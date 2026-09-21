@@ -1,0 +1,6 @@
+body {
+  margin: 0;
+  background: var(--kui-background);
+  color: var(--kui-foreground);
+  font-family: var(--kui-font-family);
+}

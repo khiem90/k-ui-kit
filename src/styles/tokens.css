@@ -1,0 +1,75 @@
+:where(:root) {
+  --kui-font-family: system-ui, sans-serif;
+
+  --kui-space-1: 0.25rem;
+  --kui-space-2: 0.5rem;
+  --kui-space-3: 0.75rem;
+  --kui-space-4: 1rem;
+  --kui-space-5: 1.25rem;
+  --kui-space-6: 1.5rem;
+  --kui-space-7: 1.75rem;
+  --kui-space-8: 2rem;
+
+  --kui-radius-sm: 0.25rem;
+  --kui-radius-md: 0.5rem;
+  --kui-radius-lg: 0.75rem;
+
+  --kui-focus-ring-width: 2px;
+  --kui-focus-ring-offset: 2px;
+
+  --kui-motion-duration: 150ms;
+}
+
+:where(:root),
+:where([data-theme="light"]) {
+  color-scheme: light;
+
+  --kui-background: #ffffff;
+  --kui-background-subtle: #f4f4f5;
+  --kui-foreground: #18181b;
+  --kui-foreground-muted: #52525b;
+  --kui-border: #86868f;
+  --kui-primary: #2563eb;
+  --kui-primary-foreground: #ffffff;
+  --kui-danger: #dc2626;
+  --kui-danger-foreground: #ffffff;
+  --kui-focus-ring: #2563eb;
+}
+
+:where([data-theme="dark"]) {
+  color-scheme: dark;
+
+  --kui-background: #0f0f11;
+  --kui-background-subtle: #27272a;
+  --kui-foreground: #fafafa;
+  --kui-foreground-muted: #a1a1aa;
+  --kui-border: #75757f;
+  --kui-primary: #60a5fa;
+  --kui-primary-foreground: #0f0f11;
+  --kui-danger: #f87171;
+  --kui-danger-foreground: #0f0f11;
+  --kui-focus-ring: #60a5fa;
+}
+
+@media (prefers-color-scheme: dark) {
+  :where(:root:not([data-theme="light"])) {
+    color-scheme: dark;
+
+    --kui-background: #0f0f11;
+    --kui-background-subtle: #27272a;
+    --kui-foreground: #fafafa;
+    --kui-foreground-muted: #a1a1aa;
+    --kui-border: #75757f;
+    --kui-primary: #60a5fa;
+    --kui-primary-foreground: #0f0f11;
+    --kui-danger: #f87171;
+    --kui-danger-foreground: #0f0f11;
+    --kui-focus-ring: #60a5fa;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :where(:root) {
+    --kui-motion-duration: 0ms;
+  }
+}

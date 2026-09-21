@@ -1,0 +1,103 @@
+.kui-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--kui-space-2);
+  box-sizing: border-box;
+  margin: 0;
+  border: 1px solid transparent;
+  border-radius: var(--kui-radius-md);
+  background: transparent;
+  color: var(--kui-foreground);
+  font-family: var(--kui-font-family);
+  font-weight: 500;
+  line-height: 1;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+  appearance: none;
+  transition:
+    background-color var(--kui-motion-duration),
+    border-color var(--kui-motion-duration),
+    color var(--kui-motion-duration);
+}
+
+.kui-button:focus-visible {
+  outline: var(--kui-focus-ring-width) solid var(--kui-focus-ring);
+  outline-offset: var(--kui-focus-ring-offset);
+}
+
+.kui-button[data-size="sm"] {
+  min-height: 2rem;
+  padding: 0 var(--kui-space-3);
+  font-size: 0.875rem;
+}
+
+.kui-button[data-size="md"] {
+  min-height: 2.5rem;
+  padding: 0 var(--kui-space-4);
+  font-size: 1rem;
+}
+
+.kui-button[data-size="lg"] {
+  min-height: 3rem;
+  padding: 0 var(--kui-space-5);
+  font-size: 1.125rem;
+}
+
+.kui-button[data-variant="primary"] {
+  border-color: var(--kui-primary);
+  background: var(--kui-primary);
+  color: var(--kui-primary-foreground);
+}
+
+.kui-button[data-variant="primary"]:not([data-disabled]):hover {
+  border-color: color-mix(in srgb, var(--kui-primary) 88%, var(--kui-foreground));
+  background: color-mix(in srgb, var(--kui-primary) 88%, var(--kui-foreground));
+}
+
+.kui-button[data-variant="secondary"] {
+  border-color: var(--kui-background-subtle);
+  background: var(--kui-background-subtle);
+}
+
+.kui-button[data-variant="secondary"]:not([data-disabled]):hover {
+  border-color: color-mix(in srgb, var(--kui-background-subtle) 92%, var(--kui-foreground));
+  background: color-mix(in srgb, var(--kui-background-subtle) 92%, var(--kui-foreground));
+}
+
+.kui-button[data-variant="outline"] {
+  border-color: var(--kui-border);
+}
+
+.kui-button[data-variant="outline"]:not([data-disabled]):hover,
+.kui-button[data-variant="ghost"]:not([data-disabled]):hover {
+  background: var(--kui-background-subtle);
+}
+
+.kui-button[data-variant="danger"] {
+  border-color: var(--kui-danger);
+  background: var(--kui-danger);
+  color: var(--kui-danger-foreground);
+}
+
+.kui-button[data-variant="danger"]:not([data-disabled]):hover {
+  border-color: color-mix(in srgb, var(--kui-danger) 88%, var(--kui-foreground));
+  background: color-mix(in srgb, var(--kui-danger) 88%, var(--kui-foreground));
+}
+
+.kui-button[data-disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.kui-button__icon {
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+.kui-button__icon > svg {
+  inline-size: 1.25em;
+  block-size: 1.25em;
+}

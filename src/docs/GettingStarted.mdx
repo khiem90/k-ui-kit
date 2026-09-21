@@ -1,0 +1,51 @@
+import { Meta } from "@storybook/addon-docs/blocks";
+
+<Meta title="Getting started" />
+
+# Getting started
+
+k-ui-kit is a small set of accessible React Components styled with plain CSS.
+
+## Install
+
+```bash
+pnpm add k-ui-kit
+```
+
+React 18 or later is a peer dependency.
+
+## Import the stylesheet
+
+Import it once, at the root of your app:
+
+```tsx
+import "k-ui-kit/styles.css";
+```
+
+## Use a Component
+
+```tsx
+import { Button } from "k-ui-kit";
+
+<Button variant="primary">Save</Button>;
+```
+
+## Themes
+
+The kit follows the operating system colour scheme. Force a Theme with `data-theme` on any ancestor. The attribute wins over the system preference.
+
+```html
+<html data-theme="dark"></html>
+```
+
+Every design value is a Token you can override:
+
+```css
+:root {
+  --kui-primary: #7c3aed;
+}
+
+[data-theme="dark"] {
+  --kui-primary: #a78bfa;
+}
+```

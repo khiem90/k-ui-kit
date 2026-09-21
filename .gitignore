@@ -1,0 +1,9 @@
+node_modules/
+dist/
+storybook-static/
+coverage/
+*.log
+*.tsbuildinfo
+*.timestamp-*.mjs
+.DS_Store
+.claude/launch.json
