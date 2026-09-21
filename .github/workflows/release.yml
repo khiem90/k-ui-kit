@@ -22,7 +22,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
-      # No dependency cache on a release build.
+      # No dependency cache: a publish installs from the lockfile alone, never from a restored cache.
       - uses: actions/setup-node@v7
         with:
           node-version: 22

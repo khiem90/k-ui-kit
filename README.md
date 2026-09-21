@@ -47,22 +47,22 @@ Open a pull request against `main`. A ruleset named "Protect main" blocks the me
 
 Run `pnpm changeset` to write one. Pick the bump (patch, minor, or major) and describe the change the way a Consumer should read it in the changelog. Run `pnpm changeset --empty` when shipped code changed but no Consumer would notice, such as a refactor.
 
-The same ruleset blocks pushes straight to `main`. Repository admins can bypass it. The version pull request described below is merged that way.
+The same ruleset blocks pushes straight to `main`. Repository admins can bypass it, and that is how the maintainer merges the version pull request described below.
 
 ## Release
 
 Every push to `main` runs the Release workflow. While changesets are waiting it opens or updates a pull request titled "Version Packages" that bumps the version, writes `CHANGELOG.md`, and deletes the consumed changesets. Merging that pull request publishes to npm with provenance, tags the commit, and creates a GitHub release.
 
-The Actions bot that opens the version pull request cannot trigger CI, so that pull request shows no checks. It only touches `package.json` and `CHANGELOG.md`, so merge it with the admin bypass.
+The Actions bot that opens the version pull request cannot trigger CI, so that pull request shows no checks. It only bumps the version, rewrites `CHANGELOG.md`, and deletes the consumed changesets, so merge it with the admin bypass. To give it a CI run instead, pass a fine-grained personal access token to the action's `github-token` input in `release.yml`.
 
 Publishing reads an npm token from a repository secret named `NPM_TOKEN`. Until that secret exists the workflow still manages the version pull request and skips the publish step. One-time setup for the maintainer:
 
 1. Sign in to npm. `npm login` in a terminal creates the account if needed and signs the CLI in.
-2. On npmjs.com open your avatar, then Access Tokens, then Generate New Token. Give it a name, tick "Bypass two-factor authentication" so the workflow can publish without a code, set Packages and scopes to "Read and write (publish and stage)" for All Packages, and pick an expiry. Copy the token. It is shown once.
+2. On npmjs.com open your avatar, then Access Tokens, then Generate New Token. Give it a name, tick "Bypass two-factor authentication" so the workflow can publish without a code, set Packages and scopes to "Read and write (publish and stage)" for All Packages, and pick an expiry. Copy the token. npm shows it only once.
 3. Store it as the secret with `gh secret set NPM_TOKEN`, or in Settings, then Secrets and variables, then Actions, then New repository secret.
 4. If a version pull request was already merged, run the Release workflow by hand from the Actions tab. It publishes any version that is not on npm yet.
 
-Tokens expire, so repeat steps 2 and 3 when a Release run fails with an authentication error. npm has announced that publishing with tokens ends in January 2027. Before then, add a trusted publisher on the package's settings page on npmjs.com (GitHub Actions, repository `khiem90/k-ui-kit`, workflow `release.yml`), then remove the `NPM_TOKEN` gate and `NODE_AUTH_TOKEN` from `.github/workflows/release.yml`. Provenance is automatic with trusted publishing.
+Tokens expire, so repeat steps 2 and 3 when a Release run fails with an authentication error. npm's access token docs say that publishing with a token ends in January 2027. Before then, add a trusted publisher on the package's settings page on npmjs.com (GitHub Actions, repository `khiem90/k-ui-kit`, workflow `release.yml`), then remove the `NPM_TOKEN` gate and `NODE_AUTH_TOKEN` from `.github/workflows/release.yml`. Provenance is automatic with trusted publishing.
 
 ## Repository layout
 
