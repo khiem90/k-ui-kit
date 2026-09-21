@@ -30,7 +30,8 @@ jobs:
       - run: pnpm build
 
   changeset:
-    if: github.event_name == 'pull_request'
+    # The version pull request consumes changesets by definition, so it is exempt.
+    if: github.event_name == 'pull_request' && github.head_ref != 'changeset-release/main'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
