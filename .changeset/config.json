@@ -1,0 +1,19 @@
+{
+  "$schema": "https://unpkg.com/@changesets/config@4.0.1/schema.json",
+  "baseBranch": "main",
+  "access": "public",
+  "format": "auto",
+  "changelog": ["@changesets/changelog-github", { "repo": "khiem90/k-ui-kit" }],
+  "commit": false,
+  "ignore": [],
+  "fixed": [],
+  "linked": [],
+  "updateInternalDependencies": "patch",
+  "changedFilePatterns": [
+    "src/**",
+    "package.json",
+    "tsup.config.ts",
+    "!src/**/*.stories.tsx",
+    "!src/docs/**"
+  ]
+}
