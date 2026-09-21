@@ -14,9 +14,6 @@
   --kui-radius-md: 0.5rem;
   --kui-radius-lg: 0.75rem;
 
-  --kui-focus-ring-width: 2px;
-  --kui-focus-ring-offset: 2px;
-
   --kui-motion-duration: 150ms;
 }
 
@@ -36,6 +33,7 @@
   --kui-focus-ring: #2563eb;
 }
 
+/* Dark values appear twice on purpose, under the attribute and under the media query. Edit both. */
 :where([data-theme="dark"]) {
   color-scheme: dark;
 

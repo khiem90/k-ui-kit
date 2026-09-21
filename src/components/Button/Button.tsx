@@ -19,7 +19,7 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 /**
- * Triggers an action. Renders a native button with `type="button"` unless a type is given.
+ * Triggers an action. Renders a native button, or the child element when `asChild` is set.
  */
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
   {
@@ -29,24 +29,23 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
     trailingIcon,
     asChild = false,
     disabled,
-    type = "button",
     className,
     children,
     ...props
   },
   ref,
 ) {
-  const Component = asChild ? Slot : "button";
-  const elementProps = asChild ? { "aria-disabled": disabled || undefined } : { type, disabled };
+  const Root = asChild ? Slot : "button";
+  const disabledProps = asChild ? { "aria-disabled": disabled || undefined } : { disabled };
 
   return (
-    <Component
+    <Root
       ref={ref}
       className={["kui-button", className].filter(Boolean).join(" ")}
       data-variant={variant}
       data-size={size}
       data-disabled={disabled ? "" : undefined}
-      {...elementProps}
+      {...disabledProps}
       {...props}
     >
       {leadingIcon && (
@@ -60,6 +59,6 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
           {trailingIcon}
         </span>
       )}
-    </Component>
+    </Root>
   );
 });

@@ -1,6 +1,6 @@
 # k-ui-kit
 
-Accessible React components styled with plain CSS. Ten Components that meet WCAG 2.2 AA, one stylesheet, a dark Theme, and no styling runtime.
+Accessible React Components styled with plain CSS. Ten Components that meet WCAG 2.2 AA, one stylesheet, a dark Theme, and no styling runtime.
 
 ## Use it
 
@@ -19,7 +19,7 @@ React 18 or later is a peer dependency. See the Getting started page in Storyboo
 
 ## Develop it
 
-pnpm is pinned through corepack, so `corepack enable` once and the right version is used.
+package.json pins the pnpm version. Run `corepack enable` once and corepack picks that version.
 
 | Command                | What it does                                     |
 | ---------------------- | ------------------------------------------------ |

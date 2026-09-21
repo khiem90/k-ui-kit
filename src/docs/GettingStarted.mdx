@@ -38,7 +38,7 @@ The kit follows the operating system colour scheme. Force a Theme with `data-the
 <html data-theme="dark"></html>
 ```
 
-Every design value is a Token you can override:
+Every design value is a Token you can override. Your override wins over the kit in both Themes, so give the dark value under the same two selectors the kit uses:
 
 ```css
 :root {
@@ -48,4 +48,12 @@ Every design value is a Token you can override:
 [data-theme="dark"] {
   --kui-primary: #a78bfa;
 }
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --kui-primary: #a78bfa;
+  }
+}
 ```
+
+If your app always sets `data-theme` on the root, the media query block is not needed.
