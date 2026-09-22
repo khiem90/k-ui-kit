@@ -8,6 +8,7 @@ const checks = [
   ["dist/index.d.ts", "declare Switch", (s) => s.includes("declare const Switch")],
   ["dist/index.d.ts", "declare RadioGroup", (s) => s.includes("declare const RadioGroup")],
   ["dist/index.d.ts", "declare Tooltip", (s) => s.includes("declare const Tooltip")],
+  ["dist/index.d.ts", "declare Tabs", (s) => s.includes("declare const Tabs")],
   ["dist/styles.css", "contain the Tokens", (s) => s.includes("--kui-background:")],
   ["dist/styles.css", "contain the Button styles", (s) => s.includes(".kui-button")],
   ["dist/styles.css", "contain the TextField styles", (s) => s.includes(".kui-text-field")],
@@ -15,6 +16,7 @@ const checks = [
   ["dist/styles.css", "contain the Switch styles", (s) => s.includes(".kui-switch")],
   ["dist/styles.css", "contain the RadioGroup styles", (s) => s.includes(".kui-radio-group")],
   ["dist/styles.css", "contain the Tooltip styles", (s) => s.includes(".kui-tooltip")],
+  ["dist/styles.css", "contain the Tabs styles", (s) => s.includes(".kui-tabs")],
 ];
 
 let failed = false;

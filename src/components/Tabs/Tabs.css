@@ -1,0 +1,89 @@
+.kui-tabs {
+  display: flex;
+  flex-direction: column;
+  color: var(--kui-foreground);
+  font-family: var(--kui-font-family);
+}
+
+.kui-tabs[data-orientation="vertical"] {
+  flex-direction: row;
+}
+
+/* The divider is an inset shadow so the active tab's line paints over it without a negative margin. */
+.kui-tabs__list {
+  display: flex;
+  flex-shrink: 0;
+  box-shadow: inset 0 -1px 0 var(--kui-border);
+}
+
+.kui-tabs__list[data-orientation="vertical"] {
+  flex-direction: column;
+  box-shadow: inset -1px 0 0 var(--kui-border);
+}
+
+.kui-tabs__trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-block-size: 2.5rem;
+  margin: 0;
+  padding: 0 var(--kui-space-4);
+  border: 0;
+  border-block-end: 2px solid transparent;
+  background: transparent;
+  color: var(--kui-foreground-muted);
+  font-family: inherit;
+  font-size: 1rem;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+  appearance: none;
+  transition:
+    color var(--kui-motion-duration),
+    border-color var(--kui-motion-duration);
+}
+
+.kui-tabs__trigger[data-orientation="vertical"] {
+  justify-content: flex-start;
+  border-block-end: 0;
+  border-inline-end: 2px solid transparent;
+}
+
+/* Drawn inside the tab, so it is never clipped by a neighbour or the divider. */
+.kui-tabs__trigger:focus-visible {
+  outline: 2px solid var(--kui-focus-ring);
+  outline-offset: -2px;
+}
+
+.kui-tabs__trigger:where([data-state="inactive"]:not([data-disabled])):hover {
+  color: var(--kui-foreground);
+}
+
+.kui-tabs__trigger[data-state="active"] {
+  border-color: var(--kui-primary);
+  color: var(--kui-foreground);
+}
+
+.kui-tabs__trigger[data-disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.kui-tabs__content {
+  padding-block-start: var(--kui-space-4);
+}
+
+.kui-tabs__content[data-orientation="vertical"] {
+  flex: 1;
+  padding-block-start: 0;
+  padding-inline-start: var(--kui-space-4);
+}
+
+/* The panel is a Tab stop, so keyboard users need to see when they are on it. */
+.kui-tabs__content:focus-visible {
+  outline: 2px solid var(--kui-focus-ring);
+  outline-offset: 2px;
+}

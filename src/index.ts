@@ -15,3 +15,11 @@ export type {
 } from "./components/RadioGroup/RadioGroup";
 export { Tooltip } from "./components/Tooltip/Tooltip";
 export type { TooltipProps, TooltipSide } from "./components/Tooltip/Tooltip";
+export { Tabs } from "./components/Tabs/Tabs";
+export type {
+  TabsContentProps,
+  TabsListProps,
+  TabsOrientation,
+  TabsRootProps,
+  TabsTriggerProps,
+} from "./components/Tabs/Tabs";
