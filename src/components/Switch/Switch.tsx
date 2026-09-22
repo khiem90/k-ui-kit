@@ -1,7 +1,7 @@
 "use client";
 
 import * as SwitchPrimitive from "@radix-ui/react-switch";
-import { forwardRef, useId, type ButtonHTMLAttributes, type ReactNode } from "react";
+import { forwardRef, useId, useState, type ButtonHTMLAttributes, type ReactNode } from "react";
 
 /**
  * `className` lands on the root element. Every other prop, including the ref, goes to the button
@@ -29,21 +29,43 @@ export interface SwitchProps extends Omit<
  * A labelled on/off switch. Space toggles it, and the thumb slides between the two positions.
  */
 export const Switch = forwardRef<HTMLButtonElement, SwitchProps>(function Switch(
-  { label, disabled, id: idProp, className, ...props },
+  {
+    label,
+    checked: checkedProp,
+    defaultChecked = false,
+    onCheckedChange,
+    disabled,
+    id: idProp,
+    className,
+    ...props
+  },
   ref,
 ) {
   const generatedId = useId();
   const id = idProp ?? generatedId;
+  // Owning the state puts data-state on the root, where Checkbox exposes it too, so a Consumer
+  // targets both the same way.
+  const [uncontrolledChecked, setUncontrolledChecked] = useState(defaultChecked);
+  const isControlled = checkedProp !== undefined;
+  const checked = isControlled ? checkedProp : uncontrolledChecked;
+
+  const handleCheckedChange = (next: boolean) => {
+    if (!isControlled) setUncontrolledChecked(next);
+    onCheckedChange?.(next);
+  };
 
   return (
     <div
       className={["kui-switch", className].filter(Boolean).join(" ")}
+      data-state={checked ? "checked" : "unchecked"}
       data-disabled={disabled ? "" : undefined}
     >
       <SwitchPrimitive.Root
         ref={ref}
         id={id}
         className="kui-switch__track"
+        checked={checked}
+        onCheckedChange={handleCheckedChange}
         disabled={disabled}
         {...props}
       >

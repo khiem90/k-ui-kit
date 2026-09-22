@@ -17,7 +17,7 @@
   margin: 0;
   padding: 0.125rem;
   border: 0;
-  border-radius: 9999px;
+  border-radius: var(--kui-radius-full);
   background: var(--kui-border);
   cursor: pointer;
   appearance: none;
@@ -29,15 +29,15 @@
   outline-offset: 2px;
 }
 
-.kui-switch__track[data-state="checked"] {
+.kui-switch:where([data-state="checked"]) .kui-switch__track {
   background: var(--kui-primary);
 }
 
-.kui-switch__track:where([data-state="unchecked"]):not([data-disabled]):hover {
+.kui-switch:where([data-state="unchecked"]:not([data-disabled])):hover .kui-switch__track {
   background: color-mix(in srgb, var(--kui-border) 88%, var(--kui-foreground));
 }
 
-.kui-switch__track:where([data-state="checked"]):not([data-disabled]):hover {
+.kui-switch:where([data-state="checked"]:not([data-disabled])):hover .kui-switch__track {
   background: color-mix(in srgb, var(--kui-primary) 88%, var(--kui-foreground));
 }
 
@@ -46,13 +46,14 @@
   display: block;
   inline-size: 1.25rem;
   block-size: 1.25rem;
-  border-radius: 9999px;
+  border-radius: var(--kui-radius-full);
   background: var(--kui-background);
   transition: transform var(--kui-motion-duration);
 }
 
-.kui-switch__thumb[data-state="checked"] {
-  transform: translateX(1.25rem);
+/* The thumb travels the track width minus its own size and the padding on both sides. */
+.kui-switch:where([data-state="checked"]) .kui-switch__thumb {
+  transform: translateX(calc(2.75rem - 1.25rem - 2 * 0.125rem));
 }
 
 .kui-switch__label {

@@ -13,6 +13,7 @@
   --kui-radius-sm: 0.25rem;
   --kui-radius-md: 0.5rem;
   --kui-radius-lg: 0.75rem;
+  --kui-radius-full: 9999px;
 
   --kui-motion-duration: 150ms;
 }

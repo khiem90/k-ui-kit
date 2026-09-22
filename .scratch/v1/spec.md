@@ -116,7 +116,7 @@ k-ui-kit is a small npm package of React components that are accessible out of t
 ### Styling and Tokens
 
 - Plain CSS, one stylesheet. No CSS-in-JS, no Tailwind, no runtime.
-- Tokens are semantic only, prefixed kui. Roles: background, subtle background, foreground, muted foreground, border, primary, primary foreground, danger, danger foreground, focus ring. A spacing scale of eight steps on a 4px base, three radii, and a font family defaulting to system-ui.
+- Tokens are semantic only, prefixed kui. Roles: background, subtle background, foreground, muted foreground, border, primary, primary foreground, danger, danger foreground, focus ring. A spacing scale of eight steps on a 4px base, four radii including a pill, and a font family defaulting to system-ui.
 - Light Token values live on the root element. Dark values are set under both a data-theme dark attribute selector and the dark colour-scheme media query. The attribute selector is written so it wins over the media query.
 - Class names are prefixed kui. Component state is exposed through data attributes so Consumers can target it.
 - Focus uses a 2px outline with offset on focus-visible only. Transitions are removed under prefers-reduced-motion.
