@@ -9,7 +9,10 @@ import { RadioGroup, type RadioGroupRootProps } from "./RadioGroup";
  * focus move is a zero-delay timer, and user-event releases a key in the same task it presses it,
  * so the key is held across the timer here the way a finger holds it.
  */
-const press = async (userEvent: { keyboard: (text: string) => Promise<void> }, key: string) => {
+const pressArrow = async (
+  userEvent: { keyboard: (text: string) => Promise<void> },
+  key: string,
+) => {
   await userEvent.keyboard(`{${key}>}`);
   await userEvent.keyboard(`{/${key}}`);
 };
@@ -44,22 +47,37 @@ export const Default: Story = {
     await userEvent.tab();
     await expect(email).toHaveFocus();
     await expect(email).not.toBeChecked();
-    await press(userEvent, "ArrowDown");
+    await pressArrow(userEvent, "ArrowDown");
     await expect(sms).toHaveFocus();
     await expect(sms).toBeChecked();
     await expect(args.onValueChange).toHaveBeenLastCalledWith("sms");
-    await press(userEvent, "ArrowDown");
+    await pressArrow(userEvent, "ArrowDown");
     await expect(phone).toBeChecked();
-    await press(userEvent, "ArrowDown");
+    await pressArrow(userEvent, "ArrowDown");
     await expect(email).toBeChecked();
-    await press(userEvent, "ArrowUp");
+    await pressArrow(userEvent, "ArrowUp");
     await expect(phone).toBeChecked();
-    await press(userEvent, "ArrowRight");
+    await pressArrow(userEvent, "ArrowRight");
     await expect(email).toBeChecked();
-    await press(userEvent, "ArrowLeft");
+    await pressArrow(userEvent, "ArrowLeft");
     await expect(phone).toBeChecked();
     await expect(phone).toHaveFocus();
     await expect(args.onValueChange).toHaveBeenCalledTimes(6);
+  },
+};
+
+export const Selected: Story = {
+  args: { defaultValue: "sms" },
+  play: async ({ canvas, userEvent, args }) => {
+    const sms = canvas.getByRole("radio", { name: "Text message" });
+    const phone = canvas.getByRole("radio", { name: "Phone call" });
+    await expect(sms).toBeChecked();
+    await userEvent.tab();
+    await expect(sms).toHaveFocus();
+    await userEvent.click(phone);
+    await expect(phone).toBeChecked();
+    await expect(sms).not.toBeChecked();
+    await expect(args.onValueChange).toHaveBeenCalledWith("phone");
   },
 };
 
@@ -120,7 +138,7 @@ export const WithDisabledItem: Story = {
     await expect(sms).toBeDisabled();
     await userEvent.tab();
     await expect(email).toHaveFocus();
-    await press(userEvent, "ArrowDown");
+    await pressArrow(userEvent, "ArrowDown");
     await expect(phone).toHaveFocus();
     await expect(phone).toBeChecked();
     await userEvent.click(canvas.getByText("Text message"));
@@ -159,11 +177,11 @@ export const Horizontal: Story = {
     const phone = canvas.getByRole("radio", { name: "Phone call" });
     await userEvent.tab();
     await expect(email).toHaveFocus();
-    await press(userEvent, "ArrowRight");
+    await pressArrow(userEvent, "ArrowRight");
     await expect(sms).toBeChecked();
-    await press(userEvent, "ArrowDown");
+    await pressArrow(userEvent, "ArrowDown");
     await expect(phone).toBeChecked();
-    await press(userEvent, "ArrowLeft");
+    await pressArrow(userEvent, "ArrowLeft");
     await expect(sms).toBeChecked();
     await expect(args.onValueChange).toHaveBeenCalledTimes(3);
   },
@@ -211,7 +229,7 @@ export const Controlled: Story = {
     await expect(canvas.getByText("We will reach you by email")).toBeVisible();
     await userEvent.tab();
     await expect(email).toHaveFocus();
-    await press(userEvent, "ArrowDown");
+    await pressArrow(userEvent, "ArrowDown");
     await expect(sms).toBeChecked();
     await expect(canvas.getByText("We will reach you by sms")).toBeVisible();
     await userEvent.click(canvas.getByRole("button", { name: "Prefer phone" }));
@@ -229,7 +247,7 @@ const RadioGroupWithRefs = () => {
   return (
     <div style={{ display: "grid", gap: "var(--kui-space-4)", justifyItems: "start" }}>
       <RadioGroup.Root ref={rootRef} className="contact-method">
-        <RadioGroup.Label ref={labelRef} className="contact-method__label">
+        <RadioGroup.Label ref={labelRef} className="contact-method__label" data-part="label">
           Contact method
         </RadioGroup.Label>
         <RadioGroup.Item
@@ -237,21 +255,18 @@ const RadioGroupWithRefs = () => {
           className="contact-method__item"
           value="email"
           label="Email"
+          onFocus={() =>
+            setReport(
+              `${rootRef.current?.getAttribute("role")} named ${labelRef.current?.textContent}`,
+            )
+          }
         />
         <RadioGroup.Item value="sms" label="Text message" />
       </RadioGroup.Root>
-      <Button
-        variant="outline"
-        onClick={() => {
-          itemRef.current?.focus();
-          setReport(
-            `${rootRef.current?.getAttribute("role")} named ${labelRef.current?.textContent}`,
-          );
-        }}
-      >
+      <Button variant="outline" onClick={() => itemRef.current?.focus()}>
         Focus the first item
       </Button>
-      <output>Refs: {report}</output>
+      <output>Focused: {report}</output>
     </div>
   );
 };
@@ -262,12 +277,12 @@ export const FocusThroughRef: Story = {
     const email = canvas.getByRole("radio", { name: "Email" });
     await userEvent.click(canvas.getByRole("button", { name: "Focus the first item" }));
     await expect(email).toHaveFocus();
-    await expect(canvas.getByText("Refs: radiogroup named Contact method")).toBeVisible();
+    await expect(canvas.getByText("Focused: radiogroup named Contact method")).toBeVisible();
     const root = canvasElement.querySelector(".contact-method");
     await expect(root).toBe(canvas.getByRole("radiogroup", { name: "Contact method" }));
-    await expect(canvasElement.querySelector(".contact-method__label")).toHaveTextContent(
-      "Contact method",
-    );
+    const label = canvasElement.querySelector(".contact-method__label");
+    await expect(label).toHaveTextContent("Contact method");
+    await expect(label).toHaveAttribute("data-part", "label");
     const item = canvasElement.querySelector(".contact-method__item");
     await expect(item).toContainElement(email);
     await expect(item).toContainElement(canvas.getByText("Email"));

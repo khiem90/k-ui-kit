@@ -34,7 +34,7 @@
 }
 
 /* The button is the 24px target WCAG 2.5.8 asks for; the visible circle is drawn inside it. */
-.kui-radio__control {
+.kui-radio__circle {
   position: relative;
   display: inline-flex;
   flex-shrink: 0;
@@ -51,7 +51,7 @@
   appearance: none;
 }
 
-.kui-radio__control::before {
+.kui-radio__circle::before {
   content: "";
   position: absolute;
   inset: 0.125rem;
@@ -63,25 +63,25 @@
     border-color var(--kui-motion-duration);
 }
 
-.kui-radio__control:focus-visible {
+.kui-radio__circle:focus-visible {
   outline: none;
 }
 
-.kui-radio__control:focus-visible::before {
+.kui-radio__circle:focus-visible::before {
   outline: 2px solid var(--kui-focus-ring);
   outline-offset: 2px;
 }
 
-.kui-radio:where([data-state="checked"]) .kui-radio__control::before {
+.kui-radio:where([data-state="checked"]) .kui-radio__circle::before {
   border-color: var(--kui-primary);
   background: var(--kui-primary);
 }
 
-.kui-radio:where([data-state="unchecked"]:not([data-disabled])):hover .kui-radio__control::before {
+.kui-radio:where([data-state="unchecked"]:not([data-disabled])):hover .kui-radio__circle::before {
   border-color: var(--kui-foreground);
 }
 
-.kui-radio:where([data-state="checked"]:not([data-disabled])):hover .kui-radio__control::before {
+.kui-radio:where([data-state="checked"]:not([data-disabled])):hover .kui-radio__circle::before {
   border-color: color-mix(in srgb, var(--kui-primary) 88%, var(--kui-foreground));
   background: color-mix(in srgb, var(--kui-primary) 88%, var(--kui-foreground));
 }
@@ -101,7 +101,7 @@
   cursor: pointer;
 }
 
-.kui-radio[data-disabled] .kui-radio__control {
+.kui-radio[data-disabled] .kui-radio__circle {
   opacity: 0.5;
   cursor: not-allowed;
 }

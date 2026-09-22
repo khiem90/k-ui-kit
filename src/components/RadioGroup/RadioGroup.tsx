@@ -5,7 +5,6 @@ import {
   createContext,
   forwardRef,
   useContext,
-  useEffect,
   useId,
   useState,
   type ButtonHTMLAttributes,
@@ -16,7 +15,7 @@ import {
 interface RadioGroupContextValue {
   value: string | undefined;
   disabled: boolean;
-  setLabelId: (id: string | undefined) => void;
+  labelId: string;
 }
 
 const RadioGroupContext = createContext<RadioGroupContextValue | null>(null);
@@ -61,6 +60,7 @@ const Root = forwardRef<HTMLDivElement, RadioGroupRootProps>(function RadioGroup
     disabled = false,
     orientation = "vertical",
     className,
+    "aria-label": ariaLabel,
     children,
     ...props
   },
@@ -70,7 +70,7 @@ const Root = forwardRef<HTMLDivElement, RadioGroupRootProps>(function RadioGroup
   const [uncontrolledValue, setUncontrolledValue] = useState(defaultValue);
   const isControlled = valueProp !== undefined;
   const value = isControlled ? valueProp : uncontrolledValue;
-  const [labelId, setLabelId] = useState<string>();
+  const labelId = useId();
 
   // Radix passes null when a form reset clears the selection.
   const handleValueChange = (next: string | null) => {
@@ -78,15 +78,19 @@ const Root = forwardRef<HTMLDivElement, RadioGroupRootProps>(function RadioGroup
     if (next !== null) onValueChange?.(next);
   };
 
+  // The Label part renders under labelId, so server HTML already names the group, and a Consumer
+  // who names it with aria-label gets no dangling reference. Orientation only sets the layout:
+  // handing it to Radix would limit the arrow keys to one axis, and native radios answer all four.
   return (
-    <RadioGroupContext.Provider value={{ value, disabled, setLabelId }}>
+    <RadioGroupContext.Provider value={{ value, disabled, labelId }}>
       <RadioGroupPrimitive.Root
         ref={ref}
         className={["kui-radio-group", className].filter(Boolean).join(" ")}
         value={value ?? null}
         onValueChange={handleValueChange}
         disabled={disabled}
-        aria-labelledby={labelId}
+        aria-label={ariaLabel}
+        aria-labelledby={ariaLabel ? undefined : labelId}
         aria-orientation={orientation}
         data-orientation={orientation}
         {...props}
@@ -130,7 +134,7 @@ const Item = forwardRef<HTMLButtonElement, RadioGroupItemProps>(function RadioGr
       <RadioGroupPrimitive.Item
         ref={ref}
         id={id}
-        className="kui-radio__control"
+        className="kui-radio__circle"
         value={value}
         disabled={disabled}
         {...props}
@@ -144,25 +148,19 @@ const Item = forwardRef<HTMLButtonElement, RadioGroupItemProps>(function RadioGr
   );
 });
 
-export type RadioGroupLabelProps = HTMLAttributes<HTMLSpanElement>;
+/** The group owns the label's id and points aria-labelledby at it, so `id` is not accepted. */
+export type RadioGroupLabelProps = Omit<HTMLAttributes<HTMLSpanElement>, "id">;
 
 const Label = forwardRef<HTMLSpanElement, RadioGroupLabelProps>(function RadioGroupLabel(
-  { id: idProp, className, ...props },
+  { className, ...props },
   ref,
 ) {
-  const { setLabelId } = useRadioGroupContext("Label");
-  const generatedId = useId();
-  const id = idProp ?? generatedId;
-
-  useEffect(() => {
-    setLabelId(id);
-    return () => setLabelId(undefined);
-  }, [id, setLabelId]);
+  const { labelId } = useRadioGroupContext("Label");
 
   return (
     <span
       ref={ref}
-      id={id}
+      id={labelId}
       className={["kui-radio-group__label", className].filter(Boolean).join(" ")}
       {...props}
     />
