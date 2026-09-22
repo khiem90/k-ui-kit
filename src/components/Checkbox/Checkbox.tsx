@@ -5,8 +5,8 @@ import { forwardRef, useId, useState, type ButtonHTMLAttributes, type ReactNode 
 import { CheckIcon, MinusIcon } from "../../icons";
 
 /**
- * `className` lands on the root element. Every other prop, including the ref, goes to the checkbox
- * control, so `name`, `value`, and `required` reach the surrounding form.
+ * `className` lands on the root element. Every other prop, including the ref, goes to the button
+ * that carries the checkbox role, so `name`, `value`, and `required` reach the surrounding form.
  */
 export interface CheckboxProps extends Omit<
   ButtonHTMLAttributes<HTMLButtonElement>,
@@ -50,6 +50,8 @@ export const Checkbox = forwardRef<HTMLButtonElement, CheckboxProps>(function Ch
 ) {
   const generatedId = useId();
   const id = idProp ?? generatedId;
+  // Owning the state keeps Radix controlled at all times, so an uncontrolled box toggled while
+  // indeterminate lands on checked once the Consumer clears that prop.
   const [uncontrolledChecked, setUncontrolledChecked] = useState(defaultChecked);
   const isControlled = checkedProp !== undefined;
   const checked = isControlled ? checkedProp : uncontrolledChecked;
@@ -70,7 +72,7 @@ export const Checkbox = forwardRef<HTMLButtonElement, CheckboxProps>(function Ch
       <CheckboxPrimitive.Root
         ref={ref}
         id={id}
-        className="kui-checkbox__control"
+        className="kui-checkbox__box"
         checked={indeterminate ? "indeterminate" : checked}
         onCheckedChange={handleCheckedChange}
         disabled={disabled}

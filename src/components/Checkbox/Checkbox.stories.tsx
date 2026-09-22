@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, fn } from "storybook/test";
 import { useRef, useState } from "react";
 import { Button } from "../Button/Button";
-import { Checkbox } from "./Checkbox";
+import { Checkbox, type CheckboxProps } from "./Checkbox";
 
 const meta = {
   title: "Components/Checkbox",
@@ -165,7 +165,7 @@ export const FocusThroughRef: Story = {
   },
 };
 
-const NewsletterForm = () => {
+const SubscribeForm = (props: Omit<CheckboxProps, "label" | "name">) => {
   const [submitted, setSubmitted] = useState("nothing yet");
   return (
     <form
@@ -176,7 +176,7 @@ const NewsletterForm = () => {
         setSubmitted(typeof value === "string" ? value : "no newsletter field");
       }}
     >
-      <Checkbox label="Email me about new releases" name="newsletter" value="weekly" />
+      <Checkbox label="Email me about new releases" name="newsletter" {...props} />
       <Button type="submit" variant="outline">
         Subscribe
       </Button>
@@ -186,7 +186,7 @@ const NewsletterForm = () => {
 };
 
 export const InForm: Story = {
-  render: () => <NewsletterForm />,
+  render: () => <SubscribeForm value="weekly" />,
   play: async ({ canvas, userEvent }) => {
     const submit = canvas.getByRole("button", { name: "Subscribe" });
     await userEvent.click(submit);
@@ -194,5 +194,19 @@ export const InForm: Story = {
     await userEvent.click(canvas.getByRole("checkbox", { name: "Email me about new releases" }));
     await userEvent.click(submit);
     await expect(canvas.getByText("Submitted: weekly")).toBeVisible();
+  },
+};
+
+export const Required: Story = {
+  render: () => <SubscribeForm required />,
+  play: async ({ canvas, userEvent }) => {
+    const checkbox = canvas.getByRole("checkbox", { name: "Email me about new releases" });
+    await expect(checkbox).toHaveAttribute("aria-required", "true");
+    const submit = canvas.getByRole("button", { name: "Subscribe" });
+    await userEvent.click(submit);
+    await expect(canvas.getByText("Submitted: nothing yet")).toBeVisible();
+    await userEvent.click(checkbox);
+    await userEvent.click(submit);
+    await expect(canvas.getByText("Submitted: on")).toBeVisible();
   },
 };

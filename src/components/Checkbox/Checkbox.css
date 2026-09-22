@@ -6,8 +6,8 @@
   font-family: var(--kui-font-family);
 }
 
-/* The button is the 24px target WCAG 2.5.8 asks for; the visible box is drawn smaller inside it. */
-.kui-checkbox__control {
+/* The button is the 24px target WCAG 2.5.8 asks for; the visible square is drawn inside it. */
+.kui-checkbox__box {
   position: relative;
   display: inline-flex;
   flex-shrink: 0;
@@ -25,7 +25,7 @@
   appearance: none;
 }
 
-.kui-checkbox__control::before {
+.kui-checkbox__box::before {
   content: "";
   position: absolute;
   inset: 0.125rem;
@@ -37,30 +37,30 @@
     border-color var(--kui-motion-duration);
 }
 
-.kui-checkbox__control:focus-visible {
+.kui-checkbox__box:focus-visible {
   outline: none;
 }
 
-.kui-checkbox__control:focus-visible::before {
+.kui-checkbox__box:focus-visible::before {
   outline: 2px solid var(--kui-focus-ring);
   outline-offset: 2px;
 }
 
 .kui-checkbox:where([data-state="checked"], [data-state="indeterminate"])
-  .kui-checkbox__control::before {
+  .kui-checkbox__box::before {
   border-color: var(--kui-primary);
   background: var(--kui-primary);
 }
 
 .kui-checkbox:where([data-state="unchecked"]:not([data-disabled])):hover
-  .kui-checkbox__control::before {
+  .kui-checkbox__box::before {
   border-color: var(--kui-foreground);
 }
 
 .kui-checkbox:where([data-state="checked"], [data-state="indeterminate"]):where(
     :not([data-disabled])
   ):hover
-  .kui-checkbox__control::before {
+  .kui-checkbox__box::before {
   border-color: color-mix(in srgb, var(--kui-primary) 88%, var(--kui-foreground));
   background: color-mix(in srgb, var(--kui-primary) 88%, var(--kui-foreground));
 }
@@ -81,7 +81,7 @@
   cursor: pointer;
 }
 
-.kui-checkbox[data-disabled] .kui-checkbox__control {
+.kui-checkbox[data-disabled] .kui-checkbox__box {
   opacity: 0.5;
   cursor: not-allowed;
 }

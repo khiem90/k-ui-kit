@@ -10,9 +10,6 @@ const iconProps = {
   "aria-hidden": true,
 } satisfies SVGProps<SVGSVGElement>;
 
-// Inline icons the kit needs for its own Components. They are not exported from the public entry;
-// a Consumer passes their own React node wherever a Component accepts an icon.
-
 export const CheckIcon = () => (
   <svg {...iconProps}>
     <path d="M3.5 8.5l3 3 6-7" />

@@ -13,3 +13,7 @@
 - [ ] Loading renders a status region announced to assistive technology and keeps the header visible; empty renders the custom message in a single spanning cell
 - [ ] Stories for selectable, selectable and paginated, controlled selection, loading, and empty; a play function selects rows with Space, asserts the callback payload and the select-all indeterminate state, then uses select-all and asserts every row on the page is selected
 - [ ] axe passes on every Story; lint, typecheck, build pass
+
+## Comments
+
+2026-09-21: Checkbox landed in ticket 04 with a required, always-visible `label`. The row and select-all boxes here need an accessible name with no visible text, and the kit has no visually-hidden utility yet. Add a `hideLabel` prop to Checkbox in this ticket that keeps the label in the DOM for assistive technology and hides it visually.
