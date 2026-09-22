@@ -21,3 +21,9 @@ export const MinusIcon = () => (
     <path d="M4 8h8" />
   </svg>
 );
+
+export const CloseIcon = () => (
+  <svg {...iconProps}>
+    <path d="M4 4l8 8M12 4l-8 8" />
+  </svg>
+);

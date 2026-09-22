@@ -23,3 +23,12 @@ export type {
   TabsRootProps,
   TabsTriggerProps,
 } from "./components/Tabs/Tabs";
+export { Dialog } from "./components/Dialog/Dialog";
+export type {
+  DialogCloseProps,
+  DialogContentProps,
+  DialogDescriptionProps,
+  DialogRootProps,
+  DialogTitleProps,
+  DialogTriggerProps,
+} from "./components/Dialog/Dialog";

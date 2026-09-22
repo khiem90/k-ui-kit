@@ -1,0 +1,137 @@
+/* The overlay and the panel are portaled to the end of body, so document order already puts them
+   above earlier content and neither carries a z-index. */
+.kui-dialog__overlay {
+  position: fixed;
+  inset: 0;
+  /* Not a Token: the scrim dims whatever is behind it, so it is the same black in both Themes. */
+  background: rgb(0 0 0 / 0.5);
+}
+
+.kui-dialog {
+  position: fixed;
+  /* Zero inset with auto margins centres the panel on both axes and leaves transform free for the
+     open and close animations. */
+  inset: 0;
+  margin: auto;
+  box-sizing: border-box;
+  inline-size: min(28rem, calc(100% - 2 * var(--kui-space-4)));
+  block-size: fit-content;
+  max-block-size: calc(100% - 2 * var(--kui-space-4));
+  overflow-y: auto;
+  padding: var(--kui-space-6);
+  border: 1px solid var(--kui-border);
+  border-radius: var(--kui-radius-lg);
+  background: var(--kui-background);
+  color: var(--kui-foreground);
+  font-family: var(--kui-font-family);
+}
+
+/* Radix focuses the panel itself when it holds nothing focusable, and that focus needs to show. */
+.kui-dialog:focus-visible {
+  outline: 2px solid var(--kui-focus-ring);
+  outline-offset: 2px;
+}
+
+.kui-dialog__title {
+  /* Room for the close button, so a long title does not run under it. */
+  margin: 0 var(--kui-space-8) 0 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.kui-dialog__description {
+  margin: var(--kui-space-2) 0 0;
+  color: var(--kui-foreground-muted);
+  line-height: 1.5;
+}
+
+.kui-dialog__close {
+  position: absolute;
+  inset-block-start: var(--kui-space-4);
+  inset-inline-end: var(--kui-space-4);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  inline-size: 2rem;
+  block-size: 2rem;
+  padding: 0;
+  border: 0;
+  border-radius: var(--kui-radius-sm);
+  background: transparent;
+  color: var(--kui-foreground-muted);
+  cursor: pointer;
+  appearance: none;
+  transition:
+    background-color var(--kui-motion-duration),
+    color var(--kui-motion-duration);
+}
+
+.kui-dialog__close > svg {
+  inline-size: 1rem;
+  block-size: 1rem;
+}
+
+.kui-dialog__close:hover {
+  background: var(--kui-background-subtle);
+  color: var(--kui-foreground);
+}
+
+.kui-dialog__close:focus-visible {
+  outline: 2px solid var(--kui-focus-ring);
+  outline-offset: 2px;
+}
+
+/* Each state has its own animation name. Radix holds the element in the DOM until the closing one
+   ends, and it can only tell the two apart by name. */
+.kui-dialog__overlay:where([data-state="open"]) {
+  animation: kui-dialog-overlay-in var(--kui-motion-duration) ease-out;
+}
+
+.kui-dialog__overlay:where([data-state="closed"]) {
+  animation: kui-dialog-overlay-out var(--kui-motion-duration) ease-in;
+}
+
+.kui-dialog:where([data-state="open"]) {
+  animation: kui-dialog-in var(--kui-motion-duration) ease-out;
+}
+
+.kui-dialog:where([data-state="closed"]) {
+  animation: kui-dialog-out var(--kui-motion-duration) ease-in;
+}
+
+@keyframes kui-dialog-overlay-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes kui-dialog-overlay-out {
+  to {
+    opacity: 0;
+  }
+}
+
+/* The panel scales rather than fades. A fade would leave text half transparent while axe measures
+   its contrast. */
+@keyframes kui-dialog-in {
+  from {
+    transform: scale(0.96);
+  }
+}
+
+@keyframes kui-dialog-out {
+  to {
+    transform: scale(0.96);
+  }
+}
+
+/* The motion Token is already 0ms here, but a zero-length animation still has to reach its end
+   event before Radix unmounts the panel. Dropping the animation outright skips that wait. */
+@media (prefers-reduced-motion: reduce) {
+  .kui-dialog__overlay,
+  .kui-dialog {
+    animation: none;
+  }
+}
