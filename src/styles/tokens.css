@@ -16,6 +16,9 @@
   --kui-radius-full: 9999px;
 
   --kui-motion-duration: 150ms;
+
+  /* The scrim over the page behind a modal. One value for both Themes: it dims whatever is under it. */
+  --kui-overlay: rgb(0 0 0 / 0.5);
 }
 
 :where(:root),

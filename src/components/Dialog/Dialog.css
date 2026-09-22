@@ -3,8 +3,7 @@
 .kui-dialog__overlay {
   position: fixed;
   inset: 0;
-  /* Not a Token: the scrim dims whatever is behind it, so it is the same black in both Themes. */
-  background: rgb(0 0 0 / 0.5);
+  background: var(--kui-overlay);
 }
 
 .kui-dialog {
@@ -13,17 +12,27 @@
      open and close animations. */
   inset: 0;
   margin: auto;
+  display: flex;
+  flex-direction: column;
   box-sizing: border-box;
   inline-size: min(28rem, calc(100% - 2 * var(--kui-space-4)));
   block-size: fit-content;
   max-block-size: calc(100% - 2 * var(--kui-space-4));
-  overflow-y: auto;
-  padding: var(--kui-space-6);
+  overflow: hidden;
   border: 1px solid var(--kui-border);
   border-radius: var(--kui-radius-lg);
   background: var(--kui-background);
   color: var(--kui-foreground);
   font-family: var(--kui-font-family);
+}
+
+/* The children scroll here rather than in the panel, so the close button, positioned against the
+   panel, stays in the corner. A flex item is at least as tall as its content until told otherwise. */
+.kui-dialog__viewport {
+  flex: 1;
+  min-block-size: 0;
+  overflow-y: auto;
+  padding: var(--kui-space-6);
 }
 
 /* Radix focuses the panel itself when it holds nothing focusable, and that focus needs to show. */
@@ -34,7 +43,8 @@
 
 .kui-dialog__title {
   /* Room for the close button, so a long title does not run under it. */
-  margin: 0 var(--kui-space-8) 0 0;
+  margin-block: 0;
+  margin-inline: 0 var(--kui-space-8);
   font-size: 1.125rem;
   font-weight: 600;
   line-height: 1.5;

@@ -21,6 +21,12 @@ const expectFocus = async (element: HTMLElement) => {
   await waitFor(() => expect(element).toHaveFocus());
 };
 
+/** Every way of dismissing the dialog ends the same way. */
+const expectDismissed = async (trigger: HTMLElement) => {
+  await waitFor(() => expect(queryDialog()).not.toBeInTheDocument());
+  await expectFocus(trigger);
+};
+
 const meta = {
   title: "Components/Dialog",
   component: Dialog.Root,
@@ -50,7 +56,7 @@ const meta = {
             marginBlockStart: "var(--kui-space-6)",
           }}
         >
-          <Dialog.Close>
+          <Dialog.Close asChild>
             <Button variant="outline">Cancel</Button>
           </Dialog.Close>
           <Button variant="danger">Delete</Button>
@@ -88,25 +94,22 @@ export const Default: Story = {
     const remove = parts.getByRole("button", { name: "Delete" });
     const close = parts.getByRole("button", { name: "Close" });
     await expectFocus(cancel);
-    await expect(getComputedStyle(document.body).overflow).toBe("hidden");
 
     await userEvent.tab();
     await expect(remove).toHaveFocus();
     await userEvent.tab();
     await expect(close).toHaveFocus();
-    // Tab off the last control and focus lands back on the first, never on the trigger behind.
+    // Tab off the last control and focus wraps, never landing on the trigger behind.
     await userEvent.tab();
     await expect(cancel).toHaveFocus();
     await userEvent.keyboard("{Shift>}{Tab}{/Shift}");
     await expect(close).toHaveFocus();
 
     await userEvent.keyboard("{Escape}");
-    await waitFor(() => expect(queryDialog()).not.toBeInTheDocument());
+    await expectDismissed(trigger);
     await expect(args.onOpenChange).toHaveBeenLastCalledWith(false);
     await expect(args.onOpenChange).toHaveBeenCalledTimes(2);
-    await expectFocus(trigger);
     await expect(trigger).toHaveAttribute("data-state", "closed");
-    await expect(getComputedStyle(document.body).overflow).not.toBe("hidden");
   },
 };
 
@@ -116,10 +119,8 @@ export const ClosesOnOverlayClick: Story = {
     await userEvent.click(trigger);
     await findDialog();
     await userEvent.click(getOverlay());
-    await waitFor(() => expect(queryDialog()).not.toBeInTheDocument());
+    await expectDismissed(trigger);
     await expect(args.onOpenChange).toHaveBeenLastCalledWith(false);
-    await expectFocus(trigger);
-    await expect(getComputedStyle(document.body).overflow).not.toBe("hidden");
   },
 };
 
@@ -132,9 +133,8 @@ export const ClosesOnCloseButton: Story = {
     // The icon is hidden from assistive technology, so the button's name comes from the kit.
     await expect(close).toHaveAccessibleName("Close");
     await userEvent.click(close);
-    await waitFor(() => expect(queryDialog()).not.toBeInTheDocument());
+    await expectDismissed(trigger);
     await expect(args.onOpenChange).toHaveBeenLastCalledWith(false);
-    await expectFocus(trigger);
   },
 };
 
@@ -166,7 +166,7 @@ const RenameFile = () => {
           >
             <TextField label="File name" name="filename" defaultValue={name} />
             <div style={{ display: "flex", gap: "var(--kui-space-2)", justifyContent: "flex-end" }}>
-              <Dialog.Close>
+              <Dialog.Close asChild>
                 <Button variant="outline">Cancel</Button>
               </Dialog.Close>
               <Button type="submit">Save</Button>
@@ -194,20 +194,21 @@ export const WithForm: Story = {
     await userEvent.clear(input);
     await userEvent.type(input, "budget.xlsx");
     await userEvent.keyboard("{Enter}");
-    await waitFor(() => expect(queryDialog()).not.toBeInTheDocument());
-    await expectFocus(trigger);
+    await expectDismissed(trigger);
     await expect(canvas.getByText("The file is called budget.xlsx")).toBeVisible();
 
-    // Cancel closes the panel through the Close part and leaves the name alone.
     await userEvent.click(trigger);
     const reopened = await findDialog();
     const cancel = within(reopened).getByRole("button", { name: "Cancel" });
     await expect(cancel).toHaveAttribute("type", "button");
     await userEvent.click(cancel);
-    await waitFor(() => expect(queryDialog()).not.toBeInTheDocument());
+    await expectDismissed(trigger);
     await expect(canvas.getByText("The file is called budget.xlsx")).toBeVisible();
   },
 };
+
+const lastClause =
+  "This agreement is updated in place, and the date at the top records the last change.";
 
 const clauses = [
   "You keep the rights to everything you upload, and we keep the rights to the service itself.",
@@ -229,7 +230,7 @@ const clauses = [
   "The service is offered as it is, with the availability target in the appendix.",
   "We keep audit logs for a year so you can see who opened what, and when.",
   "Third-party integrations you switch on are governed by their own terms as well.",
-  "This agreement is updated in place, and the date at the top records the last change.",
+  lastClause,
 ];
 
 export const LongBody: Story = {
@@ -252,31 +253,39 @@ export const LongBody: Story = {
       </Dialog.Root>
     </div>
   ),
-  play: async ({ canvas, args }) => {
+  play: async ({ canvas, userEvent, args }) => {
     const dialog = await findDialog();
     // defaultOpen opens the panel without reporting a change.
     await expect(args.onOpenChange).not.toHaveBeenCalled();
     // Everything behind an open dialog leaves the accessibility tree, the trigger included, so
     // the role query only finds it with hidden elements included.
     await expect(canvas.queryByRole("button", { name: "Read the terms" })).not.toBeInTheDocument();
-    await expect(
-      canvas.getByRole("button", { name: "Read the terms", hidden: true }),
-    ).toHaveAttribute("data-state", "open");
-    await expectFocus(within(dialog).getByRole("button", { name: "Close" }));
+    const trigger = canvas.getByRole("button", { name: "Read the terms", hidden: true });
+    await expect(trigger).toHaveAttribute("data-state", "open");
 
-    // The panel takes the scrolling; the page behind it is held still.
-    await expect(dialog.scrollHeight).toBeGreaterThan(dialog.clientHeight);
+    const close = within(dialog).getByRole("button", { name: "Close" });
+    const end = within(dialog).getByText(lastClause);
+    // The panel scales as it opens, so it has to settle before anything is measured against it.
+    await waitFor(() => expect(dialog.getAnimations()).toHaveLength(0));
+    const closeTop = close.getBoundingClientRect().top;
+    const endTop = end.getBoundingClientRect().top;
+
+    // The page behind the dialog is locked. The lock shows as the body's own overflow, since a
+    // Story has no way to raise the trusted wheel or key event a user would scroll the page with.
     await expect(getComputedStyle(document.body).overflow).toBe("hidden");
-    dialog.scrollTop = dialog.scrollHeight;
-    await expect(dialog.scrollTop).toBeGreaterThan(0);
-    await expect(window.scrollY).toBe(0);
+
+    // Reading to the end leaves the close button in the corner, where it can still be clicked.
+    end.scrollIntoView();
+    await waitFor(() => expect(end.getBoundingClientRect().top).toBeLessThan(endTop));
+    await expect(close.getBoundingClientRect().top).toBe(closeTop);
+    await userEvent.click(close);
+    await expectDismissed(trigger);
+    await expect(args.onOpenChange).toHaveBeenLastCalledWith(false);
+    await expect(getComputedStyle(document.body).overflow).not.toBe("hidden");
   },
 };
 
-/**
- * The usual way to keep text for assistive technology and take it out of the layout. The kit ships
- * no class for it, so a Consumer applies their own, here inline.
- */
+/** The kit ships no class for this, so a Consumer applies their own, here inline. */
 const visuallyHidden: CSSProperties = {
   position: "absolute",
   inlineSize: 1,
@@ -323,7 +332,6 @@ export const VisuallyHiddenTitle: Story = {
   play: async () => {
     const dialog = await findDialog();
     const title = within(dialog).getByRole("heading", { name: "Share this document" });
-    // The name still reaches a screen reader, and the heading takes up no room on screen.
     await expect(dialog).toHaveAccessibleName("Share this document");
     const box = title.getBoundingClientRect();
     await expect(box.width).toBeLessThanOrEqual(1);
@@ -352,7 +360,7 @@ const LeavePage = () => {
               marginBlockStart: "var(--kui-space-6)",
             }}
           >
-            <Dialog.Close>
+            <Dialog.Close asChild>
               <Button variant="outline">Keep editing</Button>
             </Dialog.Close>
             {/* Closing from the app's own code, rather than through a Close part. */}
@@ -388,21 +396,19 @@ export const Controlled: Story = {
     await findDialog();
     await expect(canvas.getByText("The dialog is open and the draft is still here")).toBeVisible();
     await userEvent.keyboard("{Escape}");
-    await waitFor(() => expect(queryDialog()).not.toBeInTheDocument());
+    await expectDismissed(trigger);
     await expect(
       canvas.getByText("The dialog is closed and the draft is still here"),
     ).toBeVisible();
-    await expectFocus(trigger);
 
+    // Closing from the app returns focus to the trigger, the same as Escape and the Close parts.
     await userEvent.click(trigger);
     const reopened = await findDialog();
     await userEvent.click(within(reopened).getByRole("button", { name: "Leave" }));
-    await waitFor(() => expect(queryDialog()).not.toBeInTheDocument());
+    await expectDismissed(trigger);
     await expect(
       canvas.getByText("The dialog is closed and the draft is thrown away"),
     ).toBeVisible();
-    // Closing from the app returns focus to the trigger, the same as Escape and the Close parts.
-    await expectFocus(trigger);
   },
 };
 
@@ -475,7 +481,7 @@ export const PartsThroughRefs: Story = {
     await userEvent.click(parts.getByRole("button", { name: "Report the parts" }));
     await expect(close).toHaveFocus();
     await userEvent.keyboard("{Enter}");
-    await waitFor(() => expect(queryDialog()).not.toBeInTheDocument());
+    await expectDismissed(trigger);
     await expect(
       canvas.getByText("Parts: open from dialog, H2 title, P description, Close button"),
     ).toBeVisible();

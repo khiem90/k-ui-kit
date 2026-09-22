@@ -16,15 +16,13 @@ export interface DialogRootProps {
   open?: boolean;
   /** Initial open state when uncontrolled. */
   defaultOpen?: boolean;
-  /** Called with the next open state when the trigger, a close part, Escape, or the overlay changes it. */
+  /** Called with the next open state when a part, Escape, or the overlay changes it. */
   onOpenChange?: (open: boolean) => void;
   /** The Trigger and Content parts. */
   children?: ReactNode;
 }
 
-const Root = ({ children, ...props }: DialogRootProps) => (
-  <DialogPrimitive.Root {...props}>{children}</DialogPrimitive.Root>
-);
+const Root = (props: DialogRootProps) => <DialogPrimitive.Root {...props} />;
 
 /**
  * The child is the trigger and receives the ref, the click handler, and the aria wiring. It keeps
@@ -51,7 +49,9 @@ const Trigger = forwardRef<HTMLButtonElement, DialogTriggerProps>(function Dialo
 
 /**
  * The ref, `className`, and every other prop go to the dialog panel. The panel and the overlay
- * behind it render in a portal at the end of body, so no ancestor's overflow or stacking clips them.
+ * behind it render in a portal at the end of body, so no ancestor's overflow or stacking clips
+ * them. The children scroll inside the panel, which leaves the Close part in the corner however
+ * far they scroll.
  */
 export type DialogContentProps = HTMLAttributes<HTMLDivElement>;
 
@@ -67,7 +67,7 @@ const Content = forwardRef<HTMLDivElement, DialogContentProps>(function DialogCo
         className={["kui-dialog", className].filter(Boolean).join(" ")}
         {...props}
       >
-        {children}
+        <div className="kui-dialog__viewport">{children}</div>
       </DialogPrimitive.Content>
     </DialogPrimitive.Portal>
   );
@@ -110,24 +110,31 @@ const Description = forwardRef<HTMLParagraphElement, DialogDescriptionProps>(
   },
 );
 
-/**
- * Closes the dialog. On its own it is an icon button in the panel's top corner, named "Close" for
- * assistive technology. Give it a child element, such as a Button, and that element closes the
- * dialog instead, keeping its own look and its own accessible name.
- */
-export interface DialogCloseProps extends Omit<
+interface DialogCloseIconProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, "children"> {
+  asChild?: false;
+  children?: never;
+}
+
+interface DialogCloseAsChildProps extends Omit<
   ButtonHTMLAttributes<HTMLButtonElement>,
   "children"
 > {
-  /** One focusable element to close with in place of the icon button. It must forward its ref. */
-  children?: ReactElement;
+  /** Render the child element in place of the icon button, so it closes the dialog and keeps its own look. */
+  asChild: true;
+  children: ReactElement;
 }
 
+/**
+ * Closes the dialog. On its own it is an icon button in the panel's top corner, named "Close" for
+ * assistive technology, and `asChild` swaps in an element of the Consumer's own instead.
+ */
+export type DialogCloseProps = DialogCloseIconProps | DialogCloseAsChildProps;
+
 const Close = forwardRef<HTMLButtonElement, DialogCloseProps>(function DialogClose(
-  { className, children, ...props },
+  { asChild = false, className, children, ...props },
   ref,
 ) {
-  if (children) {
+  if (asChild) {
     return (
       <DialogPrimitive.Close ref={ref} asChild className={className} {...props}>
         {children}
