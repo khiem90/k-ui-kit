@@ -119,6 +119,14 @@ export const Vertical: Story = {
     const profile = canvas.getByRole("tab", { name: "Profile" });
     const security = canvas.getByRole("tab", { name: "Security" });
     const billing = canvas.getByRole("tab", { name: "Billing" });
+    // The stylesheet keys the vertical layout on data-orientation, so every part must carry it.
+    await expect(list.parentElement).toHaveAttribute("data-orientation", "vertical");
+    await expect(list).toHaveAttribute("data-orientation", "vertical");
+    await expect(profile).toHaveAttribute("data-orientation", "vertical");
+    await expect(canvas.getByRole("tabpanel", { name: "Profile" })).toHaveAttribute(
+      "data-orientation",
+      "vertical",
+    );
     await userEvent.tab();
     await expect(profile).toHaveFocus();
     await userEvent.keyboard("{ArrowDown}");
@@ -278,7 +286,7 @@ const TabsWithRefs = () => {
         onClick={() => {
           triggerRef.current?.focus();
           setReport(
-            `${triggerRef.current?.textContent} ${triggerRef.current?.getAttribute("role")} in ${listRef.current?.getAttribute("role")} ${listRef.current?.getAttribute("aria-label")}, panel ${contentRef.current?.id}`,
+            `${triggerRef.current?.textContent} tab in ${listRef.current?.getAttribute("aria-label")}, ${rootRef.current?.dataset.orientation} root, panel ${contentRef.current?.id}`,
           );
         }}
       >
@@ -299,7 +307,9 @@ export const FocusThroughRef: Story = {
     const panel = canvas.getByRole("tabpanel", { name: "Security" });
     await expect(panel).toBeVisible();
     await expect(
-      canvas.getByText(`Focused: Security tab in tablist Account settings, panel ${panel.id}`),
+      canvas.getByText(
+        `Focused: Security tab in Account settings, horizontal root, panel ${panel.id}`,
+      ),
     ).toBeVisible();
     const root = canvasElement.querySelector(".account");
     await expect(root).toHaveClass("kui-tabs", "account");
