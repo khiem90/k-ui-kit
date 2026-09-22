@@ -8,10 +8,13 @@ import { Tooltip, type TooltipSide } from "./Tooltip";
 const findTooltip = () => within(document.body).findByRole("tooltip", {}, { timeout: 2000 });
 const queryTooltip = () => within(document.body).queryByRole("tooltip");
 
-/** Radix positions the box a frame after it mounts, so the rectangles are compared until stable. */
+/**
+ * Radix positions the box a frame after it mounts and may flip it, so the side and the rectangles
+ * are checked until they settle.
+ */
 const expectPlacedOn = async (side: TooltipSide, tooltip: HTMLElement, trigger: HTMLElement) => {
-  await expect(tooltip).toHaveAttribute("data-side", side);
   await waitFor(() => {
+    expect(tooltip).toHaveAttribute("data-side", side);
     const box = tooltip.getBoundingClientRect();
     const anchor = trigger.getBoundingClientRect();
     if (side === "top") expect(box.bottom).toBeLessThanOrEqual(anchor.top);
@@ -44,70 +47,48 @@ export const Default: Story = {
   play: async ({ canvas, userEvent, args }) => {
     const trigger = canvas.getByRole("button", { name: "Save" });
     await expect(queryTooltip()).not.toBeInTheDocument();
+    await expect(trigger).toHaveAttribute("data-state", "closed");
     await userEvent.tab();
     await expect(trigger).toHaveFocus();
     const tooltip = await findTooltip();
     await expect(tooltip).toBeVisible();
     await expect(tooltip).toHaveTextContent("Saves your changes");
+    await expect(tooltip).toHaveAttribute("data-state", "open");
+    await expect(trigger).toHaveAttribute("data-state", "open");
     await expect(trigger).toHaveAccessibleDescription("Saves your changes");
     await expect(args.onOpenChange).toHaveBeenLastCalledWith(true);
     await userEvent.keyboard("{Escape}");
     await expect(queryTooltip()).not.toBeInTheDocument();
     await expect(trigger).not.toHaveAttribute("aria-describedby");
+    await expect(trigger).toHaveAttribute("data-state", "closed");
     await expect(args.onOpenChange).toHaveBeenLastCalledWith(false);
     await expect(args.onOpenChange).toHaveBeenCalledTimes(2);
   },
 };
 
-export const Top: Story = {
-  args: { side: "top" },
-  play: async ({ canvas, userEvent }) => {
-    await userEvent.tab();
-    await expectPlacedOn("top", await findTooltip(), canvas.getByRole("button", { name: "Save" }));
-  },
+/** Shared by the side Stories. The side under test comes from the Story's args. */
+const placesOnRequestedSide: NonNullable<Story["play"]> = async ({ canvas, userEvent, args }) => {
+  await userEvent.tab();
+  const trigger = canvas.getByRole("button", { name: "Save" });
+  await expectPlacedOn(args.side ?? "top", await findTooltip(), trigger);
 };
 
-export const Right: Story = {
-  args: { side: "right" },
-  play: async ({ canvas, userEvent }) => {
-    await userEvent.tab();
-    await expectPlacedOn(
-      "right",
-      await findTooltip(),
-      canvas.getByRole("button", { name: "Save" }),
-    );
-  },
-};
+export const Top: Story = { args: { side: "top" }, play: placesOnRequestedSide };
 
-export const Bottom: Story = {
-  args: { side: "bottom" },
-  play: async ({ canvas, userEvent }) => {
-    await userEvent.tab();
-    await expectPlacedOn(
-      "bottom",
-      await findTooltip(),
-      canvas.getByRole("button", { name: "Save" }),
-    );
-  },
-};
+export const Right: Story = { args: { side: "right" }, play: placesOnRequestedSide };
 
-export const Left: Story = {
-  args: { side: "left" },
-  play: async ({ canvas, userEvent }) => {
-    await userEvent.tab();
-    await expectPlacedOn("left", await findTooltip(), canvas.getByRole("button", { name: "Save" }));
-  },
-};
+export const Bottom: Story = { args: { side: "bottom" }, play: placesOnRequestedSide };
+
+export const Left: Story = { args: { side: "left" }, play: placesOnRequestedSide };
 
 export const FlipsWhenNoRoom: Story = {
   args: { side: "top" },
-  // No centring: the trigger sits at the top of the canvas, where a tooltip above it would not fit.
+  // No centring: the trigger sits at the top of the canvas, where a box above it would not fit.
   render: (args) => <Tooltip {...args} />,
   play: async ({ canvas, userEvent }) => {
     await userEvent.tab();
-    const tooltip = await findTooltip();
-    await waitFor(() => expect(tooltip).toHaveAttribute("data-side", "bottom"));
-    await expectPlacedOn("bottom", tooltip, canvas.getByRole("button", { name: "Save" }));
+    const trigger = canvas.getByRole("button", { name: "Save" });
+    await expectPlacedOn("bottom", await findTooltip(), trigger);
   },
 };
 
@@ -158,9 +139,21 @@ export const WithDelay: Story = {
   },
 };
 
+export const DefaultOpen: Story = {
+  args: { defaultOpen: true },
+  play: async ({ canvas, userEvent, args }) => {
+    await expect(await findTooltip()).toBeVisible();
+    await expect(canvas.getByRole("button", { name: "Save" })).not.toHaveFocus();
+    await expect(args.onOpenChange).not.toHaveBeenCalled();
+    await userEvent.keyboard("{Escape}");
+    await expect(queryTooltip()).not.toBeInTheDocument();
+    await expect(args.onOpenChange).toHaveBeenLastCalledWith(false);
+  },
+};
+
 const MeasuredHint = () => {
   const [width, setWidth] = useState<number | null>(null);
-  // A callback ref sees the box the moment it mounts, which an effect in this component would miss.
+  // A callback ref runs with the box when it mounts and with null when it unmounts.
   const measure = useCallback((box: HTMLDivElement | null) => {
     setWidth(box ? Math.round(box.getBoundingClientRect().width) : null);
   }, []);
@@ -188,11 +181,10 @@ const MeasuredHint = () => {
   );
 };
 
-export const DefaultOpen: Story = {
+export const MeasuredThroughRef: Story = {
   render: () => <MeasuredHint />,
   play: async ({ canvas, userEvent }) => {
     const tooltip = await findTooltip();
-    await expect(tooltip).toBeVisible();
     await expect(tooltip).toHaveClass("kui-tooltip", "save-hint");
     await expect(tooltip).toHaveAttribute("data-part", "hint");
     await expect(canvas.getByText(/^The box is \d+px wide$/)).toBeVisible();

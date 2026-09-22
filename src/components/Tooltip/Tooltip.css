@@ -15,9 +15,9 @@
   transform-origin: var(--radix-tooltip-content-transform-origin);
 }
 
-/* Only the open states animate. If the closed state kept the same animation, Radix would hold a box
+/* Only the open state animates. If the closed state kept the same animation, Radix would hold a box
    closed mid-entrance in the DOM until that animation ended. */
-.kui-tooltip:where([data-state="delayed-open"], [data-state="instant-open"]) {
+.kui-tooltip:where([data-state="open"]) {
   animation: kui-tooltip-in var(--kui-motion-duration) ease-out;
 }
 
