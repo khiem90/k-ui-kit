@@ -97,7 +97,7 @@ export const ReadOnly: Story = {
   },
 };
 
-const ControlledExample = () => {
+const ControlledTextField = () => {
   const [value, setValue] = useState("");
   const error =
     value && !value.includes("@") ? "Enter an email address that contains @." : undefined;
@@ -113,7 +113,7 @@ const ControlledExample = () => {
 };
 
 export const Controlled: Story = {
-  render: () => <ControlledExample />,
+  render: () => <ControlledTextField />,
   play: async ({ canvas, userEvent }) => {
     const input = canvas.getByLabelText("Email");
     await userEvent.type(input, "khiem");
@@ -129,7 +129,7 @@ export const Controlled: Story = {
   },
 };
 
-const FocusThroughRefExample = () => {
+const TextFieldWithFocusButton = () => {
   const ref = useRef<HTMLInputElement>(null);
   return (
     <div style={{ display: "grid", gap: "var(--kui-space-4)", justifyItems: "start" }}>
@@ -142,7 +142,7 @@ const FocusThroughRefExample = () => {
 };
 
 export const FocusThroughRef: Story = {
-  render: () => <FocusThroughRefExample />,
+  render: () => <TextFieldWithFocusButton />,
   play: async ({ canvas, userEvent }) => {
     await userEvent.click(canvas.getByRole("button", { name: "Focus the email field" }));
     await expect(canvas.getByLabelText("Email")).toHaveFocus();

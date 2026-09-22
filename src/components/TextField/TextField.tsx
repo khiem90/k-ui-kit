@@ -4,6 +4,10 @@ import { forwardRef, useId, type InputHTMLAttributes, type ReactNode } from "rea
 
 export type TextFieldSize = "sm" | "md" | "lg";
 
+/**
+ * `className` lands on the root element. Every other prop, including the ref, goes to the input,
+ * so a form library registers it like any native input.
+ */
 export interface TextFieldProps extends Omit<InputHTMLAttributes<HTMLInputElement>, "size"> {
   /** Visible label. It is also the input's accessible name. */
   label: ReactNode;
@@ -57,11 +61,6 @@ export const TextField = forwardRef<HTMLInputElement, TextFieldProps>(function T
     >
       <label className="kui-text-field__label" htmlFor={id}>
         {label}
-        {required && (
-          <span className="kui-text-field__required" aria-hidden="true">
-            *
-          </span>
-        )}
       </label>
       {hasDescription && (
         <p id={descriptionId} className="kui-text-field__description">

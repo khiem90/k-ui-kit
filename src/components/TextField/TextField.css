@@ -6,22 +6,24 @@
   font-family: var(--kui-font-family);
 }
 
-.kui-text-field__label {
+.kui-text-field__label,
+.kui-text-field__description,
+.kui-text-field__error {
+  margin: 0;
   font-size: 0.875rem;
-  font-weight: 500;
   line-height: 1.25rem;
 }
 
-.kui-text-field__required {
-  margin-inline-start: var(--kui-space-1);
-  color: var(--kui-danger);
+.kui-text-field__label {
+  font-weight: 500;
 }
 
 .kui-text-field__description {
-  margin: 0;
   color: var(--kui-foreground-muted);
-  font-size: 0.875rem;
-  line-height: 1.25rem;
+}
+
+.kui-text-field__error {
+  color: var(--kui-danger);
 }
 
 .kui-text-field__input {
@@ -44,10 +46,6 @@
 .kui-text-field__input::placeholder {
   color: var(--kui-foreground-muted);
   opacity: 1;
-}
-
-.kui-text-field__input:where(:not(:disabled):not([readonly])):hover {
-  border-color: var(--kui-foreground);
 }
 
 .kui-text-field__input:focus-visible {
@@ -73,26 +71,24 @@
   font-size: 1.125rem;
 }
 
-.kui-text-field__input[readonly] {
-  background: var(--kui-background-subtle);
+.kui-text-field:where(:not([data-disabled], [data-readonly], [data-invalid]))
+  .kui-text-field__input:hover {
+  border-color: var(--kui-foreground);
 }
 
-.kui-text-field__input:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+.kui-text-field[data-readonly] .kui-text-field__input {
+  background: var(--kui-background-subtle);
 }
 
 .kui-text-field[data-disabled] .kui-text-field__label {
   color: var(--kui-foreground-muted);
 }
 
-.kui-text-field[data-invalid] .kui-text-field__input {
-  border-color: var(--kui-danger);
+.kui-text-field[data-disabled] .kui-text-field__input {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
-.kui-text-field__error {
-  margin: 0;
-  color: var(--kui-danger);
-  font-size: 0.875rem;
-  line-height: 1.25rem;
+.kui-text-field[data-invalid] .kui-text-field__input {
+  border-color: var(--kui-danger);
 }
