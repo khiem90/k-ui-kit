@@ -68,6 +68,7 @@ Tokens expire, so repeat steps 2 and 3 when a Release run fails with an authenti
 
 - `src/components/<Name>/` holds a Component's source, CSS, and Stories.
 - `src/styles/` holds the Tokens and the single entry stylesheet.
+- `src/icons.tsx` holds the inline SVG icons the kit's own Components use. They are not exported.
 - `src/index.ts` is the public entry.
 - `.changeset/` holds pending changesets and the Changesets config.
 - `.github/workflows/` holds the CI, Pages, and Release workflows.

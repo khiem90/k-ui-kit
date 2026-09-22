@@ -1,0 +1,92 @@
+.kui-checkbox {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: var(--kui-space-2);
+  color: var(--kui-foreground);
+  font-family: var(--kui-font-family);
+}
+
+/* The button is the 24px target WCAG 2.5.8 asks for; the visible box is drawn smaller inside it. */
+.kui-checkbox__control {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  inline-size: 1.5rem;
+  block-size: 1.5rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--kui-primary-foreground);
+  cursor: pointer;
+  appearance: none;
+}
+
+.kui-checkbox__control::before {
+  content: "";
+  position: absolute;
+  inset: 0.125rem;
+  border: 1px solid var(--kui-border);
+  border-radius: var(--kui-radius-sm);
+  background: var(--kui-background);
+  transition:
+    background-color var(--kui-motion-duration),
+    border-color var(--kui-motion-duration);
+}
+
+.kui-checkbox__control:focus-visible {
+  outline: none;
+}
+
+.kui-checkbox__control:focus-visible::before {
+  outline: 2px solid var(--kui-focus-ring);
+  outline-offset: 2px;
+}
+
+.kui-checkbox:where([data-state="checked"], [data-state="indeterminate"])
+  .kui-checkbox__control::before {
+  border-color: var(--kui-primary);
+  background: var(--kui-primary);
+}
+
+.kui-checkbox:where([data-state="unchecked"]:not([data-disabled])):hover
+  .kui-checkbox__control::before {
+  border-color: var(--kui-foreground);
+}
+
+.kui-checkbox:where([data-state="checked"], [data-state="indeterminate"]):where(
+    :not([data-disabled])
+  ):hover
+  .kui-checkbox__control::before {
+  border-color: color-mix(in srgb, var(--kui-primary) 88%, var(--kui-foreground));
+  background: color-mix(in srgb, var(--kui-primary) 88%, var(--kui-foreground));
+}
+
+.kui-checkbox__indicator {
+  position: relative;
+  display: inline-flex;
+}
+
+.kui-checkbox__indicator > svg {
+  inline-size: 0.875rem;
+  block-size: 0.875rem;
+}
+
+.kui-checkbox__label {
+  font-size: 1rem;
+  line-height: 1.5rem;
+  cursor: pointer;
+}
+
+.kui-checkbox[data-disabled] .kui-checkbox__control {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.kui-checkbox[data-disabled] .kui-checkbox__label {
+  color: var(--kui-foreground-muted);
+  cursor: not-allowed;
+}

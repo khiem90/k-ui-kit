@@ -4,9 +4,11 @@ const checks = [
   ["dist/index.js", "start with the client directive", (s) => s.startsWith('"use client";')],
   ["dist/index.d.ts", "declare Button", (s) => s.includes("declare const Button")],
   ["dist/index.d.ts", "declare TextField", (s) => s.includes("declare const TextField")],
+  ["dist/index.d.ts", "declare Checkbox", (s) => s.includes("declare const Checkbox")],
   ["dist/styles.css", "contain the Tokens", (s) => s.includes("--kui-background:")],
   ["dist/styles.css", "contain the Button styles", (s) => s.includes(".kui-button")],
   ["dist/styles.css", "contain the TextField styles", (s) => s.includes(".kui-text-field")],
+  ["dist/styles.css", "contain the Checkbox styles", (s) => s.includes(".kui-checkbox")],
 ];
 
 let failed = false;
