@@ -22,3 +22,5 @@
 ## Comments
 
 2026-09-21: Implemented in 123d278 (scaffold, Tokens, Button, Stories, ADRs) and 548d4f4 (code review fixes). Public repository at https://github.com/khiem90/k-ui-kit with main pushed. Verified locally: lint, typecheck, 13 Story tests in Chromium with axe, and build all pass. Two notes for later tickets. The client directive is added as a whole-bundle banner in tsup.config.ts because esbuild drops it from non-entry modules; every Component in the kit is interactive, so the boundary is correct for v1. Token selectors carry zero specificity, so a Consumer override that should follow the system preference restates the kit's three selectors; ADR-0001 and the Getting started page cover it.
+
+2026-09-21: Ticket 02 lowered package.json to 0.0.0 so that 0.1.0 becomes the first published version through a changeset and a CHANGELOG entry (https://github.com/khiem90/k-ui-kit/pull/2). The version box above described the scaffold state; 0.1.0 remains the first release.
