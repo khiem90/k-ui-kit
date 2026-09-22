@@ -13,3 +13,5 @@ export type {
   RadioGroupOrientation,
   RadioGroupRootProps,
 } from "./components/RadioGroup/RadioGroup";
+export { Tooltip } from "./components/Tooltip/Tooltip";
+export type { TooltipProps, TooltipSide } from "./components/Tooltip/Tooltip";

@@ -1,0 +1,34 @@
+/* The box is portaled to the end of body, so document order already puts it above earlier content
+   and it carries no z-index. */
+.kui-tooltip {
+  box-sizing: border-box;
+  max-inline-size: 20rem;
+  padding: var(--kui-space-1) var(--kui-space-2);
+  border-radius: var(--kui-radius-sm);
+  background: var(--kui-foreground);
+  color: var(--kui-background);
+  font-family: var(--kui-font-family);
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  overflow-wrap: break-word;
+  user-select: none;
+  transform-origin: var(--radix-tooltip-content-transform-origin);
+}
+
+/* Only the open states animate. If the closed state kept the same animation, Radix would hold a box
+   closed mid-entrance in the DOM until that animation ended. */
+.kui-tooltip:where([data-state="delayed-open"], [data-state="instant-open"]) {
+  animation: kui-tooltip-in var(--kui-motion-duration) ease-out;
+}
+
+.kui-tooltip__arrow {
+  fill: var(--kui-foreground);
+}
+
+/* Scale only. A fade would leave the box half transparent when axe measures its contrast. The
+   motion Token is 0ms under prefers-reduced-motion, which removes the scale. */
+@keyframes kui-tooltip-in {
+  from {
+    transform: scale(0.94);
+  }
+}
