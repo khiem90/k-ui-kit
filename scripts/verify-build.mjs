@@ -6,11 +6,13 @@ const checks = [
   ["dist/index.d.ts", "declare TextField", (s) => s.includes("declare const TextField")],
   ["dist/index.d.ts", "declare Checkbox", (s) => s.includes("declare const Checkbox")],
   ["dist/index.d.ts", "declare Switch", (s) => s.includes("declare const Switch")],
+  ["dist/index.d.ts", "declare RadioGroup", (s) => s.includes("declare const RadioGroup")],
   ["dist/styles.css", "contain the Tokens", (s) => s.includes("--kui-background:")],
   ["dist/styles.css", "contain the Button styles", (s) => s.includes(".kui-button")],
   ["dist/styles.css", "contain the TextField styles", (s) => s.includes(".kui-text-field")],
   ["dist/styles.css", "contain the Checkbox styles", (s) => s.includes(".kui-checkbox")],
   ["dist/styles.css", "contain the Switch styles", (s) => s.includes(".kui-switch")],
+  ["dist/styles.css", "contain the RadioGroup styles", (s) => s.includes(".kui-radio-group")],
 ];
 
 let failed = false;

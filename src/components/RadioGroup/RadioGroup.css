@@ -1,0 +1,112 @@
+.kui-radio-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--kui-space-2);
+  color: var(--kui-foreground);
+  font-family: var(--kui-font-family);
+}
+
+.kui-radio-group[data-orientation="horizontal"] {
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: var(--kui-space-2) var(--kui-space-4);
+}
+
+.kui-radio-group__label {
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  font-weight: 500;
+}
+
+/* The label keeps a line of its own when the items run in a row. */
+.kui-radio-group[data-orientation="horizontal"] > .kui-radio-group__label {
+  inline-size: 100%;
+}
+
+.kui-radio-group[data-disabled] .kui-radio-group__label {
+  color: var(--kui-foreground-muted);
+}
+
+.kui-radio {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: var(--kui-space-2);
+}
+
+/* The button is the 24px target WCAG 2.5.8 asks for; the visible circle is drawn inside it. */
+.kui-radio__control {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  inline-size: 1.5rem;
+  block-size: 1.5rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  appearance: none;
+}
+
+.kui-radio__control::before {
+  content: "";
+  position: absolute;
+  inset: 0.125rem;
+  border: 1px solid var(--kui-border);
+  border-radius: var(--kui-radius-full);
+  background: var(--kui-background);
+  transition:
+    background-color var(--kui-motion-duration),
+    border-color var(--kui-motion-duration);
+}
+
+.kui-radio__control:focus-visible {
+  outline: none;
+}
+
+.kui-radio__control:focus-visible::before {
+  outline: 2px solid var(--kui-focus-ring);
+  outline-offset: 2px;
+}
+
+.kui-radio:where([data-state="checked"]) .kui-radio__control::before {
+  border-color: var(--kui-primary);
+  background: var(--kui-primary);
+}
+
+.kui-radio:where([data-state="unchecked"]:not([data-disabled])):hover .kui-radio__control::before {
+  border-color: var(--kui-foreground);
+}
+
+.kui-radio:where([data-state="checked"]:not([data-disabled])):hover .kui-radio__control::before {
+  border-color: color-mix(in srgb, var(--kui-primary) 88%, var(--kui-foreground));
+  background: color-mix(in srgb, var(--kui-primary) 88%, var(--kui-foreground));
+}
+
+.kui-radio__indicator {
+  position: relative;
+  display: block;
+  inline-size: 0.5rem;
+  block-size: 0.5rem;
+  border-radius: var(--kui-radius-full);
+  background: var(--kui-primary-foreground);
+}
+
+.kui-radio__label {
+  font-size: 1rem;
+  line-height: 1.5rem;
+  cursor: pointer;
+}
+
+.kui-radio[data-disabled] .kui-radio__control {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.kui-radio[data-disabled] .kui-radio__label {
+  color: var(--kui-foreground-muted);
+  cursor: not-allowed;
+}
