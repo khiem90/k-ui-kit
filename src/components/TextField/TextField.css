@@ -1,0 +1,98 @@
+.kui-text-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--kui-space-1);
+  color: var(--kui-foreground);
+  font-family: var(--kui-font-family);
+}
+
+.kui-text-field__label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.25rem;
+}
+
+.kui-text-field__required {
+  margin-inline-start: var(--kui-space-1);
+  color: var(--kui-danger);
+}
+
+.kui-text-field__description {
+  margin: 0;
+  color: var(--kui-foreground-muted);
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+}
+
+.kui-text-field__input {
+  box-sizing: border-box;
+  inline-size: 100%;
+  margin: 0;
+  border: 1px solid var(--kui-border);
+  border-radius: var(--kui-radius-md);
+  background: var(--kui-background);
+  color: var(--kui-foreground);
+  font-family: inherit;
+  line-height: 1;
+  appearance: none;
+  transition:
+    background-color var(--kui-motion-duration),
+    border-color var(--kui-motion-duration),
+    color var(--kui-motion-duration);
+}
+
+.kui-text-field__input::placeholder {
+  color: var(--kui-foreground-muted);
+  opacity: 1;
+}
+
+.kui-text-field__input:where(:not(:disabled):not([readonly])):hover {
+  border-color: var(--kui-foreground);
+}
+
+.kui-text-field__input:focus-visible {
+  outline: 2px solid var(--kui-focus-ring);
+  outline-offset: 2px;
+}
+
+.kui-text-field[data-size="sm"] .kui-text-field__input {
+  min-height: 2rem;
+  padding: 0 var(--kui-space-2);
+  font-size: 0.875rem;
+}
+
+.kui-text-field[data-size="md"] .kui-text-field__input {
+  min-height: 2.5rem;
+  padding: 0 var(--kui-space-3);
+  font-size: 1rem;
+}
+
+.kui-text-field[data-size="lg"] .kui-text-field__input {
+  min-height: 3rem;
+  padding: 0 var(--kui-space-4);
+  font-size: 1.125rem;
+}
+
+.kui-text-field__input[readonly] {
+  background: var(--kui-background-subtle);
+}
+
+.kui-text-field__input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.kui-text-field[data-disabled] .kui-text-field__label {
+  color: var(--kui-foreground-muted);
+}
+
+.kui-text-field[data-invalid] .kui-text-field__input {
+  border-color: var(--kui-danger);
+}
+
+.kui-text-field__error {
+  margin: 0;
+  color: var(--kui-danger);
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+}
