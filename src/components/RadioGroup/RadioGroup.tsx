@@ -167,8 +167,4 @@ const Label = forwardRef<HTMLSpanElement, RadioGroupLabelProps>(function RadioGr
   );
 });
 
-/**
- * A set of mutually exclusive options. Arrow keys move selection, and the whole group is one Tab
- * stop that lands on the selected item.
- */
-export const RadioGroup = { Root, Item, Label };
+export { Root as RadioGroupRoot, Item as RadioGroupItem, Label as RadioGroupLabel };

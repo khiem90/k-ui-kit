@@ -3,7 +3,7 @@ import { expect, fn, waitFor, within } from "storybook/test";
 import { useRef, useState, type CSSProperties } from "react";
 import { Button } from "../Button/Button";
 import { TextField } from "../TextField/TextField";
-import { Dialog } from "./Dialog";
+import { Dialog } from "../../index";
 
 /** The dialog renders in a portal at the end of body, outside the Story's canvas. */
 const findDialog = () => within(document.body).findByRole("dialog", {}, { timeout: 2000 });

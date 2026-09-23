@@ -3,7 +3,7 @@ import { expect, fn, waitFor, within } from "storybook/test";
 import { useRef, useState, type CSSProperties } from "react";
 import { Button } from "../Button/Button";
 import { TextField } from "../TextField/TextField";
-import { Select, type SelectSize } from "./Select";
+import { Select, type SelectSize } from "../../index";
 
 /** The list renders in a portal at the end of body, outside the Story's canvas. */
 const findListbox = () => within(document.body).findByRole("listbox", {}, { timeout: 2000 });

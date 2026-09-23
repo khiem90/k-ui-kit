@@ -36,9 +36,9 @@ import {
   type RefAttributes,
   type TableHTMLAttributes,
 } from "react";
-import { ChevronDownIcon } from "../../icons";
-import { Button } from "../Button/Button";
-import { Checkbox } from "../Checkbox/Checkbox";
+import { ChevronDownIcon } from "../../icons.js";
+import { Button } from "../Button/Button.js";
+import { Checkbox } from "../Checkbox/Checkbox.js";
 
 // TanStack picks a sort function by value type and only finds the ones registered here. Their
 // names are also valid `sortFn` strings in a column definition.

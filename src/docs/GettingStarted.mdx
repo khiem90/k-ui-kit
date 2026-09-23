@@ -1,10 +1,11 @@
-import { Meta } from "@storybook/addon-docs/blocks";
+import { Canvas, Meta } from "@storybook/addon-docs/blocks";
+import * as Examples from "./GettingStarted.stories";
 
 <Meta title="Getting started" />
 
 # Getting started
 
-k-ui-kit is a small set of accessible React Components styled with plain CSS.
+k-ui-kit is a small set of accessible React Components styled with plain CSS. One package, one stylesheet, and a handful of Tokens you override to make it yours.
 
 ## Install
 
@@ -12,15 +13,17 @@ k-ui-kit is a small set of accessible React Components styled with plain CSS.
 pnpm add k-ui-kit
 ```
 
-React 18 or later is a peer dependency.
+React 18 or later is a peer dependency. The package ships ESM with type declarations, so your bundler keeps only the Components you import and your editor completes their props.
 
 ## Import the stylesheet
 
-Import it once, at the root of your app:
+Import it once, at the root of your app. In Next.js that is `app/layout.tsx`. In Vite it is `src/main.tsx`.
 
 ```tsx
 import "k-ui-kit/styles.css";
 ```
+
+That one file carries the Tokens and every Component's styles. Class names and Tokens are prefixed `kui`, so nothing collides with your own CSS. It ships no font files: the default font is `system-ui`.
 
 ## Use a Component
 
@@ -30,15 +33,72 @@ import { Button } from "k-ui-kit";
 <Button variant="primary">Save</Button>;
 ```
 
+Composite Components are namespaces of parts you assemble yourself:
+
+```tsx
+import { Button, Dialog } from "k-ui-kit";
+
+<Dialog.Root>
+  <Dialog.Trigger>
+    <Button>Open</Button>
+  </Dialog.Trigger>
+  <Dialog.Content>
+    <Dialog.Title>Confirm</Dialog.Title>
+    <Dialog.Description>Are you sure?</Dialog.Description>
+    <Dialog.Close />
+  </Dialog.Content>
+</Dialog.Root>;
+```
+
+Every Component works inside a React Server Component tree, namespaces included. The package draws its own client boundary, so you never add `"use client"` for it. One limit comes from React rather than the kit: a function cannot travel from the server to the browser, so props such as `onValueChange` or a DataTable `cell` renderer have to come from a client component.
+
+## A form
+
+TextField, Select, Checkbox, and Button share sizes and Tokens, so they line up with no extra CSS. Each one is a native form control, or submits like one, so a plain `form` works and so do form libraries.
+
+```tsx
+import { Button, Checkbox, Select, TextField } from "k-ui-kit";
+
+export function SignUpForm() {
+  return (
+    <form
+      action="/sign-up"
+      method="post"
+      style={{ display: "grid", gap: "var(--kui-space-4)", maxWidth: "24rem" }}
+    >
+      <TextField label="Email" name="email" type="email" autoComplete="email" required />
+      <div style={{ display: "grid", gap: "var(--kui-space-1)" }}>
+        <label htmlFor="plan">Plan</label>
+        <Select.Root name="plan" defaultValue="free">
+          <Select.Trigger id="plan" />
+          <Select.Content>
+            <Select.Item value="free">Free</Select.Item>
+            <Select.Item value="team">Team</Select.Item>
+          </Select.Content>
+        </Select.Root>
+      </div>
+      <Checkbox name="terms" label="I agree to the terms" required />
+      <Button type="submit">Create account</Button>
+    </form>
+  );
+}
+```
+
+<Canvas of={Examples.SignUp} sourceState="none" />
+
 ## Themes
 
-The kit follows the operating system colour scheme. Force a Theme with `data-theme` on any ancestor. The attribute wins over the system preference.
+The kit follows the operating system colour scheme. Force a Theme with `data-theme` on any ancestor: on `html` for the whole app, or on a `div` for one panel. The attribute wins over the system preference, so a choice the user makes in your app holds.
 
 ```html
 <html data-theme="dark"></html>
 ```
 
-Every design value is a Token you can override. Your override wins over the kit in both Themes, so give the dark value under the same two selectors the kit uses:
+Use the toolbar above any Story to see it in both Themes.
+
+## Override Tokens
+
+Every design value is a Token on `:root`. Set the ones you want and the kit's own values give way in both Themes, so give the dark value under the same two selectors the kit uses:
 
 ```css
 :root {
@@ -57,3 +117,26 @@ Every design value is a Token you can override. Your override wins over the kit 
 ```
 
 If your app always sets `data-theme` on the root, the media query block is not needed.
+
+The Tokens, with their light defaults:
+
+| Token                           | Default                        | Used for                                 |
+| ------------------------------- | ------------------------------ | ---------------------------------------- |
+| `--kui-background`              | `#ffffff`                      | Page and control backgrounds             |
+| `--kui-background-subtle`       | `#f4f4f5`                      | Hover states, table header, striped rows |
+| `--kui-foreground`              | `#18181b`                      | Text                                     |
+| `--kui-foreground-muted`        | `#52525b`                      | Descriptions and placeholders            |
+| `--kui-border`                  | `#86868f`                      | Control borders                          |
+| `--kui-primary`                 | `#2563eb`                      | Primary actions and checked states       |
+| `--kui-primary-foreground`      | `#ffffff`                      | Text on primary                          |
+| `--kui-danger`                  | `#dc2626`                      | Destructive actions and errors           |
+| `--kui-danger-foreground`       | `#ffffff`                      | Text on danger                           |
+| `--kui-focus-ring`              | `#2563eb`                      | The keyboard focus outline               |
+| `--kui-overlay`                 | `rgb(0 0 0 / 0.5)`             | The scrim behind a Dialog                |
+| `--kui-space-1` to `-8`         | `0.25rem` to `2rem`            | Spacing, in 0.25rem steps                |
+| `--kui-radius-sm`, `-md`, `-lg` | `0.25rem`, `0.5rem`, `0.75rem` | Corners                                  |
+| `--kui-radius-full`             | `9999px`                       | Pills such as the Switch                 |
+| `--kui-font-family`             | `system-ui, sans-serif`        | Every Component                          |
+| `--kui-motion-duration`         | `150ms`                        | Transitions. Zero under reduced motion   |
+
+The dark Theme changes the colour Tokens only. Read `src/styles/tokens.css` in the repository for the dark values.

@@ -10,7 +10,7 @@ import {
   type HTMLAttributes,
   type ReactNode,
 } from "react";
-import { CheckIcon, ChevronDownIcon } from "../../icons";
+import { CheckIcon, ChevronDownIcon } from "../../icons.js";
 
 export type SelectSize = "sm" | "md" | "lg";
 
@@ -195,9 +195,10 @@ const Group = forwardRef<HTMLDivElement, SelectGroupProps>(function SelectGroup(
   );
 });
 
-/**
- * Picks one value from a list. Enter, Space, and the arrow keys open the list from the trigger,
- * arrows move through the options, typing jumps to a match, Enter picks the option under focus, and
- * Escape closes the list and returns focus to the trigger.
- */
-export const Select = { Root, Trigger, Content, Item, Group };
+export {
+  Root as SelectRoot,
+  Trigger as SelectTrigger,
+  Content as SelectContent,
+  Item as SelectItem,
+  Group as SelectGroup,
+};

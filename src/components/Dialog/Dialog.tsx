@@ -8,7 +8,7 @@ import {
   type ReactElement,
   type ReactNode,
 } from "react";
-import { CloseIcon } from "../../icons";
+import { CloseIcon } from "../../icons.js";
 
 /** Root renders no element of its own, so it takes no ref, class name, or DOM props. */
 export interface DialogRootProps {
@@ -154,8 +154,11 @@ const Close = forwardRef<HTMLButtonElement, DialogCloseProps>(function DialogClo
   );
 });
 
-/**
- * A modal window over the page. Opening it moves focus inside and holds it there, the page behind
- * stops scrolling, and Escape or a click on the overlay closes it and returns focus to the trigger.
- */
-export const Dialog = { Root, Trigger, Content, Title, Description, Close };
+export {
+  Root as DialogRoot,
+  Trigger as DialogTrigger,
+  Content as DialogContent,
+  Title as DialogTitle,
+  Description as DialogDescription,
+  Close as DialogClose,
+};

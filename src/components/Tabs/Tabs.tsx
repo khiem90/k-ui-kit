@@ -103,9 +103,4 @@ const Content = forwardRef<HTMLDivElement, TabsContentProps>(function TabsConten
   );
 });
 
-/**
- * A set of panels with one shown at a time. Arrow keys move between the tabs and activate the
- * one they land on, Home and End jump to the first and last, and only the active panel is in
- * the Tab order.
- */
-export const Tabs = { Root, List, Trigger, Content };
+export { Root as TabsRoot, List as TabsList, Trigger as TabsTrigger, Content as TabsContent };

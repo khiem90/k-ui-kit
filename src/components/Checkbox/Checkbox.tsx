@@ -2,7 +2,7 @@
 
 import * as CheckboxPrimitive from "@radix-ui/react-checkbox";
 import { forwardRef, useId, useState, type ButtonHTMLAttributes, type ReactNode } from "react";
-import { CheckIcon, MinusIcon } from "../../icons";
+import { CheckIcon, MinusIcon } from "../../icons.js";
 
 /**
  * `className` lands on the root element. Every other prop, including the ref, goes to the button
