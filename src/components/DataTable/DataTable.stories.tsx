@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, waitFor, within } from "storybook/test";
+import { expect, fn, waitFor, within } from "storybook/test";
 import { useRef, useState } from "react";
 import { Button } from "../Button/Button";
 import { DataTable, type ColumnDef, type DataTableProps } from "./DataTable";
@@ -156,7 +156,13 @@ const getColumnText = (canvas: Canvas, header: string) => {
 const meta: Meta<DataTableProps<Member>> = {
   title: "Components/DataTable",
   component: DataTable,
-  args: { caption: "Team members", columns, data: members, getRowId: byId },
+  args: {
+    caption: "Team members",
+    columns,
+    data: members,
+    getRowId: byId,
+    onSelectionChange: fn(),
+  },
 };
 
 export default meta;
@@ -187,8 +193,10 @@ export const Default: Story = {
       "href",
       "mailto:lena@example.com",
     );
-    // Nothing to sort, page, or scroll, so no button, status line, or focusable region.
+    // Nothing to sort, page, select, or scroll, so no button, status line, checkbox, or focusable
+    // region.
     await expect(canvas.queryByRole("button")).not.toBeInTheDocument();
+    await expect(canvas.queryByRole("checkbox")).not.toBeInTheDocument();
     await expect(canvas.queryByRole("status")).not.toBeInTheDocument();
     await expect(canvas.queryByRole("region")).not.toBeInTheDocument();
   },
@@ -478,5 +486,213 @@ export const RowsCountedThroughRef: Story = {
     await userEvent.click(canvas.getByRole("button", { name: "Report the table" }));
     // The header row counts too.
     await expect(canvas.getByText("The ref holds a TABLE with 14 rows")).toBeVisible();
+  },
+};
+
+const memberIds = members.map(byId);
+
+export const Selectable: Story = {
+  args: { columns: plainColumns, selectable: true },
+  play: async ({ canvas, userEvent, args }) => {
+    const selectAll = canvas.getByRole("checkbox", { name: "Select all rows" });
+    const lena = canvas.getByRole("checkbox", { name: "Select Lena Fischer" });
+    const ada = canvas.getByRole("checkbox", { name: "Select Ada Okafor" });
+    const rows = getBodyRows(canvas);
+    await expect(canvas.getAllByRole("checkbox")).toHaveLength(14);
+    await expect(selectAll).not.toBeChecked();
+    await expect(selectAll).not.toBePartiallyChecked();
+
+    // Select-all is the first Tab stop, then each row's box in order. Space selects a row, the
+    // callback gets the selected ids, and select-all turns mixed.
+    await userEvent.tab();
+    await expect(selectAll).toHaveFocus();
+    await userEvent.tab();
+    await expect(lena).toHaveFocus();
+    await userEvent.keyboard(" ");
+    await expect(lena).toBeChecked();
+    await expect(rows[0]).toHaveAttribute("data-selected", "");
+    await expect(rows[1]).not.toHaveAttribute("data-selected");
+    await expect(args.onSelectionChange).toHaveBeenLastCalledWith(["m-01"]);
+    await expect(selectAll).toBePartiallyChecked();
+    await userEvent.tab();
+    await userEvent.keyboard(" ");
+    await expect(ada).toBeChecked();
+    await expect(args.onSelectionChange).toHaveBeenLastCalledWith(["m-01", "m-02"]);
+
+    // Select-all from the mixed state selects every row. Again, it clears them all.
+    await userEvent.keyboard("{Shift>}{Tab}{Tab}{/Shift}");
+    await expect(selectAll).toHaveFocus();
+    await userEvent.keyboard(" ");
+    await expect(selectAll).toBeChecked();
+    await expect(selectAll).not.toBePartiallyChecked();
+    for (const checkbox of canvas.getAllByRole("checkbox")) await expect(checkbox).toBeChecked();
+    for (const row of rows) await expect(row).toHaveAttribute("data-selected", "");
+    await expect(args.onSelectionChange).toHaveBeenLastCalledWith(memberIds);
+    await userEvent.keyboard(" ");
+    await expect(selectAll).not.toBeChecked();
+    for (const checkbox of canvas.getAllByRole("checkbox"))
+      await expect(checkbox).not.toBeChecked();
+    for (const row of rows) await expect(row).not.toHaveAttribute("data-selected");
+    await expect(args.onSelectionChange).toHaveBeenLastCalledWith([]);
+  },
+};
+
+export const SelectableAndPaginated: Story = {
+  args: { columns: plainColumns, selectable: true, pageSize: 5, defaultSelectedIds: ["m-08"] },
+  play: async ({ canvas, userEvent, args }) => {
+    const selectAll = canvas.getByRole("checkbox", { name: "Select all rows on this page" });
+    const status = canvas.getByRole("status");
+    const next = canvas.getByRole("button", { name: "Next" });
+    const previous = canvas.getByRole("button", { name: "Previous" });
+    await expect(canvas.getAllByRole("checkbox")).toHaveLength(6);
+    // Dmitri is selected from the start, but he is on the second page, so select-all here is clear.
+    await expect(selectAll).not.toBeChecked();
+    await expect(selectAll).not.toBePartiallyChecked();
+
+    await userEvent.click(canvas.getByRole("checkbox", { name: "Select Ada Okafor" }));
+    await expect(selectAll).toBePartiallyChecked();
+    await expect(args.onSelectionChange).toHaveBeenLastCalledWith(["m-08", "m-02"]);
+
+    // Select-all on the second page adds that page's rows and keeps Ada.
+    await userEvent.click(next);
+    await expect(status).toHaveTextContent("Page 2 of 3");
+    await expect(canvas.getByRole("checkbox", { name: "Select Dmitri Volkov" })).toBeChecked();
+    await expect(selectAll).toBePartiallyChecked();
+    await userEvent.click(selectAll);
+    await expect(selectAll).toBeChecked();
+    for (const row of getBodyRows(canvas)) await expect(row).toHaveAttribute("data-selected", "");
+    await expect(args.onSelectionChange).toHaveBeenLastCalledWith([
+      "m-08",
+      "m-02",
+      "m-06",
+      "m-07",
+      "m-09",
+      "m-10",
+    ]);
+
+    // Back on the first page only Ada is selected. Select-all fills the page, and clearing it
+    // clears the page and nothing else.
+    await userEvent.click(previous);
+    await expect(status).toHaveTextContent("Page 1 of 3");
+    await expect(selectAll).toBePartiallyChecked();
+    await expect(canvas.getByRole("checkbox", { name: "Select Ada Okafor" })).toBeChecked();
+    await expect(canvas.getByRole("checkbox", { name: "Select Lena Fischer" })).not.toBeChecked();
+    await userEvent.click(selectAll);
+    await expect(selectAll).toBeChecked();
+    await expect(args.onSelectionChange).toHaveBeenLastCalledWith([
+      "m-08",
+      "m-02",
+      "m-06",
+      "m-07",
+      "m-09",
+      "m-10",
+      "m-01",
+      "m-03",
+      "m-04",
+      "m-05",
+    ]);
+    await userEvent.click(selectAll);
+    await expect(selectAll).not.toBeChecked();
+    for (const row of getBodyRows(canvas)) await expect(row).not.toHaveAttribute("data-selected");
+    await expect(args.onSelectionChange).toHaveBeenLastCalledWith([
+      "m-08",
+      "m-06",
+      "m-07",
+      "m-09",
+      "m-10",
+    ]);
+  },
+};
+
+const engineerIds = members.filter((member) => member.role === "Engineer").map(byId);
+
+const TeamWithControlledSelection = () => {
+  const [selectedIds, setSelectedIds] = useState(["m-02"]);
+  return (
+    <div style={{ display: "grid", gap: "var(--kui-space-4)", justifyItems: "start" }}>
+      <DataTable
+        caption="Team members"
+        columns={plainColumns}
+        data={members}
+        getRowId={byId}
+        selectable
+        selectedIds={selectedIds}
+        onSelectionChange={setSelectedIds}
+      />
+      <Button variant="outline" onClick={() => setSelectedIds(engineerIds)}>
+        Select the engineers
+      </Button>
+      <output>Selected: {selectedIds.length === 0 ? "none" : selectedIds.join(", ")}</output>
+    </div>
+  );
+};
+
+export const ControlledSelection: Story = {
+  render: () => <TeamWithControlledSelection />,
+  play: async ({ canvas, userEvent }) => {
+    const selectAll = canvas.getByRole("checkbox", { name: "Select all rows" });
+    const lena = canvas.getByRole("checkbox", { name: "Select Lena Fischer" });
+    const ada = canvas.getByRole("checkbox", { name: "Select Ada Okafor" });
+    await expect(ada).toBeChecked();
+    await expect(canvas.getByText("Selected: m-02")).toBeVisible();
+    await userEvent.click(lena);
+    await expect(lena).toBeChecked();
+    await expect(canvas.getByText("Selected: m-02, m-01")).toBeVisible();
+
+    // A value set outside the table shows in the boxes, and select-all reads mixed for it.
+    await userEvent.click(canvas.getByRole("button", { name: "Select the engineers" }));
+    await expect(canvas.getByText("Selected: m-01, m-02, m-05, m-06, m-12")).toBeVisible();
+    await expect(canvas.getByRole("checkbox", { name: "Select Hana Sato" })).toBeChecked();
+    await expect(canvas.getByRole("checkbox", { name: "Select Mateo Garcia" })).not.toBeChecked();
+    await expect(selectAll).toBePartiallyChecked();
+    await userEvent.click(selectAll);
+    await expect(selectAll).toBeChecked();
+    // Ids keep the order they were selected in, so the engineers come first.
+    await expect(
+      canvas.getByText(
+        "Selected: m-01, m-02, m-05, m-06, m-12, m-03, m-04, m-07, m-08, m-09, m-10, m-11, m-13",
+      ),
+    ).toBeVisible();
+  },
+};
+
+export const Loading: Story = {
+  args: { loading: true },
+  play: async ({ canvas }) => {
+    // The header stays, so the columns are known while the rows are on their way. The status
+    // region is the one body cell, spanning every column.
+    await expect(canvas.getAllByRole("columnheader").map((header) => header.textContent)).toEqual([
+      "Name",
+      "Role",
+      "City",
+      "Projects",
+      "Email",
+    ]);
+    const status = canvas.getByRole("status");
+    await expect(status).toHaveTextContent("Loading");
+    const cell = canvas.getByRole("cell");
+    await expect(cell).toHaveAttribute("colspan", "5");
+    await expect(cell).toContainElement(status);
+    await expect(getBodyRows(canvas)).toHaveLength(1);
+  },
+};
+
+export const Empty: Story = {
+  args: {
+    columns: plainColumns,
+    data: [],
+    selectable: true,
+    emptyMessage: "No members yet. Invite one to get started.",
+  },
+  play: async ({ canvas }) => {
+    // The message is the one body cell, spanning the selection column and the four others.
+    const cell = canvas.getByRole("cell");
+    await expect(cell).toHaveTextContent("No members yet. Invite one to get started.");
+    await expect(cell).toHaveAttribute("colspan", "5");
+    await expect(getBodyRows(canvas)).toHaveLength(1);
+    await expect(canvas.getAllByRole("columnheader")).toHaveLength(5);
+    // Nothing to select, so select-all is disabled. Nothing is loading, so there is no status.
+    await expect(canvas.getByRole("checkbox", { name: "Select all rows" })).toBeDisabled();
+    await expect(canvas.queryByRole("status")).not.toBeInTheDocument();
   },
 };

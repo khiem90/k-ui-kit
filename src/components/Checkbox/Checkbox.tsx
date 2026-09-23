@@ -14,6 +14,11 @@ export interface CheckboxProps extends Omit<
 > {
   /** Visible label. It is also the checkbox's accessible name, and clicking it toggles the box. */
   label: ReactNode;
+  /**
+   * Hides the label visually. It stays in the DOM, so it still names the box for assistive
+   * technology. For a box whose meaning is clear from its surroundings, such as a table row.
+   */
+  hideLabel?: boolean;
   /** Controlled checked state. Pair it with onCheckedChange. */
   checked?: boolean;
   /** Initial checked state when uncontrolled. */
@@ -37,6 +42,7 @@ export interface CheckboxProps extends Omit<
 export const Checkbox = forwardRef<HTMLButtonElement, CheckboxProps>(function Checkbox(
   {
     label,
+    hideLabel = false,
     checked: checkedProp,
     defaultChecked = false,
     onCheckedChange,
@@ -68,6 +74,7 @@ export const Checkbox = forwardRef<HTMLButtonElement, CheckboxProps>(function Ch
       className={["kui-checkbox", className].filter(Boolean).join(" ")}
       data-state={state}
       data-disabled={disabled ? "" : undefined}
+      data-label-hidden={hideLabel ? "" : undefined}
     >
       <CheckboxPrimitive.Root
         ref={ref}

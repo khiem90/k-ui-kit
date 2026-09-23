@@ -210,3 +210,22 @@ export const Required: Story = {
     await expect(canvas.getByText("Submitted: on")).toBeVisible();
   },
 };
+
+export const HiddenLabel: Story = {
+  args: { label: "Select row", hideLabel: true },
+  play: async ({ canvas, userEvent, args }) => {
+    // The label stays in the DOM, so it still names the box, and still toggles it when clicked.
+    const checkbox = canvas.getByRole("checkbox", { name: "Select row" });
+    const label = canvas.getByText("Select row");
+    const { width, height } = label.getBoundingClientRect();
+    await expect(width).toBeLessThanOrEqual(1);
+    await expect(height).toBeLessThanOrEqual(1);
+    await userEvent.tab();
+    await expect(checkbox).toHaveFocus();
+    await userEvent.keyboard(" ");
+    await expect(checkbox).toBeChecked();
+    await expect(args.onCheckedChange).toHaveBeenLastCalledWith(true);
+    await userEvent.click(label);
+    await expect(checkbox).not.toBeChecked();
+  },
+};

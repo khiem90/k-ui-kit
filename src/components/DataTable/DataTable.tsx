@@ -4,7 +4,9 @@ import {
   createPaginatedRowModel,
   createSortedRowModel,
   flexRender,
+  functionalUpdate,
   rowPaginationFeature,
+  rowSelectionFeature,
   rowSortingFeature,
   sortFn_alphanumeric,
   sortFn_basic,
@@ -14,7 +16,9 @@ import {
   useTable,
   type ColumnDef as TableColumnDef,
   type PaginationState,
+  type Row,
   type RowData,
+  type RowSelectionState,
   type SortDirection,
 } from "@tanstack/react-table";
 import {
@@ -22,6 +26,7 @@ import {
   useEffect,
   useId,
   useImperativeHandle,
+  useMemo,
   useRef,
   useState,
   type ForwardedRef,
@@ -32,6 +37,7 @@ import {
 } from "react";
 import { ChevronDownIcon } from "../../icons";
 import { Button } from "../Button/Button";
+import { Checkbox } from "../Checkbox/Checkbox";
 
 // TanStack picks a sort function by value type and only finds the ones registered here. Their
 // names are also valid `sortFn` strings in a column definition.
@@ -46,6 +52,7 @@ const features = tableFeatures({
   },
   rowPaginationFeature,
   paginatedRowModel: createPaginatedRowModel(),
+  rowSelectionFeature,
 });
 
 const ARIA_SORT: Record<SortDirection, "ascending" | "descending"> = {
@@ -55,6 +62,8 @@ const ARIA_SORT: Record<SortDirection, "ascending" | "descending"> = {
 
 /** The page size TanStack documents for one page that holds every row. */
 const ALL_ROWS = Infinity;
+
+const NO_IDS: readonly string[] = [];
 
 /**
  * A column definition in the TanStack Table shape. `accessorKey` names the row field and `header`
@@ -79,7 +88,10 @@ export interface DataTableProps<TData extends RowData> extends Omit<
   columns: readonly ColumnDef<TData>[];
   /** The rows. Keep the reference stable between renders, or every render reprocesses the data. */
   data: readonly TData[];
-  /** Returns a stable id for a row, used as its key. Defaults to the row's index in `data`. */
+  /**
+   * Returns a stable id for a row, used as its key and as its selection id. Defaults to the row's
+   * index in `data`.
+   */
   getRowId?: (row: TData, index: number) => string;
   /** Visible caption above the table. It is also the table's accessible name. */
   caption: ReactNode;
@@ -93,6 +105,40 @@ export interface DataTableProps<TData extends RowData> extends Omit<
    * new value starts over from the first page. Without it every row renders on one page.
    */
   pageSize?: number;
+  /**
+   * Replaces the rows with a loading status, announced to assistive technology. The header stays,
+   * so the columns are known while the rows are on their way.
+   */
+  loading?: boolean;
+  /** Shown in one cell spanning the table when there are no rows. Defaults to "Nothing to show". */
+  emptyMessage?: ReactNode;
+  /**
+   * Adds a Checkbox to each row and a select-all Checkbox to the header. Select-all covers the
+   * rows on the current page, and shows mixed while only some of them are selected. Each row's
+   * box is named "Select" plus the row's first text or number value.
+   */
+  selectable?: boolean;
+  /** Controlled selected row ids. Pair it with onSelectionChange. */
+  selectedIds?: readonly string[];
+  /** Initial selected row ids when uncontrolled. */
+  defaultSelectedIds?: readonly string[];
+  /** Called with every selected row id, across all pages, when the user changes the selection. */
+  onSelectionChange?: (selectedIds: string[]) => void;
+}
+
+/** "Select" plus the row's first text or number value, so the box is named after its row. */
+function getSelectLabel<TData extends RowData>(row: Row<typeof features, TData>) {
+  for (const cell of row.getAllCells()) {
+    const value: unknown = cell.getValue();
+    if ((typeof value === "string" && value.trim() !== "") || Number.isFinite(value)) {
+      return `Select ${value}`;
+    }
+  }
+  return `Select row ${row.index + 1}`;
+}
+
+function toRowSelection(ids: readonly string[]): RowSelectionState {
+  return Object.fromEntries(ids.map((id) => [id, true as const]));
 }
 
 function DataTableInner<TData extends RowData>(
@@ -103,6 +149,12 @@ function DataTableInner<TData extends RowData>(
     caption,
     sortable = false,
     pageSize,
+    loading = false,
+    emptyMessage = "Nothing to show",
+    selectable = false,
+    selectedIds: selectedIdsProp,
+    defaultSelectedIds = NO_IDS,
+    onSelectionChange,
     className,
     ...props
   }: DataTableProps<TData>,
@@ -140,6 +192,11 @@ function DataTableInner<TData extends RowData>(
     setPagination({ pageIndex: 0, pageSize: size });
   }
 
+  const [uncontrolledSelectedIds, setUncontrolledSelectedIds] = useState(defaultSelectedIds);
+  const isSelectionControlled = selectedIdsProp !== undefined;
+  const selectedIds = isSelectionControlled ? selectedIdsProp : uncontrolledSelectedIds;
+  const rowSelection = useMemo(() => toRowSelection(selectedIds), [selectedIds]);
+
   const table = useTable({
     features,
     columns,
@@ -151,9 +208,24 @@ function DataTableInner<TData extends RowData>(
     // Every column starts ascending. TanStack would start numbers descending, and a cycle that
     // differs by column is one a user cannot learn.
     sortDescFirst: false,
-    state: { pagination },
+    enableRowSelection: selectable,
+    state: { pagination, rowSelection },
     onPaginationChange: setPagination,
+    onRowSelectionChange: (updater) => {
+      const next = Object.keys(functionalUpdate(updater, rowSelection));
+      if (!isSelectionControlled) setUncontrolledSelectedIds(next);
+      onSelectionChange?.(next);
+    },
   });
+
+  const headerGroups = table.getHeaderGroups();
+  // While loading the rows are withheld, so the body shows the status and select-all has nothing
+  // to act on.
+  const pageRows = loading ? [] : table.getRowModel().rows;
+  const hasRows = pageRows.length > 0;
+  const allPageRowsSelected = hasRows && table.getIsAllPageRowsSelected();
+  const somePageRowsSelected = hasRows && table.getIsSomePageRowsSelected();
+  const columnCount = table.getAllLeafColumns().length + (selectable ? 1 : 0);
 
   return (
     <div className={["kui-data-table", className].filter(Boolean).join(" ")}>
@@ -169,8 +241,26 @@ function DataTableInner<TData extends RowData>(
             {caption}
           </caption>
           <thead>
-            {table.getHeaderGroups().map((headerGroup) => (
+            {headerGroups.map((headerGroup, groupIndex) => (
               <tr key={headerGroup.id}>
+                {selectable && groupIndex === 0 && (
+                  <th
+                    className="kui-data-table__header kui-data-table__selection"
+                    scope="col"
+                    rowSpan={headerGroups.length > 1 ? headerGroups.length : undefined}
+                  >
+                    <Checkbox
+                      label={
+                        pageSize === undefined ? "Select all rows" : "Select all rows on this page"
+                      }
+                      hideLabel
+                      checked={allPageRowsSelected}
+                      indeterminate={!allPageRowsSelected && somePageRowsSelected}
+                      disabled={!hasRows}
+                      onCheckedChange={(next) => table.toggleAllPageRowsSelected(next)}
+                    />
+                  </th>
+                )}
                 {headerGroup.headers.map((header) => {
                   const { column } = header;
                   // Sorting state outlives `sortable`, and the rows ignore it then, so the header
@@ -213,15 +303,49 @@ function DataTableInner<TData extends RowData>(
             ))}
           </thead>
           <tbody>
-            {table.getRowModel().rows.map((row) => (
-              <tr key={row.id} className="kui-data-table__row">
-                {row.getAllCells().map((cell) => (
-                  <td key={cell.id} className="kui-data-table__cell">
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </td>
-                ))}
+            {loading && (
+              <tr>
+                <td className="kui-data-table__cell kui-data-table__message" colSpan={columnCount}>
+                  <p className="kui-data-table__loading" role="status">
+                    Loading…
+                  </p>
+                </td>
               </tr>
-            ))}
+            )}
+            {!loading && !hasRows && (
+              <tr>
+                <td className="kui-data-table__cell kui-data-table__message" colSpan={columnCount}>
+                  {emptyMessage}
+                </td>
+              </tr>
+            )}
+            {pageRows.map((row) => {
+              // Selection state outlives `selectable` too, and the rows ignore it then.
+              const selected = selectable && row.getIsSelected();
+              return (
+                <tr
+                  key={row.id}
+                  className="kui-data-table__row"
+                  data-selected={selected ? "" : undefined}
+                >
+                  {selectable && (
+                    <td className="kui-data-table__cell kui-data-table__selection">
+                      <Checkbox
+                        label={getSelectLabel(row)}
+                        hideLabel
+                        checked={selected}
+                        onCheckedChange={(next) => row.toggleSelected(next)}
+                      />
+                    </td>
+                  )}
+                  {row.getAllCells().map((cell) => (
+                    <td key={cell.id} className="kui-data-table__cell">
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    </td>
+                  ))}
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
@@ -258,8 +382,9 @@ function DataTableInner<TData extends RowData>(
  * With `sortable`, each accessor column's header is a button that cycles ascending, descending, and
  * unsorted, and the sorted column carries aria-sort. With `pageSize`, previous and next Buttons
  * page through the rows, and a status line announces the page. Sorting returns to the first page.
- * A table wider than its container scrolls sideways, and the scrolling region is then a Tab stop
- * named by the caption.
+ * With `selectable`, each row has a Checkbox and the header a select-all for the current page,
+ * keyed by `getRowId`. A table wider than its container scrolls sideways, and the scrolling region
+ * is then a Tab stop named by the caption.
  */
 export const DataTable = forwardRef(DataTableInner) as <TData extends RowData>(
   props: DataTableProps<TData> & RefAttributes<HTMLTableElement>,

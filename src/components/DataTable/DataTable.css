@@ -119,3 +119,29 @@
   font-size: 0.875rem;
   line-height: 1.25rem;
 }
+
+/* The selection column hugs its box. The box is 4px taller than a text line, so it is pulled up
+   to sit on the row's first line. */
+.kui-data-table__selection {
+  inline-size: 0;
+}
+
+.kui-data-table__selection .kui-checkbox {
+  margin-block: -0.125rem;
+}
+
+.kui-data-table__row[data-selected] {
+  background: color-mix(in srgb, var(--kui-primary) 12%, var(--kui-background));
+}
+
+/* The loading and empty messages sit in one cell that spans the table. Prose, so it may wrap. */
+.kui-data-table__message {
+  padding-block: var(--kui-space-6);
+  color: var(--kui-foreground-muted);
+  text-align: center;
+  white-space: normal;
+}
+
+.kui-data-table__loading {
+  margin: 0;
+}

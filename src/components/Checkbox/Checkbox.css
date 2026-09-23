@@ -90,3 +90,21 @@
   color: var(--kui-foreground-muted);
   cursor: not-allowed;
 }
+
+/* A hidden label is clipped to a pixel and kept inside the root, so it never adds to a scroll
+   container the box sits in. It stays in the DOM and keeps naming the box. */
+.kui-checkbox[data-label-hidden] {
+  position: relative;
+}
+
+.kui-checkbox[data-label-hidden] .kui-checkbox__label {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
