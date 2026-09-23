@@ -120,14 +120,14 @@
   line-height: 1.25rem;
 }
 
-/* The selection column hugs its box. The box is 4px taller than a text line, so it is pulled up
-   to sit on the row's first line. */
+/* The selection column hugs its box, and the margin centres the 1.5rem box on the cell's 1.25rem
+   first line, since cells align to the top. */
 .kui-data-table__selection {
   inline-size: 0;
 }
 
 .kui-data-table__selection .kui-checkbox {
-  margin-block: -0.125rem;
+  margin-block: calc((1.25rem - 1.5rem) / 2);
 }
 
 .kui-data-table__row[data-selected] {

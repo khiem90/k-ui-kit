@@ -23,6 +23,7 @@ import {
 } from "@tanstack/react-table";
 import {
   forwardRef,
+  useDeferredValue,
   useEffect,
   useId,
   useImperativeHandle,
@@ -62,8 +63,6 @@ const ARIA_SORT: Record<SortDirection, "ascending" | "descending"> = {
 
 /** The page size TanStack documents for one page that holds every row. */
 const ALL_ROWS = Infinity;
-
-const NO_IDS: readonly string[] = [];
 
 /**
  * A column definition in the TanStack Table shape. `accessorKey` names the row field and `header`
@@ -115,7 +114,8 @@ export interface DataTableProps<TData extends RowData> extends Omit<
   /**
    * Adds a Checkbox to each row and a select-all Checkbox to the header. Select-all covers the
    * rows on the current page, and shows mixed while only some of them are selected. Each row's
-   * box is named "Select" plus the row's first text or number value.
+   * box is named "Select" plus the row's first text or number value, so put the column that
+   * identifies a row first.
    */
   selectable?: boolean;
   /** Controlled selected row ids. Pair it with onSelectionChange. */
@@ -153,7 +153,7 @@ function DataTableInner<TData extends RowData>(
     emptyMessage = "Nothing to show",
     selectable = false,
     selectedIds: selectedIdsProp,
-    defaultSelectedIds = NO_IDS,
+    defaultSelectedIds = [],
     onSelectionChange,
     className,
     ...props
@@ -219,13 +219,16 @@ function DataTableInner<TData extends RowData>(
   });
 
   const headerGroups = table.getHeaderGroups();
-  // While loading the rows are withheld, so the body shows the status and select-all has nothing
-  // to act on.
+  // While loading the body shows the status in place of the rows, so select-all has nothing to
+  // act on.
   const pageRows = loading ? [] : table.getRowModel().rows;
   const hasRows = pageRows.length > 0;
   const allPageRowsSelected = hasRows && table.getIsAllPageRowsSelected();
   const somePageRowsSelected = hasRows && table.getIsSomePageRowsSelected();
   const columnCount = table.getAllLeafColumns().length + (selectable ? 1 : 0);
+  // A live region announces a change to its text, not text it arrives with, so the loading text
+  // lands one render after the region mounts. React 18 has no initial value and fills it at once.
+  const announceLoading = useDeferredValue(loading, false);
 
   return (
     <div className={["kui-data-table", className].filter(Boolean).join(" ")}>
@@ -251,7 +254,9 @@ function DataTableInner<TData extends RowData>(
                   >
                     <Checkbox
                       label={
-                        pageSize === undefined ? "Select all rows" : "Select all rows on this page"
+                        table.getPageCount() > 1
+                          ? "Select all rows on this page"
+                          : "Select all rows"
                       }
                       hideLabel
                       checked={allPageRowsSelected}
@@ -303,19 +308,16 @@ function DataTableInner<TData extends RowData>(
             ))}
           </thead>
           <tbody>
-            {loading && (
+            {!hasRows && (
               <tr>
                 <td className="kui-data-table__cell kui-data-table__message" colSpan={columnCount}>
-                  <p className="kui-data-table__loading" role="status">
-                    Loading…
-                  </p>
-                </td>
-              </tr>
-            )}
-            {!loading && !hasRows && (
-              <tr>
-                <td className="kui-data-table__cell kui-data-table__message" colSpan={columnCount}>
-                  {emptyMessage}
+                  {loading ? (
+                    <p className="kui-data-table__loading" role="status">
+                      {announceLoading ? "Loading…" : null}
+                    </p>
+                  ) : (
+                    emptyMessage
+                  )}
                 </td>
               </tr>
             )}

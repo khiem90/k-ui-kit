@@ -647,7 +647,7 @@ export const ControlledSelection: Story = {
     await expect(selectAll).toBePartiallyChecked();
     await userEvent.click(selectAll);
     await expect(selectAll).toBeChecked();
-    // Ids keep the order they were selected in, so the engineers come first.
+    // The engineers stay first and select-all appends the rest.
     await expect(
       canvas.getByText(
         "Selected: m-01, m-02, m-05, m-06, m-12, m-03, m-04, m-07, m-08, m-09, m-10, m-11, m-13",
@@ -669,7 +669,7 @@ export const Loading: Story = {
       "Email",
     ]);
     const status = canvas.getByRole("status");
-    await expect(status).toHaveTextContent("Loading");
+    await waitFor(() => expect(status).toHaveTextContent("Loading"));
     const cell = canvas.getByRole("cell");
     await expect(cell).toHaveAttribute("colspan", "5");
     await expect(cell).toContainElement(status);
