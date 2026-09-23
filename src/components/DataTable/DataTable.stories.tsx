@@ -134,6 +134,8 @@ const columns: ColumnDef<Member>[] = [
   },
 ];
 
+const byId = (row: { id: string }) => row.id;
+
 type Canvas = ReturnType<typeof within>;
 
 /** The body rows, without the header row. */
@@ -154,7 +156,7 @@ const getColumnText = (canvas: Canvas, header: string) => {
 const meta: Meta<DataTableProps<Member>> = {
   title: "Components/DataTable",
   component: DataTable,
-  args: { caption: "Team members", columns, data: members, getRowId: (member) => member.id },
+  args: { caption: "Team members", columns, data: members, getRowId: byId },
 };
 
 export default meta;
@@ -201,9 +203,12 @@ export const Sortable: Story = {
     const projects = canvas.getByRole("columnheader", { name: "Projects" });
     const email = canvas.getByRole("columnheader", { name: "Email" });
     const sortByName = within(name).getByRole("button", { name: "Name" });
+    const nameIcon = name.querySelector(".kui-data-table__sort-icon");
     // A display column has no value to sort by, so its header stays plain text.
     await expect(within(email).queryByRole("button")).not.toBeInTheDocument();
     await expect(name).not.toHaveAttribute("aria-sort");
+    // The chevron only shows once the column sorts, so it never stands for two states.
+    await expect(nameIcon).not.toBeVisible();
     await expect(getColumnText(canvas, "Name").slice(0, 3)).toEqual(originalOrder);
 
     // The first header button is the first Tab stop. Enter sorts ascending, then descending, then
@@ -212,6 +217,7 @@ export const Sortable: Story = {
     await expect(sortByName).toHaveFocus();
     await userEvent.keyboard("{Enter}");
     await expect(name).toHaveAttribute("aria-sort", "ascending");
+    await expect(nameIcon).toBeVisible();
     await expect(getColumnText(canvas, "Name").slice(0, 3)).toEqual([
       "Ada Okafor",
       "Bao Nguyen",
@@ -262,7 +268,7 @@ export const Paginated: Story = {
       "Hana Sato",
     ]);
 
-    // A disabled control is not a Tab stop, so the first Tab lands on Next.
+    // A disabled Button is not a Tab stop, so the first Tab lands on Next.
     await userEvent.tab();
     await expect(next).toHaveFocus();
     await userEvent.keyboard("{Enter}");
@@ -422,12 +428,7 @@ const employeeColumns: ColumnDef<Employee>[] = [
 export const Wide: Story = {
   render: () => (
     <div style={{ inlineSize: "32rem" }}>
-      <DataTable
-        caption="Employees"
-        columns={employeeColumns}
-        data={employees}
-        getRowId={(employee) => employee.id}
-      />
+      <DataTable caption="Employees" columns={employeeColumns} data={employees} getRowId={byId} />
     </div>
   ),
   play: async ({ canvas, userEvent }) => {
@@ -454,7 +455,7 @@ const TeamWithRef = () => {
         caption="Team members"
         columns={plainColumns}
         data={members}
-        getRowId={(member) => member.id}
+        getRowId={byId}
       />
       <Button
         variant="outline"
@@ -467,7 +468,7 @@ const TeamWithRef = () => {
   );
 };
 
-export const TableThroughRef: Story = {
+export const RowsCountedThroughRef: Story = {
   render: () => <TeamWithRef />,
   play: async ({ canvas, userEvent }) => {
     const table = canvas.getByRole("table", { name: "Team members" });

@@ -77,14 +77,14 @@
   outline-offset: -2px;
 }
 
-/* Muted while the column is unsorted, so a sortable header is recognisable without shouting. */
+/* Hidden until the column sorts. Hover and focus show it muted, pointing the way the next
+   activation sorts. An unsorted column and an ascending one must differ by more than colour. */
 .kui-data-table__sort-icon {
   display: inline-flex;
   flex-shrink: 0;
+  visibility: hidden;
   color: var(--kui-foreground-muted);
-  transition:
-    color var(--kui-motion-duration),
-    transform var(--kui-motion-duration);
+  transition: transform var(--kui-motion-duration);
 }
 
 .kui-data-table__sort-icon > svg {
@@ -97,7 +97,12 @@
 }
 
 .kui-data-table__sort:hover .kui-data-table__sort-icon,
+.kui-data-table__sort:focus-visible .kui-data-table__sort-icon {
+  visibility: visible;
+}
+
 .kui-data-table__header[aria-sort] .kui-data-table__sort-icon {
+  visibility: visible;
   color: inherit;
 }
 

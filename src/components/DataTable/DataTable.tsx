@@ -4,7 +4,6 @@ import {
   createPaginatedRowModel,
   createSortedRowModel,
   flexRender,
-  functionalUpdate,
   rowPaginationFeature,
   rowSortingFeature,
   sortFn_alphanumeric,
@@ -14,6 +13,7 @@ import {
   tableFeatures,
   useTable,
   type ColumnDef as TableColumnDef,
+  type PaginationState,
   type RowData,
   type SortDirection,
 } from "@tanstack/react-table";
@@ -22,7 +22,6 @@ import {
   useEffect,
   useId,
   useImperativeHandle,
-  useMemo,
   useRef,
   useState,
   type ForwardedRef,
@@ -34,9 +33,8 @@ import {
 import { ChevronDownIcon } from "../../icons";
 import { Button } from "../Button/Button";
 
-// The registered sort functions are the ones TanStack picks by value type: text and alphanumeric
-// for strings, datetime for dates, basic for everything else. Their names are also valid `sortFn`
-// strings in a column definition.
+// TanStack picks a sort function by value type and only finds the ones registered here. Their
+// names are also valid `sortFn` strings in a column definition.
 const features = tableFeatures({
   rowSortingFeature,
   sortedRowModel: createSortedRowModel(),
@@ -54,6 +52,9 @@ const ARIA_SORT: Record<SortDirection, "ascending" | "descending"> = {
   asc: "ascending",
   desc: "descending",
 };
+
+/** The page size TanStack documents for one page that holds every row. */
+const ALL_ROWS = Infinity;
 
 /**
  * A column definition in the TanStack Table shape. `accessorKey` names the row field and `header`
@@ -88,8 +89,8 @@ export interface DataTableProps<TData extends RowData> extends Omit<
    */
   sortable?: boolean;
   /**
-   * Rows per page. Adds previous and next controls and a status line that announces the page.
-   * Without it every row renders on one page and there are no controls.
+   * Rows per page. Adds previous and next Buttons and a status line that announces the page. A
+   * new value starts over from the first page. Without it every row renders on one page.
    */
   pageSize?: number;
 }
@@ -110,7 +111,11 @@ function DataTableInner<TData extends RowData>(
   const captionId = useId();
   const scrollerRef = useRef<HTMLDivElement>(null);
   const tableRef = useRef<HTMLTableElement>(null);
-  useImperativeHandle(ref, () => tableRef.current as HTMLTableElement, []);
+  useImperativeHandle<HTMLTableElement | null, HTMLTableElement | null>(
+    ref,
+    () => tableRef.current,
+    [],
+  );
 
   // While the table is wider than its container, the container is a named region and a Tab stop,
   // so a keyboard user can reach it and scroll it. Measured, because a Tab stop that scrolls
@@ -128,16 +133,12 @@ function DataTableInner<TData extends RowData>(
     return () => observer.disconnect();
   }, []);
 
-  const [pageIndex, setPageIndex] = useState(0);
-  const [lastPageSize, setLastPageSize] = useState(pageSize);
-  if (pageSize !== lastPageSize) {
+  const size = pageSize ?? ALL_ROWS;
+  const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: size });
+  if (pagination.pageSize !== size) {
     // A new page size starts over from the first page.
-    setLastPageSize(pageSize);
-    setPageIndex(0);
+    setPagination({ pageIndex: 0, pageSize: size });
   }
-  // Infinity is the page size TanStack documents for one page that holds every row.
-  const size = pageSize ?? Infinity;
-  const pagination = useMemo(() => ({ pageIndex, pageSize: size }), [pageIndex, size]);
 
   const table = useTable({
     features,
@@ -151,10 +152,7 @@ function DataTableInner<TData extends RowData>(
     // differs by column is one a user cannot learn.
     sortDescFirst: false,
     state: { pagination },
-    onPaginationChange: (updater) =>
-      setPageIndex(
-        (previous) => functionalUpdate(updater, { pageIndex: previous, pageSize: size }).pageIndex,
-      ),
+    onPaginationChange: setPagination,
   });
 
   return (
@@ -175,7 +173,9 @@ function DataTableInner<TData extends RowData>(
               <tr key={headerGroup.id}>
                 {headerGroup.headers.map((header) => {
                   const { column } = header;
-                  const sorted = column.getIsSorted();
+                  // Sorting state outlives `sortable`, and the rows ignore it then, so the header
+                  // ignores it too.
+                  const sorted = column.getCanSort() && column.getIsSorted();
                   const content = header.isPlaceholder
                     ? null
                     : flexRender(column.columnDef.header, header.getContext());
@@ -193,7 +193,6 @@ function DataTableInner<TData extends RowData>(
                           onClick={() => column.toggleSorting()}
                         >
                           {content}
-                          {/* Points the way the column is sorted, or the way the next activation sorts it. */}
                           <span
                             className="kui-data-table__sort-icon"
                             data-direction={
@@ -229,7 +228,7 @@ function DataTableInner<TData extends RowData>(
       {pageSize !== undefined && (
         <div className="kui-data-table__pagination">
           <p className="kui-data-table__page-status" role="status">
-            Page {pageIndex + 1} of {Math.max(table.getPageCount(), 1)}
+            Page {pagination.pageIndex + 1} of {Math.max(table.getPageCount(), 1)}
           </p>
           <Button
             variant="outline"
@@ -257,7 +256,7 @@ function DataTableInner<TData extends RowData>(
  * Rows from a data array, laid out by column definitions in the TanStack Table shape. Renders a
  * native table with a caption and scoped column headers, so a screen reader navigates it as a table.
  * With `sortable`, each accessor column's header is a button that cycles ascending, descending, and
- * unsorted, and the sorted column carries aria-sort. With `pageSize`, previous and next controls
+ * unsorted, and the sorted column carries aria-sort. With `pageSize`, previous and next Buttons
  * page through the rows, and a status line announces the page. Sorting returns to the first page.
  * A table wider than its container scrolls sideways, and the scrolling region is then a Tab stop
  * named by the caption.
