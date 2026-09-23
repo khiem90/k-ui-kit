@@ -1,7 +1,15 @@
 "use client";
 
 import * as SelectPrimitive from "@radix-ui/react-select";
-import { forwardRef, type ButtonHTMLAttributes, type HTMLAttributes, type ReactNode } from "react";
+import {
+  createContext,
+  forwardRef,
+  useContext,
+  useState,
+  type ButtonHTMLAttributes,
+  type HTMLAttributes,
+  type ReactNode,
+} from "react";
 import { CheckIcon, ChevronDownIcon } from "../../icons";
 
 export type SelectSize = "sm" | "md" | "lg";
@@ -10,6 +18,18 @@ export type SelectSize = "sm" | "md" | "lg";
 const SIDE_OFFSET = 4;
 /** Room the list keeps from the viewport edge before it flips above the trigger or slides along. */
 const COLLISION_PADDING = 8;
+
+interface SelectContextValue {
+  open: boolean;
+}
+
+const SelectContext = createContext<SelectContextValue | null>(null);
+
+function useSelectContext(part: string) {
+  const context = useContext(SelectContext);
+  if (!context) throw new Error(`Select.${part} must be rendered inside Select.Root.`);
+  return context;
+}
 
 /**
  * Root renders no element of its own, so it takes no ref, class name, or DOM props. Inside a form it
@@ -32,7 +52,20 @@ export interface SelectRootProps {
   children?: ReactNode;
 }
 
-const Root = (props: SelectRootProps) => <SelectPrimitive.Root {...props} />;
+const Root = ({ children, ...props }: SelectRootProps) => {
+  // Owning the open state lets the trigger leave the Tab order while the list is open. Focus is
+  // held inside the list then, and Radix hides the rest of the page from assistive technology, so
+  // a trigger still in the Tab order would be a focusable element inside aria-hidden.
+  const [open, setOpen] = useState(false);
+
+  return (
+    <SelectContext.Provider value={{ open }}>
+      <SelectPrimitive.Root open={open} onOpenChange={setOpen} {...props}>
+        {children}
+      </SelectPrimitive.Root>
+    </SelectContext.Provider>
+  );
+};
 
 /**
  * The ref, `className`, and every other prop go to the button that carries the combobox role. It
@@ -53,11 +86,14 @@ const Trigger = forwardRef<HTMLButtonElement, SelectTriggerProps>(function Selec
   { placeholder, size = "md", className, ...props },
   ref,
 ) {
+  const { open } = useSelectContext("Trigger");
+
   return (
     <SelectPrimitive.Trigger
       ref={ref}
       className={["kui-select__trigger", className].filter(Boolean).join(" ")}
       data-size={size}
+      tabIndex={open ? -1 : undefined}
       {...props}
     >
       <SelectPrimitive.Value className="kui-select__value" placeholder={placeholder} />

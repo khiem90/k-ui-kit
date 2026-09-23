@@ -21,14 +21,6 @@ const expectClosed = async (trigger: HTMLElement) => {
   await expect(trigger).toHaveAttribute("aria-expanded", "false");
 };
 
-/**
- * While the list is open, Radix hides the rest of the page from assistive technology and traps focus
- * inside the list, so nothing outside it can be reached. axe cannot see the trap: it flags the
- * trigger, which is focusable and now inside aria-hidden. A Story that ends with the list open, so
- * that axe audits the options, switches that one rule off.
- */
-const openListA11y = { a11y: { config: { rules: [{ id: "aria-hidden-focus", enabled: false }] } } };
-
 const meta = {
   title: "Components/Select",
   component: Select.Root,
@@ -188,7 +180,6 @@ export const WithPlaceholder: Story = {
 };
 
 export const WithGroups: Story = {
-  parameters: openListA11y,
   render: (args) => (
     <Select.Root {...args}>
       <Select.Trigger aria-label="Produce" />
@@ -207,7 +198,8 @@ export const WithGroups: Story = {
   play: async ({ canvas, userEvent, args }) => {
     const trigger = canvas.getByRole("combobox", { name: "Produce" });
     await userEvent.tab();
-    await userEvent.keyboard("{Enter}");
+    // The arrow keys open the list from the trigger as well as Enter and Space.
+    await userEvent.keyboard("{ArrowDown}");
     const listbox = await findListbox();
     // The label heads each group in the list and names it for assistive technology.
     const fruit = within(listbox).getByRole("group", { name: "Fruit" });
@@ -234,15 +226,16 @@ export const WithGroups: Story = {
     await expect(trigger).toHaveTextContent("Carrot");
     await expect(args.onValueChange).toHaveBeenLastCalledWith("carrot");
 
-    // Left open so axe audits the list with its groups and the check on the picked option.
+    // Left open so axe audits the list with its groups and the check on the picked option. Focus is
+    // held in the list meanwhile, so the trigger leaves the Tab order until it closes.
     await userEvent.keyboard("{Enter}");
     const reopened = await findListbox();
     await expectFocus(within(reopened).getByRole("option", { name: "Carrot" }));
+    await expect(trigger).toHaveAttribute("tabindex", "-1");
   },
 };
 
 export const WithDisabledItem: Story = {
-  parameters: openListA11y,
   render: (args) => (
     <Select.Root {...args}>
       <Select.Trigger aria-label="Fruit" />
@@ -259,7 +252,7 @@ export const WithDisabledItem: Story = {
   play: async ({ canvas, userEvent, args }) => {
     const trigger = canvas.getByRole("combobox", { name: "Fruit" });
     await userEvent.tab();
-    await userEvent.keyboard("{Enter}");
+    await userEvent.keyboard(" ");
     const listbox = await findListbox();
     const apple = within(listbox).getByRole("option", { name: "Apple" });
     const banana = within(listbox).getByRole("option", { name: "Banana" });
@@ -273,6 +266,10 @@ export const WithDisabledItem: Story = {
     await expect(blueberry).toHaveFocus();
     await userEvent.keyboard("{ArrowUp}");
     await expect(apple).toHaveFocus();
+
+    // Typeahead skips it too: the first option starting with b is Blueberry.
+    await userEvent.keyboard("b");
+    await expect(blueberry).toHaveFocus();
 
     // Clicking it picks nothing and leaves the list open, for axe to audit the disabled option.
     await userEvent.click(banana);

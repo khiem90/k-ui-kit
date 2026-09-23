@@ -58,7 +58,9 @@
   transition: transform var(--kui-motion-duration);
 }
 
-.kui-select__icon > svg {
+.kui-select__icon > svg,
+.kui-select__item-indicator > svg,
+.kui-select__scroll-button > svg {
   inline-size: 1rem;
   block-size: 1rem;
 }
@@ -126,11 +128,6 @@
   cursor: default;
 }
 
-.kui-select__scroll-button > svg {
-  inline-size: 1rem;
-  block-size: 1rem;
-}
-
 .kui-select__scroll-button[data-side="up"] > svg {
   transform: rotate(180deg);
 }
@@ -148,7 +145,6 @@
   line-height: 1.25rem;
   cursor: pointer;
   user-select: none;
-  outline: none;
 }
 
 /* Radix focuses the option under the pointer or the arrow keys, so one state covers hover and
@@ -156,6 +152,13 @@
 .kui-select__item[data-highlighted] {
   background: var(--kui-primary);
   color: var(--kui-primary-foreground);
+}
+
+/* The option under the arrow keys holds real focus, and the ring says so where the fill cannot,
+   such as under forced colours. */
+.kui-select__item:focus-visible {
+  outline: 2px solid var(--kui-focus-ring);
+  outline-offset: 2px;
 }
 
 .kui-select__item[data-disabled] {
@@ -167,11 +170,6 @@
   position: absolute;
   inset-inline-start: var(--kui-space-2);
   display: inline-flex;
-}
-
-.kui-select__item-indicator > svg {
-  inline-size: 1rem;
-  block-size: 1rem;
 }
 
 .kui-select__group-label {
