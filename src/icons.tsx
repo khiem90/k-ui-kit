@@ -22,6 +22,12 @@ export const MinusIcon = () => (
   </svg>
 );
 
+export const ChevronDownIcon = () => (
+  <svg {...iconProps}>
+    <path d="M4 6l4 4 4-4" />
+  </svg>
+);
+
 export const CloseIcon = () => (
   <svg {...iconProps}>
     <path d="M4 4l8 8M12 4l-8 8" />

@@ -1,0 +1,184 @@
+.kui-select__trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--kui-space-2);
+  box-sizing: border-box;
+  inline-size: 100%;
+  margin: 0;
+  border: 1px solid var(--kui-border);
+  border-radius: var(--kui-radius-md);
+  background: var(--kui-background);
+  color: var(--kui-foreground);
+  font-family: var(--kui-font-family);
+  line-height: 1;
+  text-align: start;
+  cursor: pointer;
+  appearance: none;
+  transition:
+    background-color var(--kui-motion-duration),
+    border-color var(--kui-motion-duration),
+    color var(--kui-motion-duration);
+}
+
+.kui-select__trigger[data-size="sm"] {
+  min-block-size: 2rem;
+  padding: 0 var(--kui-space-2);
+  font-size: 0.875rem;
+}
+
+.kui-select__trigger[data-size="md"] {
+  min-block-size: 2.5rem;
+  padding: 0 var(--kui-space-3);
+  font-size: 1rem;
+}
+
+.kui-select__trigger[data-size="lg"] {
+  min-block-size: 3rem;
+  padding: 0 var(--kui-space-4);
+  font-size: 1.125rem;
+}
+
+.kui-select__value {
+  flex: 1;
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kui-select__trigger[data-placeholder] .kui-select__value {
+  color: var(--kui-foreground-muted);
+}
+
+.kui-select__icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  color: var(--kui-foreground-muted);
+  transition: transform var(--kui-motion-duration);
+}
+
+.kui-select__icon > svg {
+  inline-size: 1rem;
+  block-size: 1rem;
+}
+
+.kui-select__trigger[data-state="open"] .kui-select__icon {
+  transform: rotate(180deg);
+}
+
+.kui-select__trigger:where(:not([data-disabled])):hover {
+  border-color: var(--kui-foreground);
+}
+
+.kui-select__trigger:focus-visible {
+  outline: 2px solid var(--kui-focus-ring);
+  outline-offset: 2px;
+}
+
+.kui-select__trigger[data-disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* The list is portaled to the end of body, so document order already puts it above earlier content
+   and it carries no z-index. */
+.kui-select__content {
+  box-sizing: border-box;
+  min-inline-size: var(--radix-select-trigger-width);
+  /* Capped so a long list scrolls instead of covering the page. */
+  max-block-size: min(20rem, var(--radix-select-content-available-height));
+  overflow: hidden;
+  border: 1px solid var(--kui-border);
+  border-radius: var(--kui-radius-md);
+  background: var(--kui-background);
+  color: var(--kui-foreground);
+  font-family: var(--kui-font-family);
+  font-size: 1rem;
+  transform-origin: var(--radix-select-content-transform-origin);
+}
+
+/* Only the open state animates, and only scale. The same animation on the closed state would make
+   Radix hold a list closed mid-entrance until it ended, and a fade would leave text half transparent
+   when axe measures its contrast. The motion Token is 0ms under prefers-reduced-motion. */
+.kui-select__content:where([data-state="open"]) {
+  animation: kui-select-in var(--kui-motion-duration) ease-out;
+}
+
+@keyframes kui-select-in {
+  from {
+    transform: scale(0.96);
+  }
+}
+
+.kui-select__viewport {
+  padding: var(--kui-space-1);
+}
+
+/* Radix renders each button only while the list can scroll its way, and hides the viewport's own
+   scrollbar, so the buttons are the only sign that more options exist. */
+.kui-select__scroll-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  block-size: 1.5rem;
+  color: var(--kui-foreground-muted);
+  cursor: default;
+}
+
+.kui-select__scroll-button > svg {
+  inline-size: 1rem;
+  block-size: 1rem;
+}
+
+.kui-select__scroll-button[data-side="up"] > svg {
+  transform: rotate(180deg);
+}
+
+/* Room on the inline start for the check, so the text of every option lines up. */
+.kui-select__item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  min-block-size: 2rem;
+  padding-block: var(--kui-space-1);
+  padding-inline: var(--kui-space-8) var(--kui-space-3);
+  border-radius: var(--kui-radius-sm);
+  line-height: 1.25rem;
+  cursor: pointer;
+  user-select: none;
+  outline: none;
+}
+
+/* Radix focuses the option under the pointer or the arrow keys, so one state covers hover and
+   keyboard focus. */
+.kui-select__item[data-highlighted] {
+  background: var(--kui-primary);
+  color: var(--kui-primary-foreground);
+}
+
+.kui-select__item[data-disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.kui-select__item-indicator {
+  position: absolute;
+  inset-inline-start: var(--kui-space-2);
+  display: inline-flex;
+}
+
+.kui-select__item-indicator > svg {
+  inline-size: 1rem;
+  block-size: 1rem;
+}
+
+.kui-select__group-label {
+  padding-block: var(--kui-space-2) var(--kui-space-1);
+  padding-inline: var(--kui-space-8) var(--kui-space-3);
+  color: var(--kui-foreground-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1rem;
+}

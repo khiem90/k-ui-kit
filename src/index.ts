@@ -32,3 +32,12 @@ export type {
   DialogTitleProps,
   DialogTriggerProps,
 } from "./components/Dialog/Dialog";
+export { Select } from "./components/Select/Select";
+export type {
+  SelectContentProps,
+  SelectGroupProps,
+  SelectItemProps,
+  SelectRootProps,
+  SelectSize,
+  SelectTriggerProps,
+} from "./components/Select/Select";
