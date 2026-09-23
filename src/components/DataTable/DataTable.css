@@ -1,0 +1,116 @@
+.kui-data-table {
+  display: flex;
+  flex-direction: column;
+  gap: var(--kui-space-3);
+  color: var(--kui-foreground);
+  font-family: var(--kui-font-family);
+}
+
+.kui-data-table__scroll {
+  overflow-x: auto;
+}
+
+.kui-data-table__scroll:focus-visible {
+  outline: 2px solid var(--kui-focus-ring);
+  outline-offset: 2px;
+}
+
+.kui-data-table__table {
+  inline-size: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+}
+
+.kui-data-table__caption {
+  padding-block-end: var(--kui-space-2);
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.5rem;
+  text-align: start;
+}
+
+/* Cells hold values, not prose, so they stay on one line and a wide table scrolls instead of
+   cramming its columns. A column of longer text wraps again with white-space: normal on its cells. */
+.kui-data-table__header,
+.kui-data-table__cell {
+  padding: var(--kui-space-2) var(--kui-space-3);
+  text-align: start;
+  vertical-align: top;
+  white-space: nowrap;
+}
+
+.kui-data-table__header {
+  border-block-end: 1px solid var(--kui-border);
+  font-weight: 600;
+}
+
+.kui-data-table__cell {
+  border-block-end: 1px solid color-mix(in srgb, var(--kui-border) 40%, transparent);
+}
+
+/* The button takes the cell's padding so the whole header cell is the hit target. */
+.kui-data-table__header:has(.kui-data-table__sort) {
+  padding: 0;
+}
+
+.kui-data-table__sort {
+  display: flex;
+  align-items: center;
+  gap: var(--kui-space-1);
+  box-sizing: border-box;
+  inline-size: 100%;
+  margin: 0;
+  padding: var(--kui-space-2) var(--kui-space-3);
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: inherit;
+  cursor: pointer;
+  appearance: none;
+}
+
+/* Inside the cell, where the scroll container cannot clip it. */
+.kui-data-table__sort:focus-visible {
+  outline: 2px solid var(--kui-focus-ring);
+  outline-offset: -2px;
+}
+
+/* Muted while the column is unsorted, so a sortable header is recognisable without shouting. */
+.kui-data-table__sort-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  color: var(--kui-foreground-muted);
+  transition:
+    color var(--kui-motion-duration),
+    transform var(--kui-motion-duration);
+}
+
+.kui-data-table__sort-icon > svg {
+  inline-size: 1rem;
+  block-size: 1rem;
+}
+
+.kui-data-table__sort-icon[data-direction="ascending"] {
+  transform: rotate(180deg);
+}
+
+.kui-data-table__sort:hover .kui-data-table__sort-icon,
+.kui-data-table__header[aria-sort] .kui-data-table__sort-icon {
+  color: inherit;
+}
+
+.kui-data-table__pagination {
+  display: flex;
+  align-items: center;
+  gap: var(--kui-space-2);
+}
+
+.kui-data-table__page-status {
+  flex: 1;
+  margin: 0;
+  color: var(--kui-foreground-muted);
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+}

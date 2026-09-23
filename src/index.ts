@@ -41,3 +41,5 @@ export type {
   SelectSize,
   SelectTriggerProps,
 } from "./components/Select/Select";
+export { DataTable } from "./components/DataTable/DataTable";
+export type { ColumnDef, DataTableProps } from "./components/DataTable/DataTable";
