@@ -32,12 +32,12 @@ package.json pins the pnpm version. Run `corepack enable` once and corepack pick
 | `pnpm build`           | tsup to `dist/`, then verifies the output shape  |
 | `pnpm build:storybook` | Static Storybook to `storybook-static/`          |
 | `pnpm check`           | Lint, typecheck, test, and build in one go       |
-| `pnpm smoke`           | Packs the kit into fresh Next.js and Vite apps   |
+| `pnpm smoke`           | Proves the kit in fresh Next.js and Vite apps    |
 | `pnpm changeset`       | Writes a changeset for the current change        |
 
 Stories are the tests. The a11y addon fails the run on any axe violation, and play functions cover keyboard behaviour.
 
-`pnpm smoke` is the consumer check. It packs the package, scaffolds a Next.js App Router app and a Vite app in a temporary folder, installs the tarball into each, builds them, and drives them in Chromium: every Component renders from a server component, both Themes apply through the attribute and the system preference, and the Vite bundle holds only the Components the app imports. It needs the network and takes a few minutes. Run it before merging a version pull request.
+`pnpm smoke` is the Consumer check. It packs the package, scaffolds a Next.js App Router app and a Vite app in a temporary folder, installs the tarball into each, builds them, and drives them in Chromium: every Component renders from a server component, both Themes apply through the attribute and the system preference, and the Vite bundle holds only the Components the app imports. It needs the network and takes a few minutes. Run it before merging a version pull request.
 
 If the first test run after adding a dependency fails with a 404 on a `node_modules/.cache` chunk, run it again. Vite re-optimises dependencies on that run and invalidates the chunk the browser had already requested.
 
@@ -73,7 +73,8 @@ Tokens expire, so repeat steps 2 and 3 when a Release run fails with an authenti
 - `src/styles/` holds the Tokens and the single entry stylesheet.
 - `src/icons.tsx` holds the inline SVG icons the kit's own Components use. They are not exported.
 - `src/index.ts` is the public entry. It carries no client directive and assembles the composite namespaces, so a server component can render `Dialog.Root`. Each Component's file carries its own directive and is built to its own file under `dist/`. `docs/adr/0003-client-boundary-below-the-entry.md` has the reasoning.
-- `scripts/` holds the build verifier and the consumer smoke test.
+- `scripts/` holds the build verifier and the Consumer smoke test.
+- `src/docs/` holds the Getting started page and the Story it renders.
 - `.changeset/` holds pending changesets and the Changesets config.
 - `.github/workflows/` holds the CI, Pages, and Release workflows.
 - `CONTEXT.md` is the glossary. `docs/adr/` records the decisions behind the hard choices.

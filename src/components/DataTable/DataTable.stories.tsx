@@ -1,8 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, fn, waitFor, within } from "storybook/test";
 import { useRef, useState } from "react";
-import { Button } from "../Button/Button";
-import { DataTable, type ColumnDef, type DataTableProps } from "./DataTable";
+import { Button, DataTable, type ColumnDef, type DataTableProps } from "../../index";
 
 interface Member {
   id: string;

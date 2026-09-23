@@ -27,7 +27,7 @@ function SignUpForm() {
 }
 
 const meta = {
-  title: "Examples/Sign-up form",
+  title: "Sign-up form",
   component: SignUpForm,
   // The Getting started page shows it through a Canvas block, so it needs no sidebar entry and no
   // docs page of its own. It still runs as a test.

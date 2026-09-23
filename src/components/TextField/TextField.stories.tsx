@@ -1,8 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect } from "storybook/test";
 import { useRef, useState } from "react";
-import { Button } from "../Button/Button";
-import { TextField } from "./TextField";
+import { Button, TextField } from "../../index";
 
 const meta = {
   title: "Components/TextField",

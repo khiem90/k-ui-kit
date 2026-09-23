@@ -1,8 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, fn } from "storybook/test";
 import { useRef, useState } from "react";
-import { Button } from "../Button/Button";
-import { Checkbox, type CheckboxProps } from "./Checkbox";
+import { Button, Checkbox, type CheckboxProps } from "../../index";
 
 const meta = {
   title: "Components/Checkbox",

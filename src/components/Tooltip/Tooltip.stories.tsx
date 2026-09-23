@@ -1,8 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, fn, waitFor, within } from "storybook/test";
 import { useCallback, useState } from "react";
-import { Button } from "../Button/Button";
-import { Tooltip, type TooltipSide } from "./Tooltip";
+import { Button, Tooltip, type TooltipSide } from "../../index";
 
 /** The box renders in a portal at the end of body, outside the Story's canvas. */
 const findTooltip = () => within(document.body).findByRole("tooltip", {}, { timeout: 2000 });

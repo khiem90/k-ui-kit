@@ -1,11 +1,11 @@
 import { Canvas, Meta } from "@storybook/addon-docs/blocks";
-import * as Examples from "./GettingStarted.stories";
+import * as SignUpStories from "./GettingStarted.stories";
 
 <Meta title="Getting started" />
 
 # Getting started
 
-k-ui-kit is a small set of accessible React Components styled with plain CSS. One package, one stylesheet, and a handful of Tokens you override to make it yours.
+k-ui-kit is a small set of accessible React Components styled with plain CSS. One package, one stylesheet, and Tokens you override.
 
 ## Install
 
@@ -23,7 +23,7 @@ Import it once, at the root of your app. In Next.js that is `app/layout.tsx`. In
 import "k-ui-kit/styles.css";
 ```
 
-That one file carries the Tokens and every Component's styles. Class names and Tokens are prefixed `kui`, so nothing collides with your own CSS. It ships no font files: the default font is `system-ui`.
+That one file carries the Tokens and every Component's styles. Class names and Tokens are prefixed `kui`, so nothing collides with your own CSS. It ships no font files. The default font is `system-ui`.
 
 ## Use a Component
 
@@ -50,7 +50,7 @@ import { Button, Dialog } from "k-ui-kit";
 </Dialog.Root>;
 ```
 
-Every Component works inside a React Server Component tree, namespaces included. The package draws its own client boundary, so you never add `"use client"` for it. One limit comes from React rather than the kit: a function cannot travel from the server to the browser, so props such as `onValueChange` or a DataTable `cell` renderer have to come from a client component.
+Every Component works inside a React Server Component tree, namespaces included. The package draws its own client boundary, so you never add `"use client"` for it. One limit comes from React rather than the kit. A function cannot travel from the server to the browser, so props such as `onValueChange` or a DataTable `cell` renderer have to come from a client component.
 
 ## A form
 
@@ -84,7 +84,7 @@ export function SignUpForm() {
 }
 ```
 
-<Canvas of={Examples.SignUp} sourceState="none" />
+<Canvas of={SignUpStories.SignUp} sourceState="none" />
 
 ## Themes
 
@@ -118,25 +118,23 @@ Every design value is a Token on `:root`. Set the ones you want and the kit's ow
 
 If your app always sets `data-theme` on the root, the media query block is not needed.
 
-The Tokens, with their light defaults:
+The Tokens and their defaults in each Theme. The dark Theme changes the colours only.
 
-| Token                           | Default                        | Used for                                 |
-| ------------------------------- | ------------------------------ | ---------------------------------------- |
-| `--kui-background`              | `#ffffff`                      | Page and control backgrounds             |
-| `--kui-background-subtle`       | `#f4f4f5`                      | Hover states, table header, striped rows |
-| `--kui-foreground`              | `#18181b`                      | Text                                     |
-| `--kui-foreground-muted`        | `#52525b`                      | Descriptions and placeholders            |
-| `--kui-border`                  | `#86868f`                      | Control borders                          |
-| `--kui-primary`                 | `#2563eb`                      | Primary actions and checked states       |
-| `--kui-primary-foreground`      | `#ffffff`                      | Text on primary                          |
-| `--kui-danger`                  | `#dc2626`                      | Destructive actions and errors           |
-| `--kui-danger-foreground`       | `#ffffff`                      | Text on danger                           |
-| `--kui-focus-ring`              | `#2563eb`                      | The keyboard focus outline               |
-| `--kui-overlay`                 | `rgb(0 0 0 / 0.5)`             | The scrim behind a Dialog                |
-| `--kui-space-1` to `-8`         | `0.25rem` to `2rem`            | Spacing, in 0.25rem steps                |
-| `--kui-radius-sm`, `-md`, `-lg` | `0.25rem`, `0.5rem`, `0.75rem` | Corners                                  |
-| `--kui-radius-full`             | `9999px`                       | Pills such as the Switch                 |
-| `--kui-font-family`             | `system-ui, sans-serif`        | Every Component                          |
-| `--kui-motion-duration`         | `150ms`                        | Transitions. Zero under reduced motion   |
-
-The dark Theme changes the colour Tokens only. Read `src/styles/tokens.css` in the repository for the dark values.
+| Token                           | Light                          | Dark      | Used for                                                     |
+| ------------------------------- | ------------------------------ | --------- | ------------------------------------------------------------ |
+| `--kui-background`              | `#ffffff`                      | `#0f0f11` | Page and control backgrounds                                 |
+| `--kui-background-subtle`       | `#f4f4f5`                      | `#27272a` | Secondary Buttons, outline and ghost hover, read-only inputs |
+| `--kui-foreground`              | `#18181b`                      | `#fafafa` | Text                                                         |
+| `--kui-foreground-muted`        | `#52525b`                      | `#a1a1aa` | Descriptions and placeholders                                |
+| `--kui-border`                  | `#86868f`                      | `#75757f` | Control borders                                              |
+| `--kui-primary`                 | `#2563eb`                      | `#60a5fa` | Primary actions and checked states                           |
+| `--kui-primary-foreground`      | `#ffffff`                      | `#0f0f11` | Text on primary                                              |
+| `--kui-danger`                  | `#dc2626`                      | `#f87171` | Destructive actions and errors                               |
+| `--kui-danger-foreground`       | `#ffffff`                      | `#0f0f11` | Text on danger                                               |
+| `--kui-focus-ring`              | `#2563eb`                      | `#60a5fa` | The keyboard focus outline                                   |
+| `--kui-overlay`                 | `rgb(0 0 0 / 0.5)`             | same      | The scrim behind a Dialog                                    |
+| `--kui-space-1` to `-8`         | `0.25rem` to `2rem`            | same      | Spacing, in 0.25rem steps                                    |
+| `--kui-radius-sm`, `-md`, `-lg` | `0.25rem`, `0.5rem`, `0.75rem` | same      | Corners                                                      |
+| `--kui-radius-full`             | `9999px`                       | same      | Pills such as the Switch                                     |
+| `--kui-font-family`             | `system-ui, sans-serif`        | same      | Every Component                                              |
+| `--kui-motion-duration`         | `150ms`                        | same      | Transitions. Zero under reduced motion                       |

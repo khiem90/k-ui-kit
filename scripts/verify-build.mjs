@@ -74,7 +74,8 @@ for (const [file, expectation, passes] of checks) {
     report(false, `${file} is missing`);
     continue;
   }
-  report(passes(content), `${file} does ${expectation}`);
+  const ok = passes(content);
+  report(ok, `${file} does ${ok ? "" : "not "}${expectation}`);
 }
 
 // Importing the entry in Node proves every relative import in dist/ resolves without a bundler,

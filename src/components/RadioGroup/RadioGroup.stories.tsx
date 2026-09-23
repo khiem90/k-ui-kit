@@ -1,8 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, fn } from "storybook/test";
 import { useRef, useState } from "react";
-import { Button } from "../Button/Button";
-import { RadioGroup, type RadioGroupRootProps } from "../../index";
+import { Button, RadioGroup, type RadioGroupRootProps } from "../../index";
 
 /**
  * Radix selects the item an arrow key moves focus to, but only while the key is still down. The

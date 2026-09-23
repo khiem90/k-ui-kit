@@ -1,8 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, fn } from "storybook/test";
 import { useRef, useState } from "react";
-import { Button } from "../Button/Button";
-import { Tabs } from "../../index";
+import { Button, Tabs } from "../../index";
 
 const meta = {
   title: "Components/Tabs",

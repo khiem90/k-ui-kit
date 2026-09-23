@@ -1,6 +1,6 @@
 # The client boundary sits below the public entry
 
-The kit has to render from a React Server Component with no `"use client"` in the Consumer's app, and a Consumer's bundler has to drop the Components they do not import. The first build shape, one bundle with the directive on top, did neither. The consumer smoke test in ticket 13 found both failures in a fresh Next.js app and a fresh Vite app.
+The kit has to render from a React Server Component with no `"use client"` in the Consumer's app, and a Consumer's bundler has to drop the Components they do not import. The first build shape, one bundle with the directive on top, did neither. The Consumer smoke test in ticket 13 found both failures in a fresh Next.js app and a fresh Vite app.
 
 A server component that imports a client module gets one client reference per export and cannot reach into it. `Dialog` was a reference, so `Dialog.Root` was `undefined` and Next.js failed the build with "Element type is invalid". And a bundler cannot drop a Component from a single file, because `forwardRef(...)` and `createContext(...)` are calls it cannot prove pure, so the Vite bundle carried all ten Components when the app imported two.
 
@@ -18,4 +18,4 @@ A server component that imports a client module gets one client reference per ex
 - The composite namespaces live in `src/index.ts`, not in the Component files. Those files export their parts under prefixed names such as `DialogRoot`, which the entry does not re-export.
 - The stylesheet is built to `dist/styles/index.css`. The `k-ui-kit/styles.css` subpath hides that.
 - A function still cannot cross from a server component to a client one. That is React's rule, not the kit's, and the Getting started page says so.
-- `pnpm smoke` reruns the consumer check in fresh apps. Run it before merging a version pull request.
+- `pnpm smoke` reruns the Consumer check in fresh apps. Run it before merging a version pull request.

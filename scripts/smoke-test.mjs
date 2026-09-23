@@ -213,16 +213,23 @@ const args = process.argv.slice(2);
 const keep = args.includes("--keep");
 const dirFlag = args.indexOf("--dir");
 const reused = dirFlag >= 0;
+if (reused && !args[dirFlag + 1]) throw new Error("--dir needs a folder after it");
 const root = reused
   ? resolve(args[dirFlag + 1])
   : mkdtempSync(join(tmpdir(), `${pkg.name}-smoke-`));
 mkdirSync(root, { recursive: true });
 
 // The primary colour in each Theme, read from the Tokens so a Token change cannot pass unnoticed.
+// Each value is taken from the block its Theme attribute selects, so block order does not matter.
 const tokens = readFileSync(join(kit, "src/styles/tokens.css"), "utf8");
-const [lightPrimary, darkPrimary] = [...tokens.matchAll(/--kui-primary:\s*#([0-9a-f]{6})/gi)].map(
-  ([, hex]) => `rgb(${[0, 2, 4].map((i) => parseInt(hex.slice(i, i + 2), 16)).join(", ")})`,
-);
+const primaryIn = (theme) => {
+  const block = tokens.match(new RegExp(`\\[data-theme="${theme}"\\]\\)\\s*\\{([^}]*)\\}`));
+  const hex = block?.[1].match(/--kui-primary:\s*#([0-9a-f]{6})/i)?.[1];
+  if (!hex) throw new Error(`tokens.css has no --kui-primary for the ${theme} Theme`);
+  return `rgb(${[0, 2, 4].map((i) => parseInt(hex.slice(i, i + 2), 16)).join(", ")})`;
+};
+const lightPrimary = primaryIn("light");
+const darkPrimary = primaryIn("dark");
 
 const problems = [];
 
@@ -287,7 +294,8 @@ async function serve(command, cwd, url) {
   throw new Error(`${url} did not come up.\n${output}`);
 }
 
-async function verifyInBrowser(url, { everyComponent }) {
+/** Opens the page in Chromium, runs each check against it, and fails on anything it logged. */
+async function inBrowser(url, checks) {
   const browser = await chromium.launch();
   const page = await browser.newPage();
   const errors = [];
@@ -299,85 +307,7 @@ async function verifyInBrowser(url, { everyComponent }) {
   try {
     await page.goto(url);
     await page.locator("#button .kui-button").waitFor();
-
-    const background = (selector) =>
-      page
-        .locator(selector)
-        .first()
-        .evaluate(
-          (element) => element.ownerDocument.defaultView.getComputedStyle(element).backgroundColor,
-        );
-    // Colours transition over --kui-motion-duration, so a reading taken right after a Theme change
-    // lands mid-transition. Poll until the colour settles on the expected value or time runs out.
-    const settles = async (selector, expected) => {
-      const deadline = Date.now() + 2_000;
-      let actual = await background(selector);
-      while (actual !== expected && Date.now() < deadline) {
-        await new Promise((resolveWait) => setTimeout(resolveWait, 50));
-        actual = await background(selector);
-      }
-      return actual === expected;
-    };
-
-    check(await settles("#button .kui-button", lightPrimary), `${url} light Theme by default`);
-    check(
-      await settles("#dark-panel .kui-button", darkPrimary),
-      `${url} dark Theme from data-theme on an ancestor`,
-    );
-    await page.emulateMedia({ colorScheme: "dark" });
-    check(
-      await settles("#button .kui-button", darkPrimary),
-      `${url} dark Theme from the system preference`,
-    );
-    check(
-      await settles("#light-panel .kui-button", lightPrimary),
-      `${url} data-theme="light" wins over the system preference`,
-    );
-    await page.emulateMedia({ colorScheme: "light" });
-
-    if (everyComponent) {
-      for (const selector of [
-        ".kui-text-field",
-        ".kui-checkbox",
-        ".kui-switch",
-        ".kui-radio-group",
-        ".kui-tabs",
-        ".kui-data-table",
-        "#tooltip .kui-button",
-        "#dialog .kui-button",
-        "#select .kui-select__trigger",
-      ]) {
-        check((await page.locator(selector).count()) > 0, `${url} renders ${selector}`);
-      }
-
-      // The parts reached the browser as client references, so they have to respond there.
-      await attempt(`${url} Dialog opens and closes`, async () => {
-        await page.locator("#dialog .kui-button").click();
-        await page.getByRole("dialog").waitFor();
-        await page.keyboard.press("Escape");
-        await page.getByRole("dialog").waitFor({ state: "hidden" });
-      });
-      await attempt(`${url} Select opens and closes`, async () => {
-        await page.locator("#select .kui-select__trigger").click();
-        await page.getByRole("listbox").waitFor();
-        await page.keyboard.press("Escape");
-        await page.getByRole("listbox").waitFor({ state: "hidden" });
-      });
-      await attempt(`${url} Tabs switch panels`, async () => {
-        await page.locator("#tabs").getByRole("tab", { name: "Two" }).click();
-        await page.locator("#tabs").getByRole("tabpanel").getByText("Second panel").waitFor();
-      });
-      await attempt(`${url} DataTable sorts`, async () => {
-        await page.locator("#data-table").getByRole("button", { name: "Name" }).click();
-        await page.locator('#data-table th[aria-sort="ascending"]').waitFor();
-      });
-      await attempt(`${url} Checkbox toggles`, async () => {
-        const box = page.locator("#checkbox [role=checkbox]");
-        await box.click();
-        if ((await box.getAttribute("aria-checked")) !== "false") throw new Error("still checked");
-      });
-    }
-
+    for (const runChecks of checks) await runChecks(page, url);
     check(
       errors.length === 0,
       `${url} logs no errors${errors.length ? `:\n  ${errors.join("\n  ")}` : ""}`,
@@ -385,6 +315,102 @@ async function verifyInBrowser(url, { everyComponent }) {
   } finally {
     await browser.close();
   }
+}
+
+async function verifyThemes(page, url) {
+  const background = (selector) =>
+    page
+      .locator(selector)
+      .first()
+      .evaluate(
+        (element) => element.ownerDocument.defaultView.getComputedStyle(element).backgroundColor,
+      );
+  // Colours transition over --kui-motion-duration, so a reading taken right after a Theme change
+  // lands mid-transition. Poll until the colour settles on the expected value or time runs out.
+  const settles = async (selector, expected) => {
+    const deadline = Date.now() + 2_000;
+    let actual = await background(selector);
+    while (actual !== expected && Date.now() < deadline) {
+      await new Promise((resolveWait) => setTimeout(resolveWait, 50));
+      actual = await background(selector);
+    }
+    return actual === expected;
+  };
+
+  check(await settles("#button .kui-button", lightPrimary), `${url} light Theme by default`);
+  check(
+    await settles("#dark-panel .kui-button", darkPrimary),
+    `${url} dark Theme from data-theme on an ancestor`,
+  );
+  await page.emulateMedia({ colorScheme: "dark" });
+  check(
+    await settles("#button .kui-button", darkPrimary),
+    `${url} dark Theme from the system preference`,
+  );
+  check(
+    await settles("#light-panel .kui-button", lightPrimary),
+    `${url} data-theme="light" wins over the system preference`,
+  );
+  await page.emulateMedia({ colorScheme: "light" });
+}
+
+/** Every Component is on the page, and each one answers to input, so its parts reached the browser as working client references. */
+async function verifyEveryComponent(page, url) {
+  for (const selector of [
+    ".kui-text-field",
+    ".kui-checkbox",
+    ".kui-switch",
+    ".kui-radio-group",
+    ".kui-tabs",
+    ".kui-data-table",
+    "#tooltip .kui-button",
+    "#dialog .kui-button",
+    "#select .kui-select__trigger",
+  ]) {
+    check((await page.locator(selector).count()) > 0, `${url} renders ${selector}`);
+  }
+
+  await attempt(`${url} Dialog opens and closes`, async () => {
+    await page.locator("#dialog .kui-button").click();
+    await page.getByRole("dialog").waitFor();
+    await page.keyboard.press("Escape");
+    await page.getByRole("dialog").waitFor({ state: "hidden" });
+  });
+  await attempt(`${url} Select opens and closes`, async () => {
+    await page.locator("#select .kui-select__trigger").click();
+    await page.getByRole("listbox").waitFor();
+    await page.keyboard.press("Escape");
+    await page.getByRole("listbox").waitFor({ state: "hidden" });
+  });
+  await attempt(`${url} Tooltip opens on focus`, async () => {
+    await page.locator("#tooltip .kui-button").focus();
+    await page.getByRole("tooltip").waitFor();
+    await page.keyboard.press("Escape");
+    await page.getByRole("tooltip").waitFor({ state: "hidden" });
+  });
+  await attempt(`${url} Tabs switch panels`, async () => {
+    await page.locator("#tabs").getByRole("tab", { name: "Two" }).click();
+    await page.locator("#tabs").getByRole("tabpanel").getByText("Second panel").waitFor();
+  });
+  await attempt(`${url} DataTable sorts`, async () => {
+    await page.locator("#data-table").getByRole("button", { name: "Name" }).click();
+    await page.locator('#data-table th[aria-sort="ascending"]').waitFor();
+  });
+  await attempt(`${url} Checkbox toggles`, async () => {
+    const box = page.locator("#checkbox [role=checkbox]");
+    await box.click();
+    if ((await box.getAttribute("aria-checked")) !== "false") throw new Error("still checked");
+  });
+  await attempt(`${url} Switch toggles`, async () => {
+    const control = page.locator("#switch [role=switch]");
+    await control.click();
+    if ((await control.getAttribute("aria-checked")) !== "true") throw new Error("still off");
+  });
+  await attempt(`${url} RadioGroup selects`, async () => {
+    const dark = page.locator("#radio-group").getByRole("radio", { name: "Dark" });
+    await dark.click();
+    if ((await dark.getAttribute("aria-checked")) !== "true") throw new Error("not selected");
+  });
 }
 
 console.log(`Working in ${root}`);
@@ -401,7 +427,7 @@ run("npm run build", nextDir);
 const nextUrl = `http://localhost:${NEXT_PORT}/`;
 const nextServer = await serve(`npx next start -p ${NEXT_PORT}`, nextDir, nextUrl);
 try {
-  await verifyInBrowser(nextUrl, { everyComponent: true });
+  await inBrowser(nextUrl, [verifyThemes, verifyEveryComponent]);
 } finally {
   stop(nextServer);
 }
@@ -416,13 +442,13 @@ run(`npm install --no-audit --no-fund --loglevel=error "${tarball}"`, viteDir);
 run("npm run build", viteDir);
 
 const assets = join(viteDir, "dist/assets");
-const built = (extension) =>
+const assetText = (extension) =>
   readdirSync(assets)
     .filter((file) => file.endsWith(extension))
     .map((file) => readFileSync(join(assets, file), "utf8"))
     .join("\n");
-const js = built(".js");
-const css = built(".css");
+const js = assetText(".js");
+const css = assetText(".css");
 for (const marker of importedMarkers) check(js.includes(marker), `Vite bundle keeps ${marker}`);
 for (const marker of droppedMarkers) check(!js.includes(marker), `Vite bundle drops ${marker}`);
 check(
@@ -437,7 +463,7 @@ const viteServer = await serve(
   viteUrl,
 );
 try {
-  await verifyInBrowser(viteUrl, { everyComponent: false });
+  await inBrowser(viteUrl, [verifyThemes]);
 } finally {
   stop(viteServer);
 }

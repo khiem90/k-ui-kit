@@ -1,9 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, fn, waitFor, within } from "storybook/test";
 import { useRef, useState, type CSSProperties } from "react";
-import { Button } from "../Button/Button";
-import { TextField } from "../TextField/TextField";
-import { Dialog } from "../../index";
+import { Button, Dialog, TextField } from "../../index";
 
 /** The dialog renders in a portal at the end of body, outside the Story's canvas. */
 const findDialog = () => within(document.body).findByRole("dialog", {}, { timeout: 2000 });
