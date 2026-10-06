@@ -695,3 +695,123 @@ export const Empty: Story = {
     await expect(canvas.queryByRole("status")).not.toBeInTheDocument();
   },
 };
+
+interface Release {
+  id: string;
+  tag: string;
+  owner: string;
+  shipped: Date;
+  downloads: number;
+  sizeMb: number;
+  notes: string;
+}
+
+/** Values chosen so each sort type gives a different order from a plain string comparison. */
+const releases: Release[] = [
+  {
+    id: "r-1",
+    tag: "v1.10",
+    owner: "bao",
+    shipped: new Date("2024-03-01"),
+    downloads: 900,
+    sizeMb: 12,
+    notes: "Bigger",
+  },
+  {
+    id: "r-2",
+    tag: "v1.2",
+    owner: "Ada",
+    shipped: new Date("2023-11-15"),
+    downloads: 1200,
+    sizeMb: 3,
+    notes: "Small",
+  },
+  {
+    id: "r-3",
+    tag: "V1.9",
+    owner: "chiara",
+    shipped: new Date("2024-01-20"),
+    downloads: 40,
+    sizeMb: 120,
+    notes: "Assets",
+  },
+  {
+    id: "r-4",
+    tag: "v1.3",
+    owner: "Dmitri",
+    shipped: new Date("2022-06-30"),
+    downloads: 75,
+    sizeMb: 7,
+    notes: "Fixes",
+  },
+];
+
+/** One column per sort type, an accessor function column, and one that opts out of sorting. */
+const releaseColumns: ColumnDef<Release>[] = [
+  { accessorKey: "tag", header: "Tag" },
+  { accessorKey: "owner", header: "Owner" },
+  {
+    accessorKey: "shipped",
+    header: "Shipped",
+    cell: ({ row }) => row.original.shipped.toISOString().slice(0, 10),
+  },
+  { accessorKey: "downloads", header: "Downloads" },
+  { id: "size", accessorFn: (release) => `${release.sizeMb} MB`, header: "Size" },
+  { accessorKey: "notes", header: "Notes", enableSorting: false },
+];
+
+export const SortTypes: Story = {
+  render: () => (
+    <DataTable
+      caption="Releases"
+      columns={releaseColumns}
+      data={releases}
+      getRowId={byId}
+      sortable
+    />
+  ),
+  play: async ({ canvas, userEvent }) => {
+    const sortBy = (header: string) =>
+      userEvent.click(
+        within(canvas.getByRole("columnheader", { name: header })).getByRole("button", {
+          name: header,
+        }),
+      );
+
+    // Text with digits in it compares the digits as numbers, and case does not count.
+    await sortBy("Tag");
+    await expect(getColumnText(canvas, "Tag")).toEqual(["v1.2", "v1.3", "V1.9", "v1.10"]);
+    await sortBy("Tag");
+    await expect(getColumnText(canvas, "Tag")).toEqual(["v1.10", "V1.9", "v1.3", "v1.2"]);
+
+    // Plain text ignores case too.
+    await sortBy("Owner");
+    await expect(getColumnText(canvas, "Owner")).toEqual(["Ada", "bao", "chiara", "Dmitri"]);
+
+    // Dates sort by time.
+    await sortBy("Shipped");
+    await expect(getColumnText(canvas, "Shipped")).toEqual([
+      "2022-06-30",
+      "2023-11-15",
+      "2024-01-20",
+      "2024-03-01",
+    ]);
+    await sortBy("Shipped");
+    await expect(getColumnText(canvas, "Shipped")).toEqual([
+      "2024-03-01",
+      "2024-01-20",
+      "2023-11-15",
+      "2022-06-30",
+    ]);
+
+    // Numbers sort as numbers, and a value from an accessor function sorts like any other.
+    await sortBy("Downloads");
+    await expect(getColumnText(canvas, "Downloads")).toEqual(["40", "75", "900", "1200"]);
+    await sortBy("Size");
+    await expect(getColumnText(canvas, "Size")).toEqual(["3 MB", "7 MB", "12 MB", "120 MB"]);
+
+    // A column can opt out of sorting, and its header stays plain text.
+    const notes = canvas.getByRole("columnheader", { name: "Notes" });
+    await expect(within(notes).queryByRole("button")).not.toBeInTheDocument();
+  },
+};
