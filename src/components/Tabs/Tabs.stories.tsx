@@ -38,6 +38,13 @@ export const Default: Story = {
     await expect(profilePanel).toBeVisible();
     await expect(profilePanel).toHaveTextContent("Update your name and photo.");
     await expect(profilePanel).toHaveAttribute("data-state", "active");
+    await expect(profile).toHaveAttribute("aria-controls", profilePanel.id);
+    await expect(profilePanel).toHaveAttribute("aria-labelledby", profile.id);
+    // An inactive tab still points at its hidden panel, and the panel points back.
+    const securityPanel = document.getElementById(security.getAttribute("aria-controls") ?? "");
+    await expect(securityPanel).toHaveAttribute("role", "tabpanel");
+    await expect(securityPanel).toHaveAttribute("aria-labelledby", security.id);
+    await expect(securityPanel).not.toBeVisible();
     await expect(
       canvas.queryByText("Change your password and two-factor settings."),
     ).not.toBeInTheDocument();
@@ -107,6 +114,47 @@ export const WithDisabledTab: Story = {
       canvas.queryByText("Change your password and two-factor settings."),
     ).not.toBeInTheDocument();
     await expect(args.onValueChange).toHaveBeenCalledTimes(2);
+  },
+};
+
+export const NoInitialTab: Story = {
+  args: { defaultValue: undefined },
+  render: (args) => (
+    <div style={{ display: "grid", gap: "var(--kui-space-4)", justifyItems: "start" }}>
+      <Button variant="outline">Before</Button>
+      <Tabs.Root {...args} style={{ justifySelf: "stretch" }}>
+        <Tabs.List aria-label="Account settings">
+          <Tabs.Trigger value="profile" disabled>
+            Profile
+          </Tabs.Trigger>
+          <Tabs.Trigger value="security">Security</Tabs.Trigger>
+          <Tabs.Trigger value="billing">Billing</Tabs.Trigger>
+        </Tabs.List>
+        <Tabs.Content value="profile">Update your name and photo.</Tabs.Content>
+        <Tabs.Content value="security">Change your password and two-factor settings.</Tabs.Content>
+        <Tabs.Content value="billing">Manage your plan and payment method.</Tabs.Content>
+      </Tabs.Root>
+      <Button variant="outline">After</Button>
+    </div>
+  ),
+  play: async ({ canvas, userEvent, args }) => {
+    const security = canvas.getByRole("tab", { name: "Security" });
+    const billing = canvas.getByRole("tab", { name: "Billing" });
+    await expect(canvas.queryByRole("tab", { selected: true })).not.toBeInTheDocument();
+    await expect(canvas.queryByRole("tabpanel")).not.toBeInTheDocument();
+    await userEvent.tab();
+    await expect(canvas.getByRole("button", { name: "Before" })).toHaveFocus();
+    // With nothing active, the first enabled tab takes the Tab stop, and focusing it activates it.
+    await userEvent.tab();
+    await expect(security).toHaveFocus();
+    await expect(security).toHaveAttribute("aria-selected", "true");
+    await expect(args.onValueChange).toHaveBeenLastCalledWith("security");
+    await userEvent.keyboard("{ArrowRight}");
+    await expect(billing).toHaveFocus();
+    await userEvent.tab();
+    await expect(canvas.getByRole("tabpanel", { name: "Billing" })).toHaveFocus();
+    await userEvent.tab();
+    await expect(canvas.getByRole("button", { name: "After" })).toHaveFocus();
   },
 };
 
