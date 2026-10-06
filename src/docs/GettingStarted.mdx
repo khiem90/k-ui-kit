@@ -5,7 +5,7 @@ import * as SignUpStories from "./GettingStarted.stories";
 
 # Getting started
 
-k-ui-kit is a small set of accessible React Components styled with plain CSS. They come dressed in Ridgeline, the kit's one Theme: warm apricot and cream surfaces, Ember for actions, pill Buttons, and an arched Dialog. You get one package, one stylesheet, an optional fonts stylesheet, and Tokens you override.
+k-ui-kit is a small set of accessible React Components styled with plain CSS. They come in two Themes. Ridgeline, the default, is warm apricot and cream surfaces, Ember for actions, pill Buttons, and an arched Dialog. Noren, one attribute away, is Washi and Paper surfaces, Cat text, Lantern red for the main action, Tabs hung like cloth from a Cedar Rail, fields with a bottom edge only, and flat square Buttons. You get one package, one stylesheet that holds both Themes, an optional fonts stylesheet for each, and Tokens you override.
 
 ## Install
 
@@ -23,7 +23,7 @@ Import it once, at the root of your app. In Next.js that is `app/layout.tsx`. In
 import "k-ui-kit/styles.css";
 ```
 
-That one file carries the Tokens and every Component's styles. Class names and Tokens are prefixed `kui`, so nothing collides with your own CSS. It loads no font files.
+That one file carries the Tokens of both Themes and every Component's styles. Class names and Tokens are prefixed `kui`, so nothing collides with your own CSS. It loads no font files.
 
 ## Add the fonts
 
@@ -37,6 +37,8 @@ import "k-ui-kit/fonts.css";
 Your bundler copies the woff2 files into your build, so you host nothing yourself. They come to 228 KB across seven files, but a browser only fetches the faces and character ranges a page draws. Each family's SIL Open Font License sits beside its files in the package. The faces use `font-display: swap`, so text shows in a fallback font until the file arrives.
 
 Skip this import if your app already serves these families under the same names. The kit's Tokens name them, so your own font-face rules apply. If neither stylesheet provides them, the kit falls back to Georgia for Dialog titles and `system-ui` for the rest.
+
+Noren has a fonts stylesheet of its own, `k-ui-kit/fonts/noren.css`, described under Themes below. Import the stylesheet for each Theme you use and no other, so a Ridgeline app never fetches a Noren face.
 
 ## Use a Component
 
@@ -108,15 +110,32 @@ export function SignUpForm() {
 
 <Canvas of={SignUpStories.SignUp} sourceState="none" />
 
-## The Ridgeline Theme
+## Themes
 
-Ridgeline applies as soon as the stylesheet loads. There is no attribute to set and no provider to wrap your app in.
+Ridgeline applies as soon as the stylesheet loads. There is no attribute to set and no provider to wrap your app in. To switch the whole app to Noren, set one attribute on the html element:
 
-Ridgeline has a light Color scheme only. The stylesheet declares `color-scheme: light` and holds no dark values, so the kit looks the same whatever the operating system prefers. Switching your app to a dark Color scheme leaves the kit light, so there's nothing to wire up for it. The kit reads no `data-theme` attribute today. That name and `data-color-scheme` are reserved for a second Theme and a dark Color scheme, if either arrives.
+```html
+<html lang="en" data-theme="noren"></html>
+```
+
+Tokens inherit, so the attribute works on any ancestor, not only the root. A `section` with `data-theme="noren"` is a Noren section inside a Ridgeline page. A Dialog opened from inside it is Noren too, because the native dialog element stays a descendant of that section even while it sits in the top layer. Without the attribute nothing changes. Ridgeline is the default, and the Noren block adds a few kilobytes to the stylesheet you already import.
+
+Noren uses two typefaces. Dialog titles are Shippori Mincho B1. Labels, Buttons, tabs, table headers, and everything else are Zen Kaku Gothic New. Both ship inside the package under a second stylesheet:
+
+```tsx
+import "k-ui-kit/styles.css";
+import "k-ui-kit/fonts/noren.css";
+```
+
+They come to 55 KB across six files, the latin and latin-ext subsets of each face, under the same SIL Open Font License and `font-display: swap` as Ridgeline's. The latin-ext part needs a caveat. These families draw almost none of that range. Shippori Mincho B1 has the dotless i and the OE ligature, Zen Kaku Gothic New adds the Welsh circumflexes and the capital sharp s, and neither has Ł, ź, or the other Polish and Czech letters. Those letters, and any Japanese text, fall back to the next family in the stack. Skip the import if you already serve these families under the same names. Without it, Noren reaches Hiragino Mincho ProN or Yu Mincho for titles and Hiragino Sans or Yu Gothic for the rest on a Japanese system, and Georgia and `system-ui` anywhere else.
+
+Both Themes have a light Color scheme only. Each block declares `color-scheme: light` and holds no dark values, so the kit looks the same whatever the operating system prefers. Switching your app to a dark Color scheme leaves the kit light, so there's nothing to wire up for it. `data-color-scheme` is reserved for a dark Color scheme, if one arrives.
+
+This Storybook has a Theme menu in its toolbar, so every Story can be viewed under either Theme.
 
 ## Override Tokens
 
-Every design value is a Token on `:root`: colours, shadows, radii, fonts, label styling, spacing, and motion. Set the ones you want in a plain `:root` rule. The kit wraps its own selector in `:where()`, which carries zero specificity, so your rule wins wherever it sits in the cascade.
+Every design value is a Token: colours, shadows, radii, border widths, fonts, label styling, spacing, and motion. Ridgeline declares them on `:root` and Noren on the element that carries `data-theme="noren"`. Set the ones you want in a plain `:root` rule. The kit wraps both of its selectors in `:where()`, which carries zero specificity, so your rule wins wherever it sits in the cascade.
 
 ```css
 :root {
@@ -127,47 +146,78 @@ Every design value is a Token on `:root`: colours, shadows, radii, fonts, label 
 }
 ```
 
-Token names describe a role, not a colour, so `--kui-primary` still means "the main action" when another Theme arrives. An override applies to everything inside the element that sets it, so a rule on a `section` restyles one part of a page.
+Token names describe a role, not a colour, so `--kui-primary` means "the main action" under either Theme, and the override above changes the main action under both.
 
-The kit checks the contrast of every pair it draws with its own values. When you change a colour, check its pairs yourself: text Tokens need 4.5:1 on the surfaces they sit on, and `--kui-border` and `--kui-focus-ring` need 3:1.
+One case needs a second selector. A `:root` rule beats a Theme set on the html element, because your rule and the Theme block target the same element and yours wins on specificity. It does not reach inside a `data-theme` wrapper lower down the page, because the Noren block re-declares every Token on that wrapper and a declaration on the element beats one inherited from the root. To reach a themed subtree, target the wrapper as well:
 
-Ember is too faint on the Peach sky tint, so a control drawn there uses its own pair of Tokens. A selected or hovered DataTable row draws its checked Checkbox in `--kui-primary-on-tint` and sets `--kui-focus-ring` to `--kui-focus-ring-on-tint`, so every control in the row, your own included, rings in that colour. The highlighted Select option draws its check in `--kui-primary-on-tint`. If you change `--kui-primary` or `--kui-focus-ring`, set these two as well.
+```css
+:root,
+[data-theme] {
+  --kui-primary: #2f6f5e;
+}
+```
 
-| Token                        | Ridgeline value                                              | Used for                                                      |
-| ---------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------- |
-| `--kui-background`           | `#f6e6d6` (Apricot)                                          | The page and the default surface                              |
-| `--kui-surface-raised`       | `#fff9f2` (Cream)                                            | Fields, secondary Buttons, popups, the Dialog, the table body |
-| `--kui-surface-stripe`       | `#f9ecde`                                                    | Every other DataTable row                                     |
-| `--kui-tint`                 | `#f2b8a2` (Peach sky)                                        | Hover, the highlighted option, selected rows                  |
-| `--kui-foreground`           | `#3a2b26` (Bark)                                             | Text                                                          |
-| `--kui-foreground-muted`     | `#654b41`                                                    | Descriptions, placeholders, group labels                      |
-| `--kui-border`               | `#6b4f45`                                                    | The edge of fields and unchecked controls                     |
-| `--kui-primary`              | `#bd5038` (Ember)                                            | Primary Buttons, checked controls, the active tab             |
-| `--kui-primary-hover`        | `#8e3826`                                                    | Primary hover and press                                       |
-| `--kui-primary-foreground`   | `#fff9f2`                                                    | Text on primary                                               |
-| `--kui-primary-on-tint`      | `#8e3826`                                                    | Checked boxes and checks on the tint                          |
-| `--kui-danger`               | `#9b2335`                                                    | Danger Buttons, error text and edges                          |
-| `--kui-danger-hover`         | `#8c2433`                                                    | Danger hover                                                  |
-| `--kui-danger-foreground`    | `#fff9f2`                                                    | Text on danger                                                |
-| `--kui-focus-ring`           | `#bd5038`                                                    | The keyboard focus outline                                    |
-| `--kui-focus-ring-on-tint`   | `#3a2b26` (Bark)                                             | The focus outline on the tint                                 |
-| `--kui-overlay`              | `rgb(58 43 38 / 0.5)`                                        | The backdrop behind a Dialog                                  |
-| `--kui-shadow-rest`          | `0 2px 0 rgb(58 43 38 / 0.08)`                               | Resting surfaces such as the DataTable card                   |
-| `--kui-shadow-raised`        | `0 10px 24px -8px rgb(140 60 40 / 0.35)`                     | Primary and secondary Buttons                                 |
-| `--kui-shadow-floating`      | `0 24px 48px -16px rgb(90 35 25 / 0.45)`                     | The Dialog, Tooltip, and the Select list                      |
-| `--kui-font-display`         | `"Fraunces", Georgia, serif`                                 | Dialog titles                                                 |
-| `--kui-font-label`           | `"Josefin Sans", system-ui, sans-serif`                      | Buttons, field labels, tabs, table headers                    |
-| `--kui-font-body`            | `"Nunito Sans", system-ui, sans-serif`                       | Everything else                                               |
-| `--kui-label-case`           | `uppercase`                                                  | `text-transform` wherever the label font applies              |
-| `--kui-label-tracking`       | `0.24em`                                                     | `letter-spacing` wherever the label font applies              |
-| `--kui-font-size-sm`         | `0.75rem`                                                    | Small Buttons, table headers, Select group labels             |
-| `--kui-font-size-md`         | `0.875rem`                                                   | Medium Buttons, field labels, tabs, Tooltip, table captions   |
-| `--kui-font-size-lg`         | `1rem`                                                       | Large Buttons, field text, option and control labels, cells   |
-| `--kui-font-size-display`    | `1.5rem`                                                     | The Dialog title                                              |
-| `--kui-radius-field`         | `12px`                                                       | TextField, the Select trigger and its options                 |
-| `--kui-radius-card`          | `24px`                                                       | Tooltip, the Select list, DataTable, the Dialog's bottom      |
-| `--kui-radius-pill`          | `999px`                                                      | Switch and the Dialog close button                            |
-| `--kui-radius-arch`          | `160px`                                                      | The Dialog's top corners, capped at half its width            |
-| `--kui-space-1` to `-8`      | `4px`, `8px`, `12px`, `16px`, `24px`, `32px`, `48px`, `72px` | Spacing                                                       |
-| `--kui-padding-field-inline` | `18px`                                                       | Inline padding in TextField and the Select trigger            |
-| `--kui-motion-duration`      | `150ms`                                                      | Transitions. Zero under reduced motion                        |
+An override applies to everything inside the element that sets it, so a rule on a `section` restyles one part of a page.
+
+The kit checks the contrast of every pair it draws with each Theme's own values. When you change a colour, check its pairs yourself: text Tokens need 4.5:1 on the surfaces they sit on, and `--kui-border` and `--kui-focus-ring` need 3:1.
+
+Ember is too faint on the Peach sky tint, and Lantern on Broth, so a control drawn on the tint uses its own pair of Tokens. A selected or hovered DataTable row draws its checked Checkbox in `--kui-primary-on-tint` and sets `--kui-focus-ring` to `--kui-focus-ring-on-tint`, so every control in the row, your own included, rings in that colour. The highlighted Select option draws its check in `--kui-primary-on-tint`. If you change `--kui-primary` or `--kui-focus-ring`, set these two as well.
+
+## Every Token in both Themes
+
+Three Tokens may hold four values, one per corner or side, the way the `border-radius` and `border-width` shorthands do: `--kui-radius-field`, `--kui-radius-tab`, and `--kui-border-width-field`. No other Token may. A width may be `0`, a shadow `none`, and a fill `transparent`, which is how a Theme switches off a part the other Theme draws, such as the Rail in Ridgeline or the Tabs track in Noren. Noren declares every Token below except `--kui-motion-duration`, which it inherits from Ridgeline so that the reduced-motion rule keeps the last word under both Themes.
+
+| Token                        | Ridgeline                                                    | Noren                                                                                | Used for                                                                                 |
+| ---------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------- |
+| `--kui-background`           | `#f6e6d6` (Apricot)                                          | `#efe3c8` (Washi)                                                                    | The page and the default surface                                                         |
+| `--kui-surface-raised`       | `#fff9f2` (Cream)                                            | `#fff8e8` (Paper)                                                                    | Fields, popups, the Dialog, the table body                                               |
+| `--kui-surface-stripe`       | `#f9ecde`                                                    | `#f7eed8`                                                                            | Every other DataTable row                                                                |
+| `--kui-surface-track`        | `#fff9f2` (Cream)                                            | `transparent`                                                                        | The Tabs list, the track behind the tabs                                                 |
+| `--kui-tint`                 | `#f2b8a2` (Peach sky)                                        | `#e3b04b` (Broth)                                                                    | Hover, the highlighted option, selected rows                                             |
+| `--kui-foreground`           | `#3a2b26` (Bark)                                             | `#1c2022` (Cat)                                                                      | Text, and the edge of the outline Button                                                 |
+| `--kui-foreground-muted`     | `#654b41`                                                    | `#574333`                                                                            | Descriptions, placeholders, group labels                                                 |
+| `--kui-foreground-display`   | `#bd5038` (Ember)                                            | `#1c2022` (Cat)                                                                      | The Dialog title                                                                         |
+| `--kui-border`               | `#6b4f45`                                                    | `#1c2022` (Cat)                                                                      | The edge of fields and unchecked controls                                                |
+| `--kui-primary`              | `#bd5038` (Ember)                                            | `#c8402b` (Lantern)                                                                  | Primary Buttons, checked controls, the active tab                                        |
+| `--kui-primary-hover`        | `#8e3826`                                                    | `#8f2a1b`                                                                            | Primary hover and press                                                                  |
+| `--kui-primary-foreground`   | `#fff9f2` (Cream)                                            | `#fff8e8` (Paper)                                                                    | Text on primary                                                                          |
+| `--kui-primary-on-tint`      | `#8e3826`                                                    | `#1c2022` (Cat)                                                                      | Checked boxes and checks on the tint                                                     |
+| `--kui-secondary`            | `#fff9f2` (Cream)                                            | `#8a5a36` (Cedar)                                                                    | The secondary Button's fill                                                              |
+| `--kui-secondary-hover`      | `#f2b8a2` (Peach sky)                                        | `#6f4729`                                                                            | Secondary hover                                                                          |
+| `--kui-secondary-foreground` | `#3a2b26` (Bark)                                             | `#fff8e8` (Paper)                                                                    | Text on secondary                                                                        |
+| `--kui-tab`                  | `transparent`                                                | `#2f5755` (Old wall)                                                                 | An inactive tab's fill                                                                   |
+| `--kui-tab-foreground`       | `#654b41`                                                    | `#fff8e8` (Paper)                                                                    | An inactive tab's text                                                                   |
+| `--kui-danger`               | `#9b2335`                                                    | `#9b2335`                                                                            | Danger Buttons, error text and edges                                                     |
+| `--kui-danger-hover`         | `#8c2433`                                                    | `#8c2433`                                                                            | Danger hover                                                                             |
+| `--kui-danger-foreground`    | `#fff9f2` (Cream)                                            | `#fff8e8` (Paper)                                                                    | Text on danger                                                                           |
+| `--kui-focus-ring`           | `#bd5038` (Ember)                                            | `#c8402b` (Lantern)                                                                  | The keyboard focus outline                                                               |
+| `--kui-focus-ring-on-tint`   | `#3a2b26` (Bark)                                             | `#1c2022` (Cat)                                                                      | The focus outline on the tint                                                            |
+| `--kui-overlay`              | `rgb(58 43 38 / 0.5)`                                        | `rgb(47 87 85 / 0.7)`                                                                | The backdrop behind a Dialog                                                             |
+| `--kui-shadow-rest`          | `0 2px 0 rgb(58 43 38 / 0.08)`                               | `0 3px 0 #d6c6a4`                                                                    | Resting surfaces such as the DataTable card                                              |
+| `--kui-shadow-track`         | `0 2px 0 rgb(58 43 38 / 0.08)`                               | `none`                                                                               | The Tabs list                                                                            |
+| `--kui-shadow-raised`        | `0 10px 24px -8px rgb(140 60 40 / 0.35)`                     | `none`                                                                               | Primary and secondary Buttons                                                            |
+| `--kui-shadow-floating`      | `0 24px 48px -16px rgb(90 35 25 / 0.45)`                     | `0 0 0 1px #e3b04b`, `0 0 28px rgb(227 176 75 / 0.55)`                               | The Dialog, Tooltip, and the Select list                                                 |
+| `--kui-font-display`         | `"Fraunces"`, `Georgia`, `serif`                             | `"Shippori Mincho B1"`, `"Hiragino Mincho ProN"`, `"Yu Mincho"`, `Georgia`, `serif`  | Dialog titles                                                                            |
+| `--kui-font-label`           | `"Josefin Sans"`, `system-ui`, `sans-serif`                  | `"Zen Kaku Gothic New"`, `"Hiragino Sans"`, `"Yu Gothic"`, `system-ui`, `sans-serif` | Buttons, field labels, tabs, table headers                                               |
+| `--kui-font-body`            | `"Nunito Sans"`, `system-ui`, `sans-serif`                   | `"Zen Kaku Gothic New"`, `"Hiragino Sans"`, `"Yu Gothic"`, `system-ui`, `sans-serif` | Everything else                                                                          |
+| `--kui-label-case`           | `uppercase`                                                  | `none`                                                                               | `text-transform` wherever the label font applies                                         |
+| `--kui-label-tracking`       | `0.24em`                                                     | `0`                                                                                  | `letter-spacing` wherever the label font applies                                         |
+| `--kui-label-weight`         | `600`                                                        | `700`                                                                                | `font-weight` wherever the label font applies, and on the Dialog title and table caption |
+| `--kui-font-size-sm`         | `0.75rem`                                                    | `0.8125rem`                                                                          | Small Buttons, table headers, Select group labels                                        |
+| `--kui-font-size-md`         | `0.875rem`                                                   | `0.9375rem`                                                                          | Medium Buttons, field labels, tabs, Tooltip, table captions                              |
+| `--kui-font-size-lg`         | `1rem`                                                       | `1.0625rem`                                                                          | Large Buttons, field text, option and control labels, cells                              |
+| `--kui-font-size-display`    | `1.5rem`                                                     | `1.875rem`                                                                           | The Dialog title                                                                         |
+| `--kui-radius-field`         | `12px`                                                       | `4px 4px 0 0`                                                                        | TextField, the Select trigger and its options. Up to four values                         |
+| `--kui-radius-button`        | `999px`                                                      | `4px`                                                                                | Button                                                                                   |
+| `--kui-radius-tab`           | `999px`                                                      | `0 0 6px 6px`                                                                        | Tab triggers and the horizontal Tabs list. Up to four values                             |
+| `--kui-radius-check`         | `6px`                                                        | `2px`                                                                                | The Checkbox box                                                                         |
+| `--kui-radius-row`           | `12px`                                                       | `2px`                                                                                | The ends of a DataTable row                                                              |
+| `--kui-radius-card`          | `24px`                                                       | `4px`                                                                                | Tooltip, the Select list, DataTable, the vertical Tabs list, the Dialog's bottom         |
+| `--kui-radius-pill`          | `999px`                                                      | `999px`                                                                              | Switch and the Dialog close button                                                       |
+| `--kui-radius-arch`          | `160px`                                                      | `4px`                                                                                | The Dialog's top corners, capped at half its width                                       |
+| `--kui-border-width-field`   | `2px`                                                        | `0 0 3px`                                                                            | The edge of TextField and the Select trigger. Up to four values                          |
+| `--kui-rail-width`           | `0`                                                          | `10px`                                                                               | The Rail along the top of the Tabs list and the Dialog                                   |
+| `--kui-rail-color`           | `#bd5038` (Ember)                                            | `#8a5a36` (Cedar)                                                                    | The Rail's colour                                                                        |
+| `--kui-space-1` to `-8`      | `4px`, `8px`, `12px`, `16px`, `24px`, `32px`, `48px`, `72px` | `6px`, `12px`, `18px`, `24px`, `36px`, `48px`, `72px`, `96px`                        | Spacing                                                                                  |
+| `--kui-padding-field-inline` | `18px`                                                       | `16px`                                                                               | Inline padding in TextField and the Select trigger                                       |
+| `--kui-motion-duration`      | `150ms`                                                      | Not declared, inherits `150ms`                                                       | Transitions. Zero under reduced motion                                                   |
