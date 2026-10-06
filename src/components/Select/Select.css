@@ -15,7 +15,7 @@
   background: var(--kui-surface-raised);
   color: var(--kui-foreground);
   font-family: var(--kui-font-body);
-  font-size: 1rem;
+  font-size: var(--kui-font-size-lg);
   line-height: 1;
   text-align: start;
   cursor: pointer;
@@ -116,7 +116,7 @@
   box-shadow: var(--kui-shadow-floating);
   color: var(--kui-foreground);
   font-family: var(--kui-font-body);
-  font-size: 1rem;
+  font-size: var(--kui-font-size-lg);
   /* The list takes focus itself only while the pointer rests on a disabled option or a label. */
   outline: none;
 }
@@ -192,7 +192,7 @@
   padding-inline: var(--kui-space-6) var(--kui-space-4);
   color: var(--kui-foreground-muted);
   font-family: var(--kui-font-label);
-  font-size: 0.75rem;
+  font-size: var(--kui-font-size-sm);
   font-weight: 600;
   line-height: 1rem;
   text-transform: var(--kui-label-case);

@@ -10,7 +10,7 @@ The kit has to work unchanged in Next.js App Router, Remix, Vite, and Astro, and
 
 ## Consequences
 
-- Every colour, spacing step, radius, and font family in component CSS must come from a Token. A hard-coded value is a bug.
+- Every colour, spacing step, radius, font family, and font size in component CSS must come from a Token. A hard-coded value is a bug, and `pnpm lint` fails on one: Stylelint rejects a raw colour anywhere in `src/**/*.css` outside `tokens.css`, and a px or rem length in a spacing, radius, or font-size property, allowing only `0`, `1px`, `2px`, and `-1px`.
 - The Token selectors are wrapped in `:where()` so they carry zero specificity, and a Consumer's plain `:root` override always wins.
 - Ridgeline has a light Color scheme only, so each Token is declared once, on the root. There is no dark media query and no `data-theme="light|dark"` switch to restate in an override. If a dark Color scheme arrives, ADR 0005 reserves `data-color-scheme` to select it, and this consequence gets revisited then.
 - package.json marks CSS as side-effectful so bundlers keep the stylesheet.

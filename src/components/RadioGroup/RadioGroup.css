@@ -14,7 +14,7 @@
 
 .kui-radio-group__label {
   font-family: var(--kui-font-label);
-  font-size: 0.875rem;
+  font-size: var(--kui-font-size-md);
   line-height: 1.25rem;
   font-weight: 600;
   text-transform: var(--kui-label-case);
@@ -108,7 +108,7 @@
 
 .kui-radio__label {
   font-family: var(--kui-font-body);
-  font-size: 1rem;
+  font-size: var(--kui-font-size-lg);
   line-height: 1.5rem;
   cursor: pointer;
 }

@@ -35,19 +35,19 @@
 .kui-button[data-size="sm"] {
   padding-inline: var(--kui-space-4);
   block-size: 36px;
-  font-size: 0.75rem;
+  font-size: var(--kui-font-size-sm);
 }
 
 .kui-button[data-size="md"] {
   padding-inline: var(--kui-space-5);
   block-size: 44px;
-  font-size: 0.875rem;
+  font-size: var(--kui-font-size-md);
 }
 
 .kui-button[data-size="lg"] {
   padding-inline: var(--kui-space-6);
   block-size: 52px;
-  font-size: 1rem;
+  font-size: var(--kui-font-size-lg);
 }
 
 .kui-button[data-variant="primary"] {

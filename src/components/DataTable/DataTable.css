@@ -26,14 +26,14 @@
   inline-size: 100%;
   border-collapse: separate;
   border-spacing: 0;
-  font-size: 0.875rem;
+  font-size: var(--kui-font-size-md);
   line-height: 1.25rem;
 }
 
 /* Inline padding lines the caption up with the text in the cells below it. */
 .kui-data-table__caption {
   padding: var(--kui-space-2) var(--kui-space-3);
-  font-size: 1rem;
+  font-size: var(--kui-font-size-lg);
   font-weight: 600;
   line-height: 1.5rem;
   text-align: start;
@@ -53,7 +53,7 @@
    way in the header as in the rows. */
 .kui-data-table__header {
   font-family: var(--kui-font-label);
-  font-size: 0.75rem;
+  font-size: var(--kui-font-size-sm);
   font-weight: 600;
   text-transform: var(--kui-label-case);
   letter-spacing: var(--kui-label-tracking);
@@ -129,7 +129,7 @@
   flex: 1;
   margin: 0;
   color: var(--kui-foreground-muted);
-  font-size: 0.875rem;
+  font-size: var(--kui-font-size-md);
   line-height: 1.25rem;
 }
 
@@ -140,6 +140,8 @@
 }
 
 .kui-data-table__selection .kui-checkbox {
+  /* stylelint-disable-next-line scale-unlimited/declaration-strict-value -- the two lengths are the
+     cell's line height and the Checkbox's box, not spacing steps */
   margin-block: calc((1.25rem - 1.5rem) / 2);
 }
 

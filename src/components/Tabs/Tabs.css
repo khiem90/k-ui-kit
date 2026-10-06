@@ -41,7 +41,7 @@
   background: transparent;
   color: var(--kui-foreground-muted);
   font-family: var(--kui-font-label);
-  font-size: 0.875rem;
+  font-size: var(--kui-font-size-md);
   font-weight: 600;
   line-height: 1;
   letter-spacing: var(--kui-label-tracking);

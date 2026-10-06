@@ -41,6 +41,13 @@
   --kui-label-case: uppercase;
   --kui-label-tracking: 0.24em;
 
+  /* The type scale, in rem so it follows the page's root font size. sm, md, and lg are the three
+     Button sizes, and display is the Dialog title. */
+  --kui-font-size-sm: 0.75rem; /* 12px */
+  --kui-font-size-md: 0.875rem; /* 14px */
+  --kui-font-size-lg: 1rem; /* 16px */
+  --kui-font-size-display: 1.5rem; /* 24px */
+
   --kui-radius-field: 12px;
   --kui-radius-card: 24px;
   --kui-radius-pill: 999px;

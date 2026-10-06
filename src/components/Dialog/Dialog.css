@@ -78,13 +78,15 @@ body:has(.kui-dialog:modal) {
   /* Clears the close button: its inset and its width, less the viewport's padding, plus a gap.
      Equal on both sides, so the title stays centred and a long one wraps before the button. */
   margin-block: 0;
+  /* stylelint-disable-next-line scale-unlimited/declaration-strict-value -- 2rem is the close
+     button's width, declared below */
   margin-inline: calc(
     min(var(--kui-radius-arch), 50cqi) * (1 - 1 / sqrt(2)) + var(--kui-space-2) + 2rem -
       var(--kui-space-6) + var(--kui-space-2)
   );
   color: var(--kui-primary);
   font-family: var(--kui-font-display);
-  font-size: 1.5rem;
+  font-size: var(--kui-font-size-display);
   font-style: italic;
   font-weight: 600;
   line-height: 1.25;

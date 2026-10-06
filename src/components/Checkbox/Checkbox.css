@@ -74,7 +74,7 @@
 }
 
 .kui-checkbox__label {
-  font-size: 1rem;
+  font-size: var(--kui-font-size-lg);
   line-height: 1.5rem;
   cursor: pointer;
 }

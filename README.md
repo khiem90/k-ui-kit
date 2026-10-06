@@ -32,7 +32,7 @@ package.json pins the pnpm version. Run `corepack enable` once and corepack pick
 | ---------------------- | ------------------------------------------------ |
 | `pnpm dev`             | Storybook on port 6006                           |
 | `pnpm test`            | Runs every Story as a test in Chromium, with axe |
-| `pnpm lint`            | ESLint with jsx-a11y, then a Prettier check      |
+| `pnpm lint`            | ESLint with jsx-a11y, Stylelint, then Prettier   |
 | `pnpm typecheck`       | `tsc --noEmit`                                   |
 | `pnpm build`           | tsup to `dist/`, then verifies the output shape  |
 | `pnpm build:storybook` | Static Storybook to `storybook-static/`          |
@@ -41,6 +41,8 @@ package.json pins the pnpm version. Run `corepack enable` once and corepack pick
 | `pnpm changeset`       | Writes a changeset for the current change        |
 
 Stories are the tests. The a11y addon fails the run on any axe violation, and play functions cover keyboard behaviour.
+
+Stylelint guards ADR 0001 in `src/**/*.css`. It fails on a colour written as hex, `rgb()`, `color-mix()`, a named colour, or any other colour function, and on a px or rem length in a margin, padding, gap, radius, or font-size property. Those values belong in `src/styles/tokens.css`, the one file the colour rules skip. The length rule lets through `0`, `1px`, `2px`, and the `-1px` of the visually-hidden pattern. A declaration that needs another value carries a `stylelint-disable-next-line` comment with the reason after `--`, and the config rejects a disable without one.
 
 `pnpm smoke` is the Consumer check. It packs the package, scaffolds a Next.js App Router app and a Vite app in a temporary folder, installs the tarball into each, builds them, and drives them in Chromium. It checks that the installed kit brings no dependencies, that every Component renders and responds from a server component, that the fonts stylesheet resolves every face in the Next.js build, that Ridgeline ignores a dark system preference and yields to a plain `:root` Token override, and that the Vite bundle holds only the Components the app imports, the stylesheet, and no font files. It needs the network and takes a few minutes. Run it before merging a version pull request.
 

@@ -10,7 +10,7 @@
 .kui-text-field__description,
 .kui-text-field__error {
   margin: 0;
-  font-size: 0.875rem;
+  font-size: var(--kui-font-size-md);
   line-height: 1.25rem;
 }
 
@@ -42,7 +42,7 @@
   background: var(--kui-surface-raised);
   color: var(--kui-foreground);
   font-family: var(--kui-font-body);
-  font-size: 1rem;
+  font-size: var(--kui-font-size-lg);
   line-height: 1;
   appearance: none;
   transition:

@@ -27,6 +27,7 @@ const radii = ["--kui-radius-field", "--kui-radius-card", "--kui-radius-pill", "
 const spaces = [1, 2, 3, 4, 5, 6, 7, 8].map((step) => `--kui-space-${step}`);
 const paddings = ["--kui-padding-field-inline"];
 const fonts = ["--kui-font-display", "--kui-font-label", "--kui-font-body"];
+const fontSizes = ["sm", "md", "lg", "display"].map((step) => `--kui-font-size-${step}`);
 const labelStyle = ["--kui-label-case", "--kui-label-tracking"];
 
 /** Every text pair the kit draws, as [text, background]. WCAG 1.4.3 asks 4.5:1. */
@@ -252,6 +253,7 @@ export const Ridgeline: Story = {
       ...spaces,
       ...paddings,
       ...fonts,
+      ...fontSizes,
       ...labelStyle,
       "--kui-motion-duration",
     ]) {
