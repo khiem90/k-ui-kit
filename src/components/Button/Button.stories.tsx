@@ -2,6 +2,8 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { createRef, type MouseEvent } from "react";
 import { expect, fn } from "storybook/test";
 import { Button } from "../../index";
+import { computedColourIn } from "../../docs/contrast";
+import { settledStyle, withRootOverrides } from "../../docs/story-helpers";
 
 const PlusIcon = () => (
   <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -67,20 +69,12 @@ export const Sizes: Story = {
   },
 };
 
-/** A style as the browser resolves it, so a Token compares with what a Button draws. */
-const resolveColour = (value: string) => {
-  const probe = document.createElement("span");
-  probe.style.color = value;
-  document.body.append(probe);
-  const resolved = getComputedStyle(probe).color;
-  probe.remove();
-  return resolved;
-};
+/** A colour Token as the browser resolves it on the page, so it compares with what a Button draws. */
+const resolveColour = (name: string) => computedColourIn(document.body, name);
 
 /** The settled fill and text of a Button, with any colour transition finished. */
 const settled = (button: HTMLElement) => {
-  for (const animation of button.getAnimations()) animation.finish();
-  const style = getComputedStyle(button);
+  const style = settledStyle(button);
   return { fill: style.backgroundColor, text: style.color };
 };
 
@@ -107,17 +101,17 @@ export const SecondaryTokens: Story = {
     // A Consumer moves the secondary Button alone through its own fill and text. The values are
     // read before the override is removed, so a failed assertion never leaks into the next Story.
     // The hover fill is not read: a synthetic pointer never matches :hover.
-    const root = document.documentElement.style;
-    root.setProperty("--kui-secondary", "rgb(1, 2, 3)");
-    root.setProperty("--kui-secondary-foreground", "rgb(4, 5, 6)");
-    const overridden = settled(secondary);
-    const others = { primary: settled(primary), outline: settled(outline) };
-    root.removeProperty("--kui-secondary");
-    root.removeProperty("--kui-secondary-foreground");
+    const { overridden, others } = await withRootOverrides(
+      { "--kui-secondary": "rgb(1, 2, 3)", "--kui-secondary-foreground": "rgb(4, 5, 6)" },
+      () => ({
+        overridden: settled(secondary),
+        others: { primary: settled(primary), outline: settled(outline) },
+      }),
+    );
 
     await expect(overridden).toEqual({ fill: "rgb(1, 2, 3)", text: "rgb(4, 5, 6)" });
     await expect(others).toEqual(before);
-    await expect(before.primary.fill).toBe(resolveColour("var(--kui-primary)"));
+    await expect(before.primary.fill).toBe(resolveColour("--kui-primary"));
     await expect(before.outline.fill).toBe("rgba(0, 0, 0, 0)");
   },
 };

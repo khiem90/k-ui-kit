@@ -26,7 +26,7 @@ export function toRGB(computed: string): RGB {
 }
 
 /** The computed colour a Token resolves to inside the given element, as the browser writes it. */
-function computedColourIn(element: Element, name: string) {
+export function computedColourIn(element: Element, name: string) {
   const probe = document.createElement("span");
   probe.style.color = `var(${name})`;
   element.append(probe);

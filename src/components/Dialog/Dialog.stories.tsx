@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, fn, waitFor, within } from "storybook/test";
 import { useRef, useState, type CSSProperties } from "react";
 import { Button, Dialog, TextField } from "../../index";
+import { withRootOverrides } from "../../docs/story-helpers";
 
 const findDialog = () => within(document.body).findByRole("dialog", {}, { timeout: 2000 });
 const queryDialog = () => within(document.body).queryByRole("dialog");
@@ -644,10 +645,10 @@ export const DisplayForegroundToken: Story = {
     const title = within(dialog).getByRole("heading");
     // The title has its own colour role, so a Consumer recolours it without touching primary. The
     // value is read before the override is removed, so a failed assertion never leaks.
-    const root = document.documentElement.style;
-    root.setProperty("--kui-foreground-display", "rgb(1, 2, 3)");
-    const overridden = getComputedStyle(title).color;
-    root.removeProperty("--kui-foreground-display");
+    const overridden = await withRootOverrides(
+      { "--kui-foreground-display": "rgb(1, 2, 3)" },
+      () => getComputedStyle(title).color,
+    );
     await expect(overridden).toBe("rgb(1, 2, 3)");
     await expect(getComputedStyle(title).color).toBe(
       resolveStyle("color", "var(--kui-foreground-display)"),

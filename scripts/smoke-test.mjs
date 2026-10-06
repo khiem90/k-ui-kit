@@ -477,20 +477,23 @@ async function verifyNorenSubtree(page, url) {
     await backgroundSettles(page, `${wrapper} .kui-button`, rgb(OVERRIDE_PRIMARY)),
     `${url} the override reaches the primary Button inside the Noren subtree`,
   );
-  const field = async (selector) => [
-    await computed(page, selector, "borderTopWidth"),
-    await computed(page, selector, "borderBottomWidth"),
-    await computed(page, selector, "backgroundColor"),
-  ];
+  const field = async (selector) => ({
+    top: await computed(page, selector, "borderTopWidth"),
+    bottom: await computed(page, selector, "borderBottomWidth"),
+    background: await computed(page, selector, "backgroundColor"),
+  });
+  const describe = ({ top, bottom, background }) => `${top}, ${bottom}, ${background}`;
   const inside = await field(`${wrapper} .kui-text-field__input`);
   const outside = await field("#text-field .kui-text-field__input");
   check(
-    inside[0] === "0px" && inside[1] === "3px" && inside[2] === noren.surfaceRaised,
-    `${url} the field inside the subtree is Noren, a 3px underline on Paper (${inside.join(", ")})`,
+    inside.top === "0px" && inside.bottom === "3px" && inside.background === noren.surfaceRaised,
+    `${url} the field inside the subtree is Noren, a 3px underline on Paper (${describe(inside)})`,
   );
   check(
-    outside[0] === "2px" && outside[1] === "2px" && outside[2] === ridgeline.surfaceRaised,
-    `${url} the field outside the subtree stays Ridgeline (${outside.join(", ")})`,
+    outside.top === "2px" &&
+      outside.bottom === "2px" &&
+      outside.background === ridgeline.surfaceRaised,
+    `${url} the field outside the subtree stays Ridgeline (${describe(outside)})`,
   );
 }
 
