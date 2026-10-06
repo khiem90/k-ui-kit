@@ -77,4 +77,4 @@ Tokens expire, so repeat steps 2 and 3 when a Release run fails with an authenti
 - `src/docs/` holds the Getting started page and the Story it renders.
 - `.changeset/` holds pending changesets and the Changesets config.
 - `.github/workflows/` holds the CI, Pages, and Release workflows.
-- `CONTEXT.md` is the glossary. `docs/adr/` records the decisions behind the hard choices.
+- `GLOSSARY.md` is the glossary. `docs/adr/` records the decisions behind the hard choices.

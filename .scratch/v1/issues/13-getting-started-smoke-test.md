@@ -2,7 +2,7 @@
 
 **What to build:** A Consumer reads one page in Storybook and can install, import the stylesheet, and switch Themes. The packed package is proven inside a fresh Next.js App Router app and a fresh Vite app before the first release is cut.
 
-**Blocked by:** 02 (CI, Pages deploy, and release workflows), 03 (TextField), 04 (Checkbox), 05 (Switch), 06 (RadioGroup), 07 (Tooltip), 08 (Tabs), 09 (Dialog), 10 (Select), 11 (DataTable with sorting and pagination), 12 (DataTable selection and states)
+**Blocked by:** 02 (CI, Pages deploy, and release workflows), 03 (TextField), 04 (Checkbox), 05 (Switch), 06 (RadioGroup), 07 (Tooltip), 08 (Tabs), 09 (Dialog), 10 (Select), 11 (DataTable with sorting and pagination), 12 (DataTable selection and states), ridgeline 17 (Docs, changesets, and smoke test)
 
 **Status:** ready-for-human
 
