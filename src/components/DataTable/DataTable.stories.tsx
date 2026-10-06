@@ -150,6 +150,83 @@ const getColumnText = (canvas: Canvas, header: string) => {
   );
 };
 
+type RGB = [number, number, number];
+
+/**
+ * A computed colour as sRGB channels from 0 to 255. Accepts `rgb()` and the `color(srgb ...)` that
+ * color-mix computes to. Fails on a translucent colour, whose look depends on what is under it.
+ */
+function toRGB(computed: string): RGB {
+  const isRGB = computed.startsWith("rgb");
+  const isSRGB = computed.startsWith("color(srgb ");
+  const [r, g, b, alpha = 1] =
+    computed
+      .replace("color(srgb ", "")
+      .match(/[\d.e-]+/g)
+      ?.map(Number) ?? [];
+  if (!(isRGB || isSRGB) || r === undefined || g === undefined || b === undefined) {
+    throw new Error(`${computed} is not an sRGB colour`);
+  }
+  if (alpha !== 1) throw new Error(`${computed} is translucent`);
+  const scale = isSRGB ? 255 : 1;
+  return [r * scale, g * scale, b * scale].map((channel) => Math.round(channel)) as RGB;
+}
+
+/** Resolves a colour Token through the browser, as it applies inside the given element. */
+function colourIn(element: Element, name: string): RGB {
+  const probe = document.createElement("span");
+  probe.style.color = `var(${name})`;
+  element.append(probe);
+  const computed = getComputedStyle(probe).color;
+  probe.remove();
+  return toRGB(computed);
+}
+
+/** Resolves a colour Token through the browser, as the root defines it. */
+const tokenColour = (name: string) => colourIn(document.body, name);
+
+/** WCAG 2 relative luminance. */
+function luminance(colour: RGB) {
+  const [R, G, B] = colour.map((channel) => {
+    const c = channel / 255;
+    return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  }) as RGB;
+  return 0.2126 * R + 0.7152 * G + 0.0722 * B;
+}
+
+function contrast(a: RGB, b: RGB) {
+  const light = Math.max(luminance(a), luminance(b));
+  const dark = Math.min(luminance(a), luminance(b));
+  return (light + 0.05) / (dark + 0.05);
+}
+
+const backgroundOf = (element: Element) => toRGB(getComputedStyle(element).backgroundColor);
+
+/**
+ * Asserts the element sets type in the label style. The expected values come from a probe styled
+ * with the label Tokens inside the element, so it resolves em-based tracking at the same font size.
+ */
+async function expectLabelStyle(element: HTMLElement) {
+  const probe = document.createElement("span");
+  probe.style.fontFamily = "var(--kui-font-label)";
+  probe.style.textTransform = "var(--kui-label-case)";
+  probe.style.letterSpacing = "var(--kui-label-tracking)";
+  element.append(probe);
+  const expected = getComputedStyle(probe);
+  const want = {
+    fontFamily: expected.fontFamily,
+    textTransform: expected.textTransform,
+    letterSpacing: expected.letterSpacing,
+  };
+  probe.remove();
+  const actual = getComputedStyle(element);
+  await expect({
+    fontFamily: actual.fontFamily,
+    textTransform: actual.textTransform,
+    letterSpacing: actual.letterSpacing,
+  }).toEqual(want);
+}
+
 // An annotation rather than satisfies, so the Stories' args are typed for Member instead of the
 // row type's constraint, which is all StoryObj can infer from a generic Component.
 const meta: Meta<DataTableProps<Member>> = {
@@ -693,6 +770,90 @@ export const Empty: Story = {
     // Nothing to select, so select-all is disabled. Nothing is loading, so there is no status.
     await expect(canvas.getByRole("checkbox", { name: "Select all rows" })).toBeDisabled();
     await expect(canvas.queryByRole("status")).not.toBeInTheDocument();
+  },
+};
+
+/** Ridgeline's "layer, don't outline" rule. A cream card, label-style headers, and rows told apart by tone. */
+export const Layered: Story = {
+  args: { columns: plainColumns, sortable: true, selectable: true, pageSize: 5 },
+  play: async ({ canvas, userEvent }) => {
+    const table = canvas.getByRole("table", { name: "Team members" });
+    const card = table.closest(".kui-data-table__scroll") as HTMLElement;
+    const cream = tokenColour("--kui-surface-raised");
+
+    // The table sits in a cream card with the card radius.
+    await expect(backgroundOf(card)).toEqual(cream);
+    await expect(getComputedStyle(card).borderRadius).toBe(
+      getComputedStyle(document.documentElement).getPropertyValue("--kui-radius-card").trim(),
+    );
+
+    // Header cells and their sort buttons set type in the label style, and the sort buttons keep
+    // the direction chevron.
+    for (const header of canvas.getAllByRole("columnheader")) await expectLabelStyle(header);
+    const sortButtons = within(table).getAllByRole("button");
+    await expect(sortButtons).toHaveLength(4);
+    for (const button of sortButtons) {
+      await expectLabelStyle(button);
+      await expect(button.querySelector(".kui-data-table__sort-icon svg")).not.toBeNull();
+    }
+
+    // No grid lines anywhere in the table.
+    for (const cell of [...canvas.getAllByRole("columnheader"), ...canvas.getAllByRole("cell")]) {
+      const style = getComputedStyle(cell);
+      await expect([
+        style.borderTopWidth,
+        style.borderRightWidth,
+        style.borderBottomWidth,
+        style.borderLeftWidth,
+      ]).toEqual(["0px", "0px", "0px", "0px"]);
+    }
+
+    // Rows alternate between a light apricot tone and cream, starting with the tone so the first
+    // row stands apart from the header. The tone sits between the page's apricot and cream.
+    const apricot = tokenColour("--kui-background");
+    const rows = getBodyRows(canvas);
+    const tone = backgroundOf(
+      within(rows[0] as HTMLElement).getAllByRole("cell")[1] as HTMLElement,
+    );
+    await expect(tone).not.toEqual(cream);
+    await expect(luminance(tone)).toBeGreaterThan(luminance(apricot));
+    await expect(luminance(tone)).toBeLessThan(luminance(cream));
+    for (const [index, row] of rows.entries()) {
+      for (const cell of within(row).getAllByRole("cell")) {
+        await expect(backgroundOf(cell)).toEqual(index % 2 === 0 ? tone : cream);
+      }
+    }
+
+    // A selected row turns Peach sky, and its text keeps 4.5:1 there. Hover shares the rule, but
+    // a synthetic pointer never matches :hover, so only selection is checked here.
+    const peach = tokenColour("--kui-tint");
+    const [first, second] = rows as [HTMLElement, HTMLElement];
+    await userEvent.click(within(first).getByRole("checkbox"));
+    for (const cell of within(first).getAllByRole("cell")) {
+      await waitFor(() => expect(backgroundOf(cell)).toEqual(peach));
+      const ratio = contrast(toRGB(getComputedStyle(cell).color), peach);
+      await expect(ratio).toBeGreaterThanOrEqual(4.5);
+    }
+    for (const cell of within(second).getAllByRole("cell")) {
+      await expect(backgroundOf(cell)).toEqual(cream);
+    }
+
+    // The checked box (drawn in primary) and the focus ring around it need 3:1 against the row
+    // (WCAG 1.4.11). Ember on Peach sky is under that, so the row deepens both.
+    const selectionCell = within(first).getAllByRole("cell")[0] as HTMLElement;
+    for (const token of ["--kui-primary", "--kui-focus-ring"]) {
+      const ratio = contrast(colourIn(selectionCell, token), peach);
+      await expect(ratio, `${token} on a selected row`).toBeGreaterThanOrEqual(3);
+    }
+
+    // Paging uses the kit's Button as a secondary pill, which layers on the page like the card
+    // does, rather than the stroked outline variant.
+    for (const name of ["Previous", "Next"]) {
+      const button = canvas.getByRole("button", { name });
+      await expect(button).toHaveClass("kui-button");
+      await expect(button).toHaveAttribute("data-variant", "secondary");
+      await expect(card).not.toContainElement(button);
+    }
   },
 };
 
