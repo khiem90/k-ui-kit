@@ -22,19 +22,19 @@
 }
 
 .kui-select__trigger[data-size="sm"] {
-  min-block-size: 2rem;
+  min-block-size: 36px;
   padding: 0 var(--kui-space-2);
   font-size: 0.875rem;
 }
 
 .kui-select__trigger[data-size="md"] {
-  min-block-size: 2.5rem;
+  min-block-size: 44px;
   padding: 0 var(--kui-space-3);
   font-size: 1rem;
 }
 
 .kui-select__trigger[data-size="lg"] {
-  min-block-size: 3rem;
+  min-block-size: 52px;
   padding: 0 var(--kui-space-4);
   font-size: 1.125rem;
 }

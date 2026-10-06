@@ -1,29 +1,39 @@
-/* The overlay and the panel are portaled to the end of body, so document order already puts them
-   above earlier content and neither carries a z-index. */
-.kui-dialog__overlay {
-  position: fixed;
-  inset: 0;
+/* The panel is a native dialog opened as a modal, so it renders in the browser's top layer above
+   everything else and needs no z-index. The overlay is its ::backdrop. */
+.kui-dialog::backdrop {
   background: var(--kui-overlay);
+}
+
+/* The page behind an open dialog keeps still. */
+body:has(.kui-dialog:modal) {
+  overflow: hidden;
 }
 
 .kui-dialog {
   position: fixed;
   /* Zero inset with auto margins centres the panel on both axes and leaves transform free for the
-     open and close animations. */
+     open animation. */
   inset: 0;
   margin: auto;
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
   inline-size: min(28rem, calc(100% - 2 * var(--kui-space-4)));
+  max-inline-size: none;
   block-size: fit-content;
   max-block-size: calc(100% - 2 * var(--kui-space-4));
+  padding: 0;
   overflow: hidden;
   border: 1px solid var(--kui-border);
   border-radius: var(--kui-radius-lg);
   background: var(--kui-background);
   color: var(--kui-foreground);
   font-family: var(--kui-font-family);
+}
+
+/* The display above would otherwise show a dialog the browser has closed. */
+.kui-dialog:not([open]) {
+  display: none;
 }
 
 /* The children scroll here rather than in the panel, so the close button, positioned against the
@@ -35,7 +45,8 @@
   padding: var(--kui-space-6);
 }
 
-/* Radix focuses the panel itself when it holds nothing focusable, and that focus needs to show. */
+/* The browser focuses the panel itself when it holds nothing focusable, and that focus needs to
+   show. */
 .kui-dialog:focus-visible {
   outline: 2px solid var(--kui-focus-ring);
   outline-offset: 2px;
@@ -93,32 +104,18 @@
   outline-offset: 2px;
 }
 
-/* Each state has its own animation name. Radix holds the element in the DOM until the closing one
-   ends, and it can only tell the two apart by name. */
-.kui-dialog__overlay:where([data-state="open"]) {
+/* The panel leaves the page as soon as it closes, so only opening animates. Under reduced motion
+   the motion Token is 0ms and the animations finish at once. */
+.kui-dialog:where([data-state="open"])::backdrop {
   animation: kui-dialog-overlay-in var(--kui-motion-duration) ease-out;
-}
-
-.kui-dialog__overlay:where([data-state="closed"]) {
-  animation: kui-dialog-overlay-out var(--kui-motion-duration) ease-in;
 }
 
 .kui-dialog:where([data-state="open"]) {
   animation: kui-dialog-in var(--kui-motion-duration) ease-out;
 }
 
-.kui-dialog:where([data-state="closed"]) {
-  animation: kui-dialog-out var(--kui-motion-duration) ease-in;
-}
-
 @keyframes kui-dialog-overlay-in {
   from {
-    opacity: 0;
-  }
-}
-
-@keyframes kui-dialog-overlay-out {
-  to {
     opacity: 0;
   }
 }
@@ -128,20 +125,5 @@
 @keyframes kui-dialog-in {
   from {
     transform: scale(0.96);
-  }
-}
-
-@keyframes kui-dialog-out {
-  to {
-    transform: scale(0.96);
-  }
-}
-
-/* The motion Token is already 0ms here, but a zero-length animation still has to reach its end
-   event before Radix unmounts the panel. Dropping the animation outright skips that wait. */
-@media (prefers-reduced-motion: reduce) {
-  .kui-dialog__overlay,
-  .kui-dialog {
-    animation: none;
   }
 }

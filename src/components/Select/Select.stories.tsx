@@ -152,17 +152,17 @@ const expectRowHeight = async (canvas: Canvas, px: number) => {
 
 export const Small: Story = {
   render: () => <OrderRow size="sm" />,
-  play: async ({ canvas }) => expectRowHeight(canvas, 32),
+  play: async ({ canvas }) => expectRowHeight(canvas, 36),
 };
 
 export const Medium: Story = {
   render: () => <OrderRow size="md" />,
-  play: async ({ canvas }) => expectRowHeight(canvas, 40),
+  play: async ({ canvas }) => expectRowHeight(canvas, 44),
 };
 
 export const Large: Story = {
   render: () => <OrderRow size="lg" />,
-  play: async ({ canvas }) => expectRowHeight(canvas, 48),
+  play: async ({ canvas }) => expectRowHeight(canvas, 52),
 };
 
 export const WithPlaceholder: Story = {
