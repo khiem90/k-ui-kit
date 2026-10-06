@@ -3,11 +3,17 @@
   flex-direction: column;
   gap: var(--kui-space-3);
   color: var(--kui-foreground);
-  font-family: var(--kui-font-family);
+  font-family: var(--kui-font-body);
 }
 
+/* The card. Its padding keeps the rows' rounded ends, and any focus ring drawn in them, clear of
+   the corners it clips to. */
 .kui-data-table__scroll {
   overflow-x: auto;
+  padding: var(--kui-space-2) var(--kui-space-3) var(--kui-space-3);
+  border-radius: var(--kui-radius-card);
+  background: var(--kui-surface-raised);
+  box-shadow: var(--kui-shadow-rest);
 }
 
 .kui-data-table__scroll:focus-visible {
@@ -15,15 +21,18 @@
   outline-offset: 2px;
 }
 
+/* Separate borders, because collapsed ones ignore the radius that rounds each row's ends. */
 .kui-data-table__table {
   inline-size: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   font-size: 0.875rem;
   line-height: 1.25rem;
 }
 
+/* Inline padding lines the caption up with the text in the cells below it. */
 .kui-data-table__caption {
-  padding-block-end: var(--kui-space-2);
+  padding: var(--kui-space-2) var(--kui-space-3);
   font-size: 1rem;
   font-weight: 600;
   line-height: 1.5rem;
@@ -40,13 +49,14 @@
   white-space: nowrap;
 }
 
+/* The label style. The line height stays the cells' 1.25rem, so the selection box centres the same
+   way in the header as in the rows. */
 .kui-data-table__header {
-  border-block-end: 1px solid var(--kui-border);
+  font-family: var(--kui-font-label);
+  font-size: 0.75rem;
   font-weight: 600;
-}
-
-.kui-data-table__cell {
-  border-block-end: 1px solid color-mix(in srgb, var(--kui-border) 40%, transparent);
+  text-transform: var(--kui-label-case);
+  letter-spacing: var(--kui-label-tracking);
 }
 
 /* The button takes the cell's padding so the whole header cell is the hit target. */
@@ -65,7 +75,10 @@
   border: 0;
   background: none;
   color: inherit;
+  /* The browser's button styles reset case and tracking, which the font shorthand leaves alone. */
   font: inherit;
+  text-transform: inherit;
+  letter-spacing: inherit;
   text-align: inherit;
   cursor: pointer;
   appearance: none;
@@ -130,8 +143,38 @@
   margin-block: calc((1.25rem - 1.5rem) / 2);
 }
 
-.kui-data-table__row[data-selected] {
-  background: color-mix(in srgb, var(--kui-primary) 12%, var(--kui-background));
+/* Rows separate by tone, not lines. Odd rows take a light apricot tone and even rows cream, so the
+   first row stands apart from the header. The cells carry the fill, since a row's background
+   would show square corners behind the rounded end cells. */
+.kui-data-table__row > .kui-data-table__cell {
+  background: var(--kui-surface-raised);
+  transition: background-color var(--kui-motion-duration);
+}
+
+.kui-data-table__row:nth-child(odd) > .kui-data-table__cell {
+  background: color-mix(in srgb, var(--kui-background) 70%, var(--kui-surface-raised));
+}
+
+/* Hovered and selected rows turn Peach sky. Ember is under 3:1 there, so the row deepens the
+   checked box to primary hover and draws the focus ring in the foreground colour, keeping both at
+   3:1 (WCAG 1.4.11). */
+.kui-data-table__row:is(:hover, [data-selected]) {
+  --kui-primary: var(--kui-primary-hover);
+  --kui-focus-ring: var(--kui-foreground);
+}
+
+.kui-data-table__row:is(:hover, [data-selected]) > .kui-data-table__cell {
+  background: var(--kui-tint);
+}
+
+.kui-data-table__row > .kui-data-table__cell:first-child {
+  border-start-start-radius: var(--kui-radius-field);
+  border-end-start-radius: var(--kui-radius-field);
+}
+
+.kui-data-table__row > .kui-data-table__cell:last-child {
+  border-start-end-radius: var(--kui-radius-field);
+  border-end-end-radius: var(--kui-radius-field);
 }
 
 /* The loading and empty messages sit in one cell that spans the table. Prose, so it may wrap. */
