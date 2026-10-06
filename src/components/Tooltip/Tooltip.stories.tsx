@@ -3,13 +3,18 @@ import { expect, fn, waitFor, within } from "storybook/test";
 import { useCallback, useState } from "react";
 import { Button, Tooltip, type TooltipSide } from "../../index";
 
-/** The box renders in a portal at the end of body, outside the Story's canvas. */
+/** The box renders in the browser's top layer. Queries start from body so they find it either way. */
 const findTooltip = () => within(document.body).findByRole("tooltip", {}, { timeout: 2000 });
 const queryTooltip = () => within(document.body).queryByRole("tooltip");
 
+/** The gap Tooltip keeps between the trigger and the box. */
+const OFFSET = 6;
+
 /**
- * Radix positions the box a frame after it mounts and may flip it, so the side and the rectangles
- * are checked until they settle.
+ * The box may flip after it opens, so the side and the rectangles are checked until they settle.
+ * Besides landing on the requested side of the trigger, the box must sit the offset away from it
+ * and overlap it along the other axis. A box that falls back to the middle of the viewport, as it
+ * would in a browser without anchor positioning, fails.
  */
 const expectPlacedOn = async (side: TooltipSide, tooltip: HTMLElement, trigger: HTMLElement) => {
   await waitFor(() => {
@@ -20,6 +25,20 @@ const expectPlacedOn = async (side: TooltipSide, tooltip: HTMLElement, trigger: 
     if (side === "bottom") expect(box.top).toBeGreaterThanOrEqual(anchor.bottom);
     if (side === "left") expect(box.right).toBeLessThanOrEqual(anchor.left);
     if (side === "right") expect(box.left).toBeGreaterThanOrEqual(anchor.right);
+    const gap = {
+      top: anchor.top - box.bottom,
+      bottom: box.top - anchor.bottom,
+      left: anchor.left - box.right,
+      right: box.left - anchor.right,
+    }[side];
+    expect(gap).toBeCloseTo(OFFSET, 0);
+    if (side === "top" || side === "bottom") {
+      expect(box.left).toBeLessThan(anchor.right);
+      expect(box.right).toBeGreaterThan(anchor.left);
+    } else {
+      expect(box.top).toBeLessThan(anchor.bottom);
+      expect(box.bottom).toBeGreaterThan(anchor.top);
+    }
   });
 };
 
@@ -91,6 +110,38 @@ export const FlipsWhenNoRoom: Story = {
   },
 };
 
+/**
+ * The trigger sits in a small box that clips its overflow and starts its own stacking context. The
+ * tooltip is in the browser's top layer, so it still shows in full above the box, and it renders
+ * next to its trigger in the DOM rather than in a portal at the end of body.
+ */
+export const EscapesClippingContainer: Story = {
+  render: (args) => (
+    <div style={{ display: "grid", placeItems: "center", minBlockSize: "12rem" }}>
+      <div
+        style={{
+          position: "relative",
+          zIndex: 0,
+          overflow: "hidden",
+          padding: "var(--kui-space-1)",
+        }}
+      >
+        <Tooltip {...args} />
+      </div>
+    </div>
+  ),
+  play: async ({ canvas, canvasElement, userEvent }) => {
+    await userEvent.tab();
+    const trigger = canvas.getByRole("button", { name: "Save" });
+    const tooltip = await findTooltip();
+    await expect(canvasElement).toContainElement(tooltip);
+    await expectPlacedOn("top", tooltip, trigger);
+    const box = tooltip.getBoundingClientRect();
+    const hit = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
+    await expect(tooltip).toContainElement(hit as HTMLElement | null);
+  },
+};
+
 export const OpensOnHover: Story = {
   play: async ({ canvas, userEvent, args }) => {
     const trigger = canvas.getByRole("button", { name: "Save" });
@@ -102,6 +153,22 @@ export const OpensOnHover: Story = {
     await userEvent.unhover(trigger);
     await waitFor(() => expect(queryTooltip()).not.toBeInTheDocument());
     await expect(args.onOpenChange).toHaveBeenLastCalledWith(false);
+  },
+};
+
+/** WCAG 1.4.13 asks that hover content stay while the pointer moves onto it. */
+export const StaysOpenWhilePointerIsOnTheBox: Story = {
+  args: { delay: 0 },
+  play: async ({ canvas, userEvent }) => {
+    const trigger = canvas.getByRole("button", { name: "Save" });
+    await userEvent.hover(trigger);
+    const tooltip = await findTooltip();
+    await userEvent.unhover(trigger);
+    await userEvent.hover(tooltip);
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    await expect(tooltip).toBeVisible();
+    await userEvent.unhover(tooltip);
+    await waitFor(() => expect(queryTooltip()).not.toBeInTheDocument());
   },
 };
 

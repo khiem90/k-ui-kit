@@ -557,7 +557,7 @@ function DataTableInner<TData>(
             Page {pageIndex + 1} of {Math.max(pageCount, 1)}
           </p>
           <Button
-            variant="outline"
+            variant="secondary"
             size="sm"
             disabled={!canPreviousPage}
             onClick={() => setPageIndex((index) => index - 1)}
@@ -565,7 +565,7 @@ function DataTableInner<TData>(
             Previous
           </Button>
           <Button
-            variant="outline"
+            variant="secondary"
             size="sm"
             disabled={!canNextPage}
             onClick={() => setPageIndex((index) => index + 1)}

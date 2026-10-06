@@ -17,6 +17,8 @@ const checks = [
     "start with the client directive",
     (s) => s.startsWith('"use client";'),
   ]),
+  // Tooltip and Select import the shared popover anchoring from outside their own folders.
+  ["dist/popover.js", "export useAnchoredPopover", (s) => s.includes("useAnchoredPopover")],
   ["dist/index.d.ts", "declare Button", (s) => s.includes("declare const Button")],
   ["dist/index.d.ts", "declare TextField", (s) => s.includes("declare const TextField")],
   ["dist/index.d.ts", "declare Checkbox", (s) => s.includes("declare const Checkbox")],
