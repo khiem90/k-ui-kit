@@ -38,6 +38,8 @@ const textPairs: [string, string][] = [
   ["--kui-danger", "--kui-surface-raised"],
   // Tooltip: cream text on a Bark bubble.
   ["--kui-surface-raised", "--kui-foreground"],
+  // Dialog: the Ember title on the cream panel.
+  ["--kui-primary", "--kui-surface-raised"],
 ];
 
 /** Every edge and indicator pair the kit draws, as [edge, background]. WCAG 1.4.11 asks 3:1. */
