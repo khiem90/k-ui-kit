@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { createRef, type MouseEvent } from "react";
 import { expect, fn } from "storybook/test";
 import { Button } from "../../index";
 
@@ -41,6 +42,31 @@ export const Medium: Story = { args: { size: "md" } };
 
 export const Large: Story = { args: { size: "lg" } };
 
+export const Sizes: Story = {
+  render: (args) => (
+    <div style={{ display: "flex", alignItems: "center", gap: "var(--kui-space-3)" }}>
+      <Button {...args} size="sm">
+        Small
+      </Button>
+      <Button {...args} size="md">
+        Medium
+      </Button>
+      <Button {...args} size="lg">
+        Large
+      </Button>
+    </div>
+  ),
+  play: async ({ canvas }) => {
+    const heights = ["Small", "Medium", "Large"].map(
+      (name) => canvas.getByRole("button", { name }).getBoundingClientRect().height,
+    );
+    await expect(heights).toEqual([36, 44, 52]);
+    const label = getComputedStyle(canvas.getByRole("button", { name: "Medium" }));
+    await expect(label.textTransform).toBe("uppercase");
+    await expect(label.fontFamily).toContain("Josefin Sans");
+  },
+};
+
 export const WithIcons: Story = {
   args: { leadingIcon: <PlusIcon />, trailingIcon: <ArrowIcon />, children: "Add item" },
   play: async ({ canvas }) => {
@@ -58,6 +84,100 @@ export const AsLink: Story = {
   play: async ({ canvas }) => {
     await expect(canvas.getByRole("link", { name: "Go to top" })).toBeVisible();
     await expect(canvas.queryByRole("button")).not.toBeInTheDocument();
+  },
+};
+
+const clicks: string[] = [];
+
+export const AsLinkRunsTheChildHandlerFirst: Story = {
+  args: {
+    asChild: true,
+    variant: "outline",
+    onClick: fn((event: MouseEvent<HTMLButtonElement>) => {
+      clicks.push("Button");
+      // Following the link would navigate the test page away.
+      event.preventDefault();
+    }),
+  },
+  render: (args) => (
+    <Button {...args}>
+      <a href="#top" onClick={() => clicks.push("link")}>
+        Go to top
+      </a>
+    </Button>
+  ),
+  play: async ({ canvas, userEvent }) => {
+    clicks.length = 0;
+    await userEvent.click(canvas.getByRole("link", { name: "Go to top" }));
+    await expect(clicks).toEqual(["link", "Button"]);
+  },
+};
+
+const preventingClick = fn((event: MouseEvent<HTMLAnchorElement>) => event.preventDefault());
+
+export const AsLinkSkipsTheKitHandlerWhenTheChildPreventsDefault: Story = {
+  args: { asChild: true, variant: "outline" },
+  render: (args) => (
+    <Button {...args}>
+      <a href="#top" onClick={preventingClick}>
+        Go to top
+      </a>
+    </Button>
+  ),
+  play: async ({ canvas, userEvent, args }) => {
+    preventingClick.mockClear();
+    await userEvent.click(canvas.getByRole("link", { name: "Go to top" }));
+    await expect(preventingClick).toHaveBeenCalledTimes(1);
+    await expect(args.onClick).not.toHaveBeenCalled();
+  },
+};
+
+const buttonRef = createRef<HTMLButtonElement>();
+const linkRef = createRef<HTMLAnchorElement>();
+
+export const AsLinkMergesClassNamesAndRefs: Story = {
+  args: { asChild: true, variant: "secondary", className: "consumer-button" },
+  render: (args) => (
+    <Button {...args} ref={buttonRef}>
+      <a href="#top" className="consumer-link" ref={linkRef}>
+        Go to top
+      </a>
+    </Button>
+  ),
+  play: async ({ canvas }) => {
+    const link = canvas.getByRole("link", { name: "Go to top" });
+    await expect(link).toHaveClass("kui-button", "consumer-button", "consumer-link");
+    await expect(link).toHaveAttribute("data-variant", "secondary");
+    await expect(buttonRef.current).toBe(link);
+    await expect(linkRef.current).toBe(link);
+  },
+};
+
+export const AsLinkWithIcons: Story = {
+  args: { asChild: true, leadingIcon: <PlusIcon />, trailingIcon: <ArrowIcon /> },
+  render: (args) => (
+    <Button {...args}>
+      <a href="#top">Add item</a>
+    </Button>
+  ),
+  play: async ({ canvas }) => {
+    const link = canvas.getByRole("link", { name: "Add item" });
+    await expect(link.querySelectorAll("svg")).toHaveLength(2);
+    await expect(link).toHaveTextContent(/^Add item$/);
+  },
+};
+
+export const AsLinkDisabled: Story = {
+  args: { asChild: true, disabled: true },
+  render: (args) => (
+    <Button {...args}>
+      <a href="#top">Go to top</a>
+    </Button>
+  ),
+  play: async ({ canvas }) => {
+    const link = canvas.getByRole("link", { name: "Go to top" });
+    await expect(link).toHaveAttribute("aria-disabled", "true");
+    await expect(link).not.toHaveAttribute("disabled");
   },
 };
 
