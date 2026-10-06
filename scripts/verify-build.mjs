@@ -56,20 +56,27 @@ const checks = [
   ["dist/styles/index.css", "contain no font-face rules", (s) => !s.includes("@font-face")],
   [
     "package.json",
-    "export the fonts stylesheet",
-    (s) => fontsExport(s) === "./dist/styles/fonts.css",
+    "export the Ridgeline fonts stylesheet",
+    (s) => fontsExport(s, "./fonts.css") === "./dist/styles/fonts.css",
+  ],
+  [
+    "package.json",
+    "export the Noren fonts stylesheet",
+    (s) => fontsExport(s, "./fonts/noren.css") === "./dist/styles/fonts-noren.css",
   ],
   // The kit has no runtime dependencies (ADR 0004). Even an empty field invites the next one back.
   ["package.json", "leave out the dependencies field", (s) => !("dependencies" in JSON.parse(s))],
-  ...["fraunces", "josefin-sans", "nunito-sans"].map((family) => [
-    `dist/fonts/${family}/OFL.txt`,
-    "carry the SIL Open Font License",
-    (s) => s.includes("SIL OPEN FONT LICENSE Version 1.1"),
-  ]),
+  ...["fraunces", "josefin-sans", "nunito-sans", "shippori-mincho-b1", "zen-kaku-gothic-new"].map(
+    (family) => [
+      `dist/fonts/${family}/OFL.txt`,
+      "carry the SIL Open Font License",
+      (s) => s.includes("SIL OPEN FONT LICENSE Version 1.1"),
+    ],
+  ),
 ];
 
-function fontsExport(manifest) {
-  return JSON.parse(manifest).exports?.["./fonts.css"];
+function fontsExport(manifest, path) {
+  return JSON.parse(manifest).exports?.[path];
 }
 
 /** What the entry exports, and the parts each composite namespace carries. */
@@ -127,49 +134,63 @@ report(
   `src/ has modules to mirror in dist/ (${sourceModules.length} found)`,
 );
 
-// The fonts stylesheet is copied, not bundled, so nothing else notices a font file that never made
-// it into dist/. Every url() must resolve to a shipped file, and every face the Theme draws must be
-// declared for both subsets.
-const fontsSheet = "dist/styles/fonts.css";
+// The fonts stylesheets are copied, not bundled, so nothing else notices a font file that never
+// made it into dist/. Every url() must resolve to a shipped file, and every face a Theme draws must
+// be declared for both subsets in that Theme's sheet.
 const latin = "U+0000-00FF";
 const latinExt = "U+0100-02BA";
-const faces = [
-  ["Fraunces", "italic", 400],
-  ["Fraunces", "italic", 600],
-  ["Fraunces", "normal", 600],
-  ["Josefin Sans", "normal", 400],
-  ["Josefin Sans", "normal", 600],
-  ["Nunito Sans", "normal", 400],
-  ["Nunito Sans", "normal", 600],
-  ["Nunito Sans", "normal", 700],
+const fontsSheets = [
+  [
+    "dist/styles/fonts.css",
+    [
+      ["Fraunces", "italic", 400],
+      ["Fraunces", "italic", 600],
+      ["Fraunces", "normal", 600],
+      ["Josefin Sans", "normal", 400],
+      ["Josefin Sans", "normal", 600],
+      ["Nunito Sans", "normal", 400],
+      ["Nunito Sans", "normal", 600],
+      ["Nunito Sans", "normal", 700],
+    ],
+  ],
+  [
+    "dist/styles/fonts-noren.css",
+    [
+      ["Shippori Mincho B1", "normal", 800],
+      ["Zen Kaku Gothic New", "normal", 400],
+      ["Zen Kaku Gothic New", "normal", 700],
+    ],
+  ],
 ];
-let fontRules = [];
-try {
-  fontRules = [...readFileSync(fontsSheet, "utf8").matchAll(/@font-face\s*{([^}]*)}/g)].map(
-    ([, body]) => body,
-  );
-} catch {
-  report(false, `${fontsSheet} is missing`);
-}
-for (const body of fontRules) {
-  const urls = [...body.matchAll(/url\(\s*["']?([^"')]+)["']?\s*\)/g)].map(([, url]) => url);
-  report(urls.length > 0, `${fontsSheet} has a face with a url: ${body.trim().split("\n")[0]}`);
-  for (const url of urls) {
-    report(existsSync(resolve(dirname(fontsSheet), url)), `${fontsSheet} ships ${url}`);
-  }
-  report(/font-display:\s*swap/.test(body), `${fontsSheet} swaps ${urls[0]}`);
-  report(/unicode-range:/.test(body), `${fontsSheet} limits ${urls[0]} to a unicode range`);
-}
-for (const [family, style, weight] of faces) {
-  for (const subset of [latin, latinExt]) {
-    const declared = fontRules.some(
-      (body) =>
-        body.includes(`font-family: "${family}"`) &&
-        body.includes(`font-style: ${style}`) &&
-        coversWeight(body, weight) &&
-        body.includes(subset),
+for (const [fontsSheet, faces] of fontsSheets) {
+  let fontRules = [];
+  try {
+    fontRules = [...readFileSync(fontsSheet, "utf8").matchAll(/@font-face\s*{([^}]*)}/g)].map(
+      ([, body]) => body,
     );
-    report(declared, `${fontsSheet} declares ${family} ${style} ${weight} from ${subset}`);
+  } catch {
+    report(false, `${fontsSheet} is missing`);
+  }
+  for (const body of fontRules) {
+    const urls = [...body.matchAll(/url\(\s*["']?([^"')]+)["']?\s*\)/g)].map(([, url]) => url);
+    report(urls.length > 0, `${fontsSheet} has a face with a url: ${body.trim().split("\n")[0]}`);
+    for (const url of urls) {
+      report(existsSync(resolve(dirname(fontsSheet), url)), `${fontsSheet} ships ${url}`);
+    }
+    report(/font-display:\s*swap/.test(body), `${fontsSheet} swaps ${urls[0]}`);
+    report(/unicode-range:/.test(body), `${fontsSheet} limits ${urls[0]} to a unicode range`);
+  }
+  for (const [family, style, weight] of faces) {
+    for (const subset of [latin, latinExt]) {
+      const declared = fontRules.some(
+        (body) =>
+          body.includes(`font-family: "${family}"`) &&
+          body.includes(`font-style: ${style}`) &&
+          coversWeight(body, weight) &&
+          body.includes(subset),
+      );
+      report(declared, `${fontsSheet} declares ${family} ${style} ${weight} from ${subset}`);
+    }
   }
 }
 
