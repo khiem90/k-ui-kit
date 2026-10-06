@@ -34,7 +34,7 @@
 .kui-data-table__caption {
   padding: var(--kui-space-2) var(--kui-space-3);
   font-size: var(--kui-font-size-lg);
-  font-weight: 600;
+  font-weight: var(--kui-label-weight);
   line-height: 1.5rem;
   text-align: start;
 }
@@ -54,7 +54,7 @@
 .kui-data-table__header {
   font-family: var(--kui-font-label);
   font-size: var(--kui-font-size-sm);
-  font-weight: 600;
+  font-weight: var(--kui-label-weight);
   text-transform: var(--kui-label-case);
   letter-spacing: var(--kui-label-tracking);
 }
@@ -176,14 +176,16 @@
   background: var(--kui-primary-on-tint);
 }
 
+/* The row ends read their own role. A longhand corner cannot take the field radius, which may hold
+   four values (ADR 0006). */
 .kui-data-table__row > .kui-data-table__cell:first-child {
-  border-start-start-radius: var(--kui-radius-field);
-  border-end-start-radius: var(--kui-radius-field);
+  border-start-start-radius: var(--kui-radius-row);
+  border-end-start-radius: var(--kui-radius-row);
 }
 
 .kui-data-table__row > .kui-data-table__cell:last-child {
-  border-start-end-radius: var(--kui-radius-field);
-  border-end-end-radius: var(--kui-radius-field);
+  border-start-end-radius: var(--kui-radius-row);
+  border-end-end-radius: var(--kui-radius-row);
 }
 
 /* The loading and empty messages sit in one cell that spans the table. Prose, so it may wrap. */

@@ -41,16 +41,19 @@ const bodyCss = `body {
 }
 `;
 
-// The Vite app overrides one Token in a plain :root rule, the way the Getting started page says to.
+// The Vite app overrides one Token the way the Getting started page says to. The rule names
+// [data-theme] as well as :root so the override reaches the Noren subtree the app renders: a Theme
+// block declares every Token on the wrapper itself, and that beats a value inherited from :root.
 const OVERRIDE_PRIMARY = "#2f6f5e";
-const overrideCss = `:root {
+const overrideCss = `:root,
+[data-theme] {
   --kui-primary: ${OVERRIDE_PRIMARY};
 }
 `;
 
-// Every face the Ridgeline Theme draws, each tried with a latin and a latin-ext sample so both
-// files of a subset family load. Kept in step with src/docs/Fonts.stories.tsx.
-const fontFaces = [
+// Every face each Theme draws, each tried with a latin and a latin-ext sample so both files of a
+// subset family load. Kept in step with src/docs/Fonts.stories.tsx.
+const ridgelineFaces = [
   'italic 400 16px "Fraunces"',
   'italic 600 16px "Fraunces"',
   'normal 600 16px "Fraunces"',
@@ -60,22 +63,30 @@ const fontFaces = [
   'normal 600 16px "Nunito Sans"',
   'normal 700 16px "Nunito Sans"',
 ];
+const norenFaces = [
+  'normal 800 16px "Shippori Mincho B1"',
+  'normal 400 16px "Zen Kaku Gothic New"',
+  'normal 700 16px "Zen Kaku Gothic New"',
+];
 const fontSamples = ["Weekend escape", "Łódź, Ærøskøbing"];
 
-// A server component: no client directive, no function props, every Component uncontrolled. It also
-// loads the opt-in fonts stylesheet, so the Next.js build has to resolve the bundled font files.
+// A server component: no client directive, no function props, every Component uncontrolled. The
+// page is under Noren, with the attribute on the html element the way the Getting started page
+// says, and it loads both opt-in fonts stylesheets, so the Next.js build has to resolve every
+// bundled font file.
 const nextFiles = {
   "app/globals.css": bodyCss,
   "app/layout.tsx": `import type { Metadata } from "next";
 import "k-ui-kit/styles.css";
 import "k-ui-kit/fonts.css";
+import "k-ui-kit/fonts/noren.css";
 import "./globals.css";
 
 export const metadata: Metadata = { title: "k-ui-kit smoke test" };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en">
+    <html lang="en" data-theme="noren">
       <body>{children}</body>
     </html>
   );
@@ -176,7 +187,8 @@ export default function Home() {
 };
 
 // Imports two Components only, so the production bundle shows what tree-shaking dropped. It skips
-// the fonts stylesheet, so the bundle proves the main stylesheet pulls in no font files.
+// the fonts stylesheets, so the bundle proves the main stylesheet pulls in no font files. The same
+// two Components render again inside a Noren subtree, beside the Ridgeline ones.
 const viteFiles = {
   "src/app.css": bodyCss + overrideCss,
   "src/main.tsx": `import { StrictMode } from "react";
@@ -201,6 +213,11 @@ export function App() {
         <Button variant="primary">Save</Button>
       </section>
       <section id="text-field">
+        <TextField label="Name" />
+      </section>
+      <section id="noren" data-theme="noren">
+        <h2>The same two under Noren</h2>
+        <Button variant="primary">Save</Button>
         <TextField label="Name" />
       </section>
     </main>
@@ -233,19 +250,26 @@ const root = reused
   : mkdtempSync(join(tmpdir(), `${pkg.name}-smoke-`));
 mkdirSync(root, { recursive: true });
 
-// Ridgeline colours, read from the Tokens so a Token change cannot pass unnoticed. Ridgeline is
-// the only Theme and has one root block, so each Token is declared once.
+// Theme colours, read from the Tokens so a Token change cannot pass unnoticed. Each Theme declares
+// every Token once in its own block: Ridgeline's is the :root block and Noren's follows it, so a
+// name is looked up in the text of one block only.
 const tokens = readFileSync(join(kit, "src/styles/tokens.css"), "utf8");
+const norenStart = tokens.indexOf('[data-theme="noren"]');
+if (norenStart < 0) throw new Error("tokens.css has no Noren block");
+const blocks = { Ridgeline: tokens.slice(0, norenStart), Noren: tokens.slice(norenStart) };
 const rgb = (hex) => `rgb(${[1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16)).join(", ")})`;
-const tokenRgb = (name) => {
-  const hex = tokens.match(new RegExp(`${name}:\\s*(#[0-9a-f]{6})\\b`, "i"))?.[1];
-  if (!hex) throw new Error(`tokens.css has no hex value for ${name}`);
+const tokenRgb = (theme, name) => {
+  const hex = blocks[theme].match(new RegExp(`${name}:\\s*(#[0-9a-f]{6})\\b`, "i"))?.[1];
+  if (!hex) throw new Error(`tokens.css has no hex value for ${name} in the ${theme} block`);
   return rgb(hex);
 };
-const ridgeline = {
-  background: tokenRgb("--kui-background"),
-  primary: tokenRgb("--kui-primary"),
-};
+const themeColours = (theme) => ({
+  background: tokenRgb(theme, "--kui-background"),
+  primary: tokenRgb(theme, "--kui-primary"),
+  surfaceRaised: tokenRgb(theme, "--kui-surface-raised"),
+});
+const ridgeline = themeColours("Ridgeline");
+const noren = themeColours("Noren");
 
 const problems = [];
 
@@ -333,91 +357,143 @@ async function inBrowser(url, checks) {
   }
 }
 
-/**
- * Ridgeline applies with no attribute and ignores a dark system preference, since it has a light
- * Color scheme only. `primary` is the colour the app's primary Button should show.
- */
-function verifyRidgeline(primary) {
-  return async (page, url) => {
-    const background = (selector) =>
-      page
-        .locator(selector)
-        .first()
-        .evaluate(
-          (element) => element.ownerDocument.defaultView.getComputedStyle(element).backgroundColor,
-        );
-    // Colours transition over --kui-motion-duration, so a reading taken right after a change lands
-    // mid-transition. Poll until the colour settles on the expected value or time runs out.
-    const settles = async (selector, expected) => {
-      const deadline = Date.now() + 2_000;
-      let actual = await background(selector);
-      while (actual !== expected && Date.now() < deadline) {
-        await new Promise((resolveWait) => setTimeout(resolveWait, 50));
-        actual = await background(selector);
-      }
-      return actual === expected;
-    };
+const computed = (page, selector, property) =>
+  page
+    .locator(selector)
+    .first()
+    .evaluate(
+      (element, name) => element.ownerDocument.defaultView.getComputedStyle(element)[name],
+      property,
+    );
 
-    check(await settles("body", ridgeline.background), `${url} Ridgeline background on the page`);
-    check(await settles("#button .kui-button", primary), `${url} primary Button is ${primary}`);
+// Colours transition over --kui-motion-duration, so a reading taken right after a change lands
+// mid-transition. Poll until the colour settles on the expected value or time runs out.
+async function backgroundSettles(page, selector, expected) {
+  const deadline = Date.now() + 2_000;
+  let actual = await computed(page, selector, "backgroundColor");
+  while (actual !== expected && Date.now() < deadline) {
+    await new Promise((resolveWait) => setTimeout(resolveWait, 50));
+    actual = await computed(page, selector, "backgroundColor");
+  }
+  return actual === expected;
+}
+
+/**
+ * The Theme the page is under: Ridgeline with no attribute, Noren with it on the html element.
+ * Both ignore a dark system preference, since each has a light Color scheme only. `primary` is
+ * the colour the app's primary Button should show, which an override may have changed.
+ */
+function verifyTheme(theme, { background, primary }) {
+  return async (page, url) => {
+    check(
+      await backgroundSettles(page, "body", background),
+      `${url} ${theme} background on the page`,
+    );
+    check(
+      await backgroundSettles(page, "#button .kui-button", primary),
+      `${url} primary Button is ${primary}`,
+    );
     await page.emulateMedia({ colorScheme: "dark" });
     check(
-      (await settles("body", ridgeline.background)) &&
-        (await settles("#button .kui-button", primary)),
+      (await backgroundSettles(page, "body", background)) &&
+        (await backgroundSettles(page, "#button .kui-button", primary)),
       `${url} a dark system preference changes nothing`,
     );
     await page.emulateMedia({ colorScheme: "light" });
   };
 }
 
-/** Every Ridgeline face resolves to a bundled file the app's build copied and served. */
-async function verifyFonts(page, url) {
-  const button = page.locator("#button .kui-button");
-  const results = await button.evaluate(
-    async (element, { faces, samples }) => {
-      const { fonts } = element.ownerDocument;
-      const out = [];
-      for (const font of faces) {
-        for (const sample of samples) {
-          try {
-            // load() resolves with no faces when nothing matches, and rejects when a file fails.
-            const loaded = await fonts.load(font, sample);
-            const ok = loaded.length > 0 && loaded.every((face) => face.status === "loaded");
-            out.push({ font, sample, ok, detail: `${loaded.length} face(s)` });
-          } catch (error) {
-            out.push({ font, sample, ok: false, detail: String(error) });
+/** Every face of a Theme resolves to a bundled file the app's build copied and served. */
+function verifyFaces(theme, faces) {
+  return async (page, url) => {
+    const results = await page.locator("#button .kui-button").evaluate(
+      async (element, { faces, samples }) => {
+        const { fonts } = element.ownerDocument;
+        const out = [];
+        for (const font of faces) {
+          for (const sample of samples) {
+            try {
+              // load() resolves with no faces when nothing matches, and rejects when a file fails.
+              const loaded = await fonts.load(font, sample);
+              const ok = loaded.length > 0 && loaded.every((face) => face.status === "loaded");
+              out.push({ font, sample, ok, detail: `${loaded.length} face(s)` });
+            } catch (error) {
+              out.push({ font, sample, ok: false, detail: String(error) });
+            }
           }
         }
-      }
-      return out;
-    },
-    { faces: fontFaces, samples: fontSamples },
-  );
-  const failed = results.filter((result) => !result.ok);
-  check(
-    failed.length === 0,
-    `${url} loads all ${fontFaces.length} Ridgeline faces in both ranges` +
-      failed.map((f) => `\n  ${f.font} for "${f.sample}": ${f.detail}`).join(""),
-  );
-  const label = await button.evaluate((element) => {
-    const { fontFamily, fontWeight } = element.ownerDocument.defaultView.getComputedStyle(element);
-    const family = fontFamily.split(",")[0];
-    // fonts.check() is true when no face matches at all, so look for a loaded face instead.
-    const weight = Number(fontWeight);
-    const ready = [...element.ownerDocument.fonts].some((face) => {
-      const [min, max = min] = face.weight.split(" ").map(Number);
-      return (
-        `"${face.family.replace(/"/g, "")}"` === family &&
-        face.status === "loaded" &&
-        weight >= min &&
-        weight <= max
-      );
+        return out;
+      },
+      { faces, samples: fontSamples },
+    );
+    const failed = results.filter((result) => !result.ok);
+    check(
+      failed.length === 0,
+      `${url} loads all ${faces.length} ${theme} faces in both ranges` +
+        failed.map((f) => `\n  ${f.font} for "${f.sample}": ${f.detail}`).join(""),
+    );
+  };
+}
+
+/** The Button label draws in the Theme's label family, from a face the page has loaded. */
+function verifyLabelFont(family) {
+  return async (page, url) => {
+    const label = await page.locator("#button .kui-button").evaluate((element) => {
+      const { fontFamily, fontWeight } =
+        element.ownerDocument.defaultView.getComputedStyle(element);
+      const first = fontFamily.split(",")[0];
+      // fonts.check() is true when no face matches at all, so look for a loaded face instead.
+      const weight = Number(fontWeight);
+      const ready = [...element.ownerDocument.fonts].some((face) => {
+        const [min, max = min] = face.weight.split(" ").map(Number);
+        return (
+          `"${face.family.replace(/"/g, "")}"` === first &&
+          face.status === "loaded" &&
+          weight >= min &&
+          weight <= max
+        );
+      });
+      return { first, ready };
     });
-    return { family, ready };
-  });
+    check(
+      label.first === `"${family}"` && label.ready,
+      `${url} Button labels draw in ${family} (${label.first}, loaded: ${label.ready})`,
+    );
+  };
+}
+
+/**
+ * The Vite app themes one subtree. The attribute reaches the Components inside it, the page
+ * outside it stays Ridgeline, and the app's override of primary reaches both because it is written
+ * as `:root, [data-theme]`. A `:root` rule alone stops at the wrapper, where the Noren block
+ * declares the Token again.
+ */
+async function verifyNorenSubtree(page, url) {
+  const wrapper = '#noren[data-theme="noren"]';
+  const present = (await page.locator(wrapper).count()) > 0;
+  check(present, `${url} renders a Noren subtree beside the Ridgeline content`);
+  if (!present) return;
   check(
-    label.family === '"Josefin Sans"' && label.ready,
-    `${url} Button labels draw in Josefin Sans (${label.family}, loaded: ${label.ready})`,
+    await backgroundSettles(page, `${wrapper} .kui-button`, rgb(OVERRIDE_PRIMARY)),
+    `${url} the override reaches the primary Button inside the Noren subtree`,
+  );
+  const field = async (selector) => ({
+    top: await computed(page, selector, "borderTopWidth"),
+    bottom: await computed(page, selector, "borderBottomWidth"),
+    background: await computed(page, selector, "backgroundColor"),
+  });
+  const describe = ({ top, bottom, background }) => `${top}, ${bottom}, ${background}`;
+  const inside = await field(`${wrapper} .kui-text-field__input`);
+  const outside = await field("#text-field .kui-text-field__input");
+  check(
+    inside.top === "0px" && inside.bottom === "3px" && inside.background === noren.surfaceRaised,
+    `${url} the field inside the subtree is Noren, a 3px underline on Paper (${describe(inside)})`,
+  );
+  check(
+    outside.top === "2px" &&
+      outside.bottom === "2px" &&
+      outside.background === ridgeline.surfaceRaised,
+    `${url} the field outside the subtree stays Ridgeline (${describe(outside)})`,
   );
 }
 
@@ -507,7 +583,15 @@ run("npm run build", nextDir);
 const nextUrl = `http://localhost:${NEXT_PORT}/`;
 const nextServer = await serve(`npx next start -p ${NEXT_PORT}`, nextDir, nextUrl);
 try {
-  await inBrowser(nextUrl, [verifyRidgeline(ridgeline.primary), verifyFonts, verifyEveryComponent]);
+  // The Next.js app is under Noren with both fonts stylesheets imported, so every face of both
+  // Themes must load, and the label must draw in the Noren label family.
+  await inBrowser(nextUrl, [
+    verifyTheme("Noren", noren),
+    verifyFaces("Ridgeline", ridgelineFaces),
+    verifyFaces("Noren", norenFaces),
+    verifyLabelFont("Zen Kaku Gothic New"),
+    verifyEveryComponent,
+  ]);
 } finally {
   stop(nextServer);
 }
@@ -547,8 +631,11 @@ const viteServer = await serve(
   viteUrl,
 );
 try {
-  // The app's plain :root override of --kui-primary beats the kit's :where(:root) Tokens.
-  await inBrowser(viteUrl, [verifyRidgeline(rgb(OVERRIDE_PRIMARY))]);
+  // The app's override of --kui-primary beats the kit's :where() Tokens under either Theme.
+  await inBrowser(viteUrl, [
+    verifyTheme("Ridgeline", { background: ridgeline.background, primary: rgb(OVERRIDE_PRIMARY) }),
+    verifyNorenSubtree,
+  ]);
 } finally {
   stop(viteServer);
 }

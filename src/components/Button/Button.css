@@ -8,11 +8,11 @@
   padding-block: 0;
   /* Every variant keeps a 2px border, so outline is the same size as the rest. */
   border: 2px solid transparent;
-  border-radius: var(--kui-radius-pill);
+  border-radius: var(--kui-radius-button);
   background: transparent;
   color: var(--kui-foreground);
   font-family: var(--kui-font-label);
-  font-weight: 600;
+  font-weight: var(--kui-label-weight);
   line-height: 1;
   text-transform: var(--kui-label-case);
   letter-spacing: var(--kui-label-tracking);
@@ -61,8 +61,13 @@
 }
 
 .kui-button[data-variant="secondary"] {
-  background: var(--kui-surface-raised);
+  background: var(--kui-secondary);
+  color: var(--kui-secondary-foreground);
   box-shadow: var(--kui-shadow-raised);
+}
+
+.kui-button[data-variant="secondary"]:not([data-disabled]):hover {
+  background: var(--kui-secondary-hover);
 }
 
 .kui-button[data-variant="ghost"] {
@@ -74,7 +79,6 @@
   border-color: var(--kui-foreground);
 }
 
-.kui-button[data-variant="secondary"]:not([data-disabled]):hover,
 .kui-button[data-variant="ghost"]:not([data-disabled]):hover,
 .kui-button[data-variant="outline"]:not([data-disabled]):hover {
   background: var(--kui-tint);

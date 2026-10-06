@@ -16,7 +16,7 @@
   font-family: var(--kui-font-label);
   font-size: var(--kui-font-size-md);
   line-height: 1.25rem;
-  font-weight: 600;
+  font-weight: var(--kui-label-weight);
   text-transform: var(--kui-label-case);
   letter-spacing: var(--kui-label-tracking);
 }

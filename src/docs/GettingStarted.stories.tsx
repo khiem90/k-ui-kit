@@ -3,7 +3,7 @@ import type { CSSProperties } from "react";
 import { Button, Checkbox, Select, TextField } from "../index";
 
 const labelStyle: CSSProperties = {
-  font: "600 0.875rem/1.25rem var(--kui-font-label)",
+  font: "var(--kui-label-weight) 0.875rem/1.25rem var(--kui-font-label)",
   textTransform: "var(--kui-label-case)" as CSSProperties["textTransform"],
   letterSpacing: "var(--kui-label-tracking)",
 };

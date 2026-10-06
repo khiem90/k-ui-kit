@@ -16,7 +16,7 @@
 
 .kui-text-field__label {
   font-family: var(--kui-font-label);
-  font-weight: 600;
+  font-weight: var(--kui-label-weight);
   text-transform: var(--kui-label-case);
   letter-spacing: var(--kui-label-tracking);
 }
@@ -30,14 +30,19 @@
 }
 
 /* Ridgeline layers rather than outlines, but cream on apricot is 1.17:1, so the field keeps a 2px
-   edge in the border Token to meet WCAG 1.4.11. The Select trigger draws the same box from the
-   same Tokens, so a change here belongs in Select.css too. */
+   edge in the border Token to meet WCAG 1.4.11. The width is its own Token and may hold four
+   values, one per side, which the border shorthand cannot take, so the edge is three longhands.
+   The hover, focus, read-only, and error rules set only the colour, so they land on whichever
+   sides have width. The Select trigger draws the same box from the same Tokens, so a change here
+   belongs in Select.css too. */
 .kui-text-field__input {
   box-sizing: border-box;
   inline-size: 100%;
   margin: 0;
   padding: 0 var(--kui-padding-field-inline);
-  border: 2px solid var(--kui-border);
+  border-style: solid;
+  border-width: var(--kui-border-width-field);
+  border-color: var(--kui-border);
   border-radius: var(--kui-radius-field);
   background: var(--kui-surface-raised);
   color: var(--kui-foreground);

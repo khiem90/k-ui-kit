@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, fn } from "storybook/test";
 import { useRef, useState } from "react";
 import { Button, Tabs } from "../../index";
+import { settledStyle, withRootOverrides } from "../../docs/story-helpers";
 
 const meta = {
   title: "Components/Tabs",
@@ -369,5 +370,38 @@ export const FocusThroughRef: Story = {
     await expect(security).toHaveAttribute("data-part", "tab");
     await expect(panel).toHaveClass("kui-tabs__content", "account__panel");
     await expect(panel).toHaveAttribute("data-part", "panel");
+  },
+};
+
+/** The settled fill, text, and shadow of an element, with any transition finished. */
+const settled = (element: HTMLElement) => {
+  const style = settledStyle(element);
+  return { fill: style.backgroundColor, text: style.color, shadow: style.boxShadow };
+};
+
+export const TrackAndTabTokens: Story = {
+  play: async ({ canvas }) => {
+    const list = canvas.getByRole("tablist", { name: "Account settings" });
+    const active = canvas.getByRole("tab", { name: "Profile" });
+    const inactive = canvas.getByRole("tab", { name: "Security" });
+    const activeBefore = settled(active);
+
+    // A Consumer restyles the track and the inactive tabs through their own roles, and the active
+    // tab keeps reading primary. The values are read before the overrides are removed, so a failed
+    // assertion never leaks into the next Story.
+    const { track, tab, activeAfter } = await withRootOverrides(
+      {
+        "--kui-surface-track": "rgb(1, 2, 3)",
+        "--kui-shadow-track": "rgb(4, 5, 6) 0px 1px 0px 0px",
+        "--kui-tab": "rgb(7, 8, 9)",
+        "--kui-tab-foreground": "rgb(10, 11, 12)",
+      },
+      () => ({ track: settled(list), tab: settled(inactive), activeAfter: settled(active) }),
+    );
+
+    await expect(track.fill).toBe("rgb(1, 2, 3)");
+    await expect(track.shadow).toBe("rgb(4, 5, 6) 0px 1px 0px 0px");
+    await expect(tab).toMatchObject({ fill: "rgb(7, 8, 9)", text: "rgb(10, 11, 12)" });
+    await expect(activeAfter).toEqual(activeBefore);
   },
 };

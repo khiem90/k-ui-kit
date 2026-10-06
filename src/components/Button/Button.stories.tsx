@@ -2,6 +2,8 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { createRef, type MouseEvent } from "react";
 import { expect, fn } from "storybook/test";
 import { Button } from "../../index";
+import { computedColourIn } from "../../docs/contrast";
+import { settledStyle, withRootOverrides } from "../../docs/story-helpers";
 
 const PlusIcon = () => (
   <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -64,6 +66,53 @@ export const Sizes: Story = {
     const label = getComputedStyle(canvas.getByRole("button", { name: "Medium" }));
     await expect(label.textTransform).toBe("uppercase");
     await expect(label.fontFamily).toContain("Josefin Sans");
+  },
+};
+
+/** A colour Token as the browser resolves it on the page, so it compares with what a Button draws. */
+const resolveColour = (name: string) => computedColourIn(document.body, name);
+
+/** The settled fill and text of a Button, with any colour transition finished. */
+const settled = (button: HTMLElement) => {
+  const style = settledStyle(button);
+  return { fill: style.backgroundColor, text: style.color };
+};
+
+export const SecondaryTokens: Story = {
+  render: (args) => (
+    <div style={{ display: "flex", gap: "var(--kui-space-3)" }}>
+      <Button {...args} variant="primary">
+        Primary
+      </Button>
+      <Button {...args} variant="secondary">
+        Secondary
+      </Button>
+      <Button {...args} variant="outline">
+        Outline
+      </Button>
+    </div>
+  ),
+  play: async ({ canvas }) => {
+    const primary = canvas.getByRole("button", { name: "Primary" });
+    const secondary = canvas.getByRole("button", { name: "Secondary" });
+    const outline = canvas.getByRole("button", { name: "Outline" });
+    const before = { primary: settled(primary), outline: settled(outline) };
+
+    // A Consumer moves the secondary Button alone through its own fill and text. The values are
+    // read before the override is removed, so a failed assertion never leaks into the next Story.
+    // The hover fill is not read: a synthetic pointer never matches :hover.
+    const { overridden, others } = await withRootOverrides(
+      { "--kui-secondary": "rgb(1, 2, 3)", "--kui-secondary-foreground": "rgb(4, 5, 6)" },
+      () => ({
+        overridden: settled(secondary),
+        others: { primary: settled(primary), outline: settled(outline) },
+      }),
+    );
+
+    await expect(overridden).toEqual({ fill: "rgb(1, 2, 3)", text: "rgb(4, 5, 6)" });
+    await expect(others).toEqual(before);
+    await expect(before.primary.fill).toBe(resolveColour("--kui-primary"));
+    await expect(before.outline.fill).toBe("rgba(0, 0, 0, 0)");
   },
 };
 

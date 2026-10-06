@@ -25,14 +25,27 @@ export function toRGB(computed: string): RGB {
   return [r * scale, g * scale, b * scale].map((channel) => Math.round(channel)) as RGB;
 }
 
-/** Resolves a colour Token through the browser, as it applies inside the given element. */
-export function colourIn(element: Element, name: string): RGB {
+/** The computed colour a Token resolves to inside the given element, as the browser writes it. */
+export function computedColourIn(element: Element, name: string) {
   const probe = document.createElement("span");
   probe.style.color = `var(${name})`;
   element.append(probe);
   const computed = getComputedStyle(probe).color;
   probe.remove();
-  return toRGB(computed);
+  return computed;
+}
+
+/** Resolves a colour Token through the browser, as it applies inside the given element. */
+export function colourIn(element: Element, name: string): RGB {
+  return toRGB(computedColourIn(element, name));
+}
+
+/**
+ * Whether a colour Token is fully transparent inside the given element. A Theme may switch a fill
+ * off this way, and a pair drawn on it has no contrast of its own to check.
+ */
+export function isTransparentIn(element: Element, name: string) {
+  return computedColourIn(element, name) === "rgba(0, 0, 0, 0)";
 }
 
 /** Resolves a colour Token through the browser, as the root defines it. */

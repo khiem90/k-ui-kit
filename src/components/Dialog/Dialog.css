@@ -51,6 +51,8 @@ body:has(.kui-dialog:modal) {
   overflow-y: auto;
   /* The extra space on top lowers the header into the arch, level with the close button. */
   padding: var(--kui-space-7) var(--kui-space-6) var(--kui-space-6);
+  /* The Rail, a bar along the top that follows the arch's curve. Ridgeline sets it to no width. */
+  border-block-start: var(--kui-rail-width) solid var(--kui-rail-color);
   /* The arch: each top corner is a quarter circle, capped at half the panel's width (50cqi), where
      the two quarters meet. A percentage would resolve against the height on the vertical axis and
      draw an ellipse. */
@@ -84,11 +86,11 @@ body:has(.kui-dialog:modal) {
     min(var(--kui-radius-arch), 50cqi) * (1 - 1 / sqrt(2)) + var(--kui-space-2) + 2rem -
       var(--kui-space-6) + var(--kui-space-2)
   );
-  color: var(--kui-primary);
+  color: var(--kui-foreground-display);
   font-family: var(--kui-font-display);
   font-size: var(--kui-font-size-display);
   font-style: italic;
-  font-weight: 600;
+  font-weight: var(--kui-label-weight);
   line-height: 1.25;
   text-align: center;
   text-wrap: balance;
