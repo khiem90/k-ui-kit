@@ -37,7 +37,7 @@ const bodyCss = `body {
   padding: 1rem;
   background: var(--kui-background);
   color: var(--kui-foreground);
-  font-family: var(--kui-font-family);
+  font-family: var(--kui-font-body);
 }
 `;
 

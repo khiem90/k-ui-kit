@@ -50,18 +50,6 @@
   --kui-motion-duration: 150ms;
 }
 
-/* Pre-Ridgeline names, kept while the Components move over one at a time. Each points at the
-   nearest Ridgeline Token, so a Consumer's override of the new name reaches them too. Ridgeline
-   ticket 16 deletes them. */
-:where(:root) {
-  --kui-background-subtle: var(--kui-surface-raised);
-  --kui-radius-sm: var(--kui-radius-field);
-  --kui-radius-md: var(--kui-radius-field);
-  --kui-radius-lg: var(--kui-radius-field);
-  --kui-radius-full: var(--kui-radius-pill);
-  --kui-font-family: var(--kui-font-body);
-}
-
 @media (prefers-reduced-motion: reduce) {
   :where(:root) {
     --kui-motion-duration: 0ms;
