@@ -888,6 +888,73 @@ export const InForm: Story = {
   },
 };
 
+/** A reset returns the Select to the value it started with, as a native select would. */
+export const ResetToDefault: Story = {
+  args: { name: "fruit", defaultValue: "banana" },
+  render: (args) => {
+    const OrderForm = () => {
+      const [submitted, setSubmitted] = useState("nothing yet");
+      return (
+        <form
+          style={{ display: "grid", gap: "var(--kui-space-4)", justifyItems: "start" }}
+          onSubmit={(event) => {
+            event.preventDefault();
+            setSubmitted(String(new FormData(event.currentTarget).get("fruit")));
+          }}
+        >
+          <Select.Root {...args}>
+            <Select.Trigger aria-label="Fruit" style={{ inlineSize: "16rem" }} />
+            <Select.Content>
+              <Select.Item value="apple">Apple</Select.Item>
+              <Select.Item value="banana">Banana</Select.Item>
+              <Select.Item value="cherry">Cherry</Select.Item>
+            </Select.Content>
+          </Select.Root>
+          <div style={{ display: "flex", gap: "var(--kui-space-2)" }}>
+            <Button type="submit">Order</Button>
+            <Button type="reset" variant="outline">
+              Start over
+            </Button>
+          </div>
+          <output>Submitted {submitted}</output>
+        </form>
+      );
+    };
+    return <OrderForm />;
+  },
+  play: async ({ canvas, userEvent, args }) => {
+    const trigger = canvas.getByRole("combobox", { name: "Fruit" });
+    const order = canvas.getByRole("button", { name: "Order" });
+    const startOver = canvas.getByRole("button", { name: "Start over" });
+
+    // A reset with nothing changed keeps the value and reports nothing.
+    await userEvent.click(startOver);
+    await expect(trigger).toHaveTextContent("Banana");
+    await userEvent.click(order);
+    await expect(canvas.getByText("Submitted banana")).toBeVisible();
+    await expect(args.onValueChange).not.toHaveBeenCalled();
+
+    // After a pick, a reset goes back to the starting value and reports it.
+    await userEvent.click(trigger);
+    await userEvent.click(within(await findListbox()).getByRole("option", { name: "Cherry" }));
+    await expectClosed(trigger);
+    await expect(args.onValueChange).toHaveBeenLastCalledWith("cherry");
+    await userEvent.click(startOver);
+    await expect(trigger).toHaveTextContent("Banana");
+    await expect(args.onValueChange).toHaveBeenLastCalledWith("banana");
+    await expect(args.onValueChange).toHaveBeenCalledTimes(2);
+    await userEvent.click(order);
+    await expect(canvas.getByText("Submitted banana")).toBeVisible();
+
+    // The form is still in step with the trigger for the next submit.
+    await userEvent.click(trigger);
+    await userEvent.click(within(await findListbox()).getByRole("option", { name: "Apple" }));
+    await expectClosed(trigger);
+    await userEvent.click(order);
+    await expect(canvas.getByText("Submitted apple")).toBeVisible();
+  },
+};
+
 const FruitWithRefs = () => {
   const triggerRef = useRef<HTMLButtonElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);

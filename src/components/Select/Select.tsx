@@ -313,12 +313,27 @@ const Root = ({
   // Until the trigger mounts, assume a form, so server-rendered markup submits without JavaScript.
   const isFormControl = trigger ? form !== null : true;
 
+  // A form reset restores the starting value and reports it if it differs, as Radix Select did.
+  // onValueChange takes a string, so a Select that started empty reports "" rather than undefined.
   useEffect(() => {
     if (!form) return;
     const reset = () => setValueRef.current(initialValue ?? "");
     form.addEventListener("reset", reset);
     return () => form.removeEventListener("reset", reset);
   }, [form, initialValue]);
+
+  // The browser resets the native select itself, to the option marked as its default, and that
+  // can land after React has rendered the restored value. React marks no default on a controlled
+  // select, so without this the form would submit the empty option after a reset. Marking an
+  // option can move the selection, so the current value is put back afterwards.
+  useLayoutEffect(() => {
+    const select = nativeRef.current;
+    if (!select) return;
+    for (const option of select.options) {
+      option.defaultSelected = option.value === (initialValue ?? "");
+    }
+    select.value = value ?? "";
+  });
 
   // Each change is announced to the form with a change event from the native select, so a
   // Consumer's onChange on the form hears it the way it would from a native select.
