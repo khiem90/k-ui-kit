@@ -36,6 +36,8 @@ const textPairs: [string, string][] = [
   ["--kui-danger-foreground", "--kui-danger"],
   ["--kui-danger", "--kui-background"],
   ["--kui-danger", "--kui-surface-raised"],
+  // Tooltip: cream text on a Bark bubble.
+  ["--kui-surface-raised", "--kui-foreground"],
 ];
 
 /** Every edge and indicator pair the kit draws, as [edge, background]. WCAG 1.4.11 asks 3:1. */
