@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect } from "storybook/test";
 
-/** Every face the Ridgeline Theme draws, from the opt-in fonts stylesheet. */
+/** Every face the Ridgeline and Noren Themes draw, from the two opt-in fonts stylesheets. */
 const faces = [
   { family: "Fraunces", style: "italic", weight: 400 },
   { family: "Fraunces", style: "italic", weight: 600 },
@@ -11,6 +11,9 @@ const faces = [
   { family: "Nunito Sans", style: "normal", weight: 400 },
   { family: "Nunito Sans", style: "normal", weight: 600 },
   { family: "Nunito Sans", style: "normal", weight: 700 },
+  { family: "Shippori Mincho B1", style: "normal", weight: 800 },
+  { family: "Zen Kaku Gothic New", style: "normal", weight: 400 },
+  { family: "Zen Kaku Gothic New", style: "normal", weight: 700 },
 ] as const;
 
 /** One sample from the latin subset and one from latin-ext, so both files of each face load. */
