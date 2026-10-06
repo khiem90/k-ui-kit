@@ -11,7 +11,6 @@ const config: StorybookConfig = {
       options: { mdxPluginOptions: { mdxCompileOptions: { remarkPlugins: [remarkGfm] } } },
     },
     "@storybook/addon-a11y",
-    "@storybook/addon-themes",
     "@storybook/addon-vitest",
   ],
 };

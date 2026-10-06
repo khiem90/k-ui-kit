@@ -1,20 +1,13 @@
 import type { Preview } from "@storybook/react-vite";
-import { withThemeByDataAttribute } from "@storybook/addon-themes";
 import "../src/styles/index.css";
 import "./preview.css";
 
 const preview: Preview = {
   parameters: {
     a11y: { test: "error" },
+    // The canvas takes the background Token in preview.css, so the background picker stays off.
     backgrounds: { disable: true },
   },
-  decorators: [
-    withThemeByDataAttribute({
-      themes: { light: "light", dark: "dark" },
-      defaultTheme: "light",
-      attributeName: "data-theme",
-    }),
-  ],
   tags: ["autodocs"],
 };
 
