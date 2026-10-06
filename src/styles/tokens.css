@@ -62,11 +62,30 @@
   --kui-font-size-lg: 1rem; /* 16px */
   --kui-font-size-display: 1.5rem; /* 24px */
 
-  --kui-radius-field: 12px;
+  /* Shape. A Theme changes shape through these values alone (ADR 0006): radius field, radius tab,
+     and border width field may hold four values, one per corner or side, and a width may be 0 so
+     that a part the other Theme draws is switched off. Component CSS never reads one of the three
+     through calc() or a longhand corner or side property, which is why the Checkbox box and the
+     DataTable row ends have radii of their own. */
+  --kui-radius-field: 12px; /* TextField, the Select trigger and its options */
+  --kui-radius-button: 999px;
+  /* Tab triggers and the horizontal Tabs list. */
+  --kui-radius-tab: 999px;
+  /* The Checkbox box: half the field radius, a square box at Ridgeline's softness. */
+  --kui-radius-check: 6px;
+  /* The ends of a DataTable row, which match a field. */
+  --kui-radius-row: 12px;
   --kui-radius-card: 24px;
+  /* Switch and the Dialog close button. */
   --kui-radius-pill: 999px;
   /* Component CSS caps it at half the element's width, so a narrow arch stays a semicircle. */
   --kui-radius-arch: 160px;
+  /* The edge of a TextField input and the Select trigger. Cream on apricot is 1.17:1, so the edge
+     meets WCAG 1.4.11 for the field. */
+  --kui-border-width-field: 2px;
+  /* The Rail along the top of a Tabs list and a Dialog. Ridgeline draws none. */
+  --kui-rail-width: 0;
+  --kui-rail-color: #bd5038; /* Ember */
 
   --kui-space-1: 4px;
   --kui-space-2: 8px;

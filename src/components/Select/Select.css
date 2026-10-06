@@ -1,6 +1,8 @@
 /* The trigger is drawn as a TextField. Ridgeline layers rather than outlines, but cream on apricot is
-   1.17:1, so it keeps a 2px edge in the border Token to meet WCAG 1.4.11. Only the height changes
-   with the size, and the heights match TextField and Button so they line up in a row. */
+   1.17:1, so it keeps a 2px edge in the border Token to meet WCAG 1.4.11. The width Token may hold
+   four values, which the border shorthand cannot take, so the edge is three longhands, and the
+   hover, focus, and invalid rules set only the colour. Only the height changes with the size, and
+   the heights match TextField and Button so they line up in a row. */
 .kui-select__trigger {
   display: flex;
   align-items: center;
@@ -10,7 +12,9 @@
   inline-size: 100%;
   margin: 0;
   padding: 0 var(--kui-padding-field-inline);
-  border: 2px solid var(--kui-border);
+  border-style: solid;
+  border-width: var(--kui-border-width-field);
+  border-color: var(--kui-border);
   border-radius: var(--kui-radius-field);
   background: var(--kui-surface-raised);
   color: var(--kui-foreground);

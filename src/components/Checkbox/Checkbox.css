@@ -36,8 +36,8 @@
   inline-size: 22px;
   block-size: 22px;
   border: 2px solid var(--kui-border);
-  /* Half the field radius keeps a square box at Ridgeline's softness without turning it round. */
-  border-radius: calc(var(--kui-radius-field) / 2);
+  /* Its own role rather than half the field radius, which may hold four values (ADR 0006). */
+  border-radius: var(--kui-radius-check);
   background: var(--kui-surface-raised);
   color: var(--kui-primary-foreground);
   pointer-events: none;
