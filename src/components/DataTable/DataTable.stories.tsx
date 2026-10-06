@@ -1001,3 +1001,46 @@ export const CustomSortFn: Story = {
     );
   },
 };
+
+/** A column that puts one of the kit's Buttons in every row. */
+const actionColumns: ColumnDef<Member>[] = [
+  ...plainColumns,
+  {
+    id: "actions",
+    header: "Actions",
+    cell: ({ row }) => (
+      <Button variant="outline" size="sm" aria-label={`Message ${row.original.name}`}>
+        Message
+      </Button>
+    ),
+  },
+];
+
+/**
+ * Any control a Consumer puts in a selected row draws its focus ring in the on-tint Token, since
+ * Ember is under 3:1 on Peach sky, and a root override of that Token reaches it.
+ */
+export const FocusRingOnTint: Story = {
+  args: { columns: actionColumns, selectable: true, defaultSelectedIds: ["m-01"], pageSize: 5 },
+  play: async ({ canvas, userEvent }) => {
+    const row = canvas.getByRole("row", { name: /Lena Fischer/ });
+    await expect(row).toHaveAttribute("data-selected", "");
+    within(row).getByRole("checkbox").focus();
+    await userEvent.tab();
+    const button = within(row).getByRole("button", { name: "Message Lena Fischer" });
+    await expect(button).toHaveFocus();
+    const ring = () => {
+      void getComputedStyle(button).outlineColor;
+      for (const animation of button.getAnimations()) animation.finish();
+      return getComputedStyle(button).outlineColor;
+    };
+    await expect(toRGB(ring())).toEqual(tokenColour("--kui-focus-ring-on-tint"));
+    await expect(contrast(toRGB(ring()), tokenColour("--kui-tint"))).toBeGreaterThanOrEqual(3);
+
+    const root = document.documentElement.style;
+    root.setProperty("--kui-focus-ring-on-tint", "rgb(4, 5, 6)");
+    const overridden = ring();
+    root.removeProperty("--kui-focus-ring-on-tint");
+    await expect(overridden).toBe("rgb(4, 5, 6)");
+  },
+};

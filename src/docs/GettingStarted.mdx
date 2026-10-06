@@ -131,7 +131,7 @@ Token names describe a role, not a colour, so `--kui-primary` still means "the m
 
 The kit checks the contrast of every pair it draws with its own values. When you change a colour, check its pairs yourself: text Tokens need 4.5:1 on the surfaces they sit on, and `--kui-border` and `--kui-focus-ring` need 3:1.
 
-Ember is too faint on the Peach sky tint, so a control drawn there uses its own pair of Tokens. A selected or hovered DataTable row draws its Checkbox in `--kui-primary-on-tint` and `--kui-focus-ring-on-tint`, and the highlighted Select option draws its check in `--kui-primary-on-tint`. If you change `--kui-primary` or `--kui-focus-ring`, set these two as well.
+Ember is too faint on the Peach sky tint, so a control drawn there uses its own pair of Tokens. A selected or hovered DataTable row draws its checked Checkbox in `--kui-primary-on-tint` and sets `--kui-focus-ring` to `--kui-focus-ring-on-tint`, so every control in the row, your own included, rings in that colour. The highlighted Select option draws its check in `--kui-primary-on-tint`. If you change `--kui-primary` or `--kui-focus-ring`, set these two as well.
 
 | Token                        | Ridgeline value                                              | Used for                                                      |
 | ---------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------- |
