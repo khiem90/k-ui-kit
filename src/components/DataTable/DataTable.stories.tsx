@@ -815,12 +815,11 @@ export const Layered: Story = {
     root.removeProperty("--kui-focus-ring-on-tint");
     await expect(overridden).toEqual(["rgb(1, 2, 3)", "rgb(4, 5, 6)"]);
 
-    // Paging uses the kit's Button as a secondary pill, which layers on the page like the card
-    // does, rather than the stroked outline variant.
+    // Paging uses the kit's outline Button, outside the card, as it did before Ridgeline.
     for (const name of ["Previous", "Next"]) {
       const button = canvas.getByRole("button", { name });
       await expect(button).toHaveClass("kui-button");
-      await expect(button).toHaveAttribute("data-variant", "secondary");
+      await expect(button).toHaveAttribute("data-variant", "outline");
       await expect(card).not.toContainElement(button);
     }
   },
@@ -943,5 +942,62 @@ export const SortTypes: Story = {
     // A column can opt out of sorting, and its header stays plain text.
     const notes = canvas.getByRole("columnheader", { name: "Notes" });
     await expect(within(notes).queryByRole("button")).not.toBeInTheDocument();
+  },
+};
+
+/** The order a release team ranks its owners in, which no built-in sort type gives. */
+const ownerRank: Record<string, number> = { Dmitri: 0, chiara: 1, Ada: 2, bao: 3 };
+
+/**
+ * Custom comparators, the function form of `sortFn`. One reads the typed row, the other reads its
+ * own column's value by id, as a comparator written for the TanStack-based build did.
+ */
+const comparatorColumns: ColumnDef<Release>[] = [
+  { accessorKey: "tag", header: "Tag" },
+  {
+    accessorKey: "owner",
+    header: "Owner",
+    sortFn: (rowA, rowB) =>
+      (ownerRank[rowA.original.owner] ?? 0) - (ownerRank[rowB.original.owner] ?? 0),
+  },
+  {
+    accessorKey: "downloads",
+    header: "Downloads",
+    // Most downloaded first when ascending.
+    sortFn: (rowA, rowB, columnId) =>
+      rowB.getValue<number>(columnId) - rowA.getValue<number>(columnId),
+  },
+];
+
+export const CustomSortFn: Story = {
+  render: () => (
+    <DataTable
+      caption="Releases"
+      columns={comparatorColumns}
+      data={releases}
+      getRowId={byId}
+      sortable
+    />
+  ),
+  play: async ({ canvas, userEvent }) => {
+    const sortBy = (header: string) =>
+      userEvent.click(
+        within(canvas.getByRole("columnheader", { name: header })).getByRole("button", {
+          name: header,
+        }),
+      );
+
+    await sortBy("Owner");
+    await expect(getColumnText(canvas, "Owner")).toEqual(["Dmitri", "chiara", "Ada", "bao"]);
+    // Descending reverses whatever the comparator returns.
+    await sortBy("Owner");
+    await expect(getColumnText(canvas, "Owner")).toEqual(["bao", "Ada", "chiara", "Dmitri"]);
+
+    await sortBy("Downloads");
+    await expect(getColumnText(canvas, "Downloads")).toEqual(["1200", "900", "75", "40"]);
+    await expect(canvas.getByRole("columnheader", { name: "Downloads" })).toHaveAttribute(
+      "aria-sort",
+      "ascending",
+    );
   },
 };

@@ -119,9 +119,27 @@ interface ColumnDefBase<TData, TValue> {
   cell?: ReactNode | ((context: CellContext<TData, TValue>) => ReactNode);
   /** `false` keeps an accessor column out of sorting. */
   enableSorting?: boolean;
-  /** How the column sorts. "auto", the default, picks a sort type from the first ten values. */
-  sortFn?: "auto" | SortType;
+  /**
+   * How the column sorts: a sort type, "auto" (the default) to pick one from the first ten values,
+   * or a comparator that returns the ascending order of two rows.
+   */
+  sortFn?: "auto" | SortType | SortFn<TData>;
 }
+
+/** A row as a custom `sortFn` receives it. */
+interface SortRow<TData> {
+  id: string;
+  index: number;
+  original: TData;
+  /** The value of the column with this id for this row. */
+  getValue: <TValue = unknown>(columnId: string) => TValue;
+}
+
+/**
+ * Compares two rows for ascending order, given the sorted column's id. The table flips the result
+ * for descending, and rows without a value still sort last when ascending.
+ */
+type SortFn<TData> = (rowA: SortRow<TData>, rowB: SortRow<TData>, columnId: string) => number;
 
 interface AccessorKeyColumnDef<TData, TValue> extends ColumnDefBase<TData, TValue> {
   /** The row field this column shows and sorts by. */
@@ -238,6 +256,17 @@ function resolveColumn<TData>(def: ColumnDef<TData>): Column<TData> {
       : undefined;
   const id = def.id ?? accessorKey ?? (typeof def.header === "string" ? def.header : "");
   return { id, def, getValue };
+}
+
+/** The row a custom sortFn receives, which reads any column's value by id. */
+function toSortRow<TData>(columns: readonly Column<TData>[], row: Row<TData>): SortRow<TData> {
+  return {
+    ...row,
+    getValue: <TValue,>(columnId: string) =>
+      columns
+        .find((column) => column.id === columnId)
+        ?.getValue?.(row.original, row.index) as TValue,
+  };
 }
 
 /** Renders a header or cell template. A function is a component, so it may use hooks. */
@@ -370,7 +399,20 @@ function DataTableInner<TData>(
     if (!sortedColumn || !getValue || !sorting) return rows;
     const values = rows.map((row) => getValue(row.original, row.index));
     const sortFn = sortedColumn.def.sortFn ?? "auto";
-    const compare = compareBySortType[sortFn === "auto" ? detectSortType(values) : sortFn];
+    let compare: (a: Row<TData>, b: Row<TData>) => number;
+    if (typeof sortFn === "function") {
+      // Indexed like `values`, by each row's position in `data`.
+      const sortRows = rows.map((row) => toSortRow(columns, row));
+      compare = (a, b) =>
+        sortFn(
+          sortRows[a.index] as SortRow<TData>,
+          sortRows[b.index] as SortRow<TData>,
+          sortedColumn.id,
+        );
+    } else {
+      const compareValues = compareBySortType[sortFn === "auto" ? detectSortType(values) : sortFn];
+      compare = (a, b) => compareValues(values[a.index], values[b.index]);
+    }
     const direction = sorting.desc ? -1 : 1;
     return rows.slice().sort((a, b) => {
       const aValue = values[a.index];
@@ -380,12 +422,12 @@ function DataTableInner<TData>(
       if (aValue === undefined || bValue === undefined) {
         if (aValue !== bValue) result = aValue === undefined ? 1 : -1;
       } else {
-        result = compare(aValue, bValue);
+        result = compare(a, b);
       }
       // Rows that compare equal keep their order in `data`, whichever the direction.
       return result * direction || a.index - b.index;
     });
-  }, [rows, sortedColumn, sorting]);
+  }, [rows, columns, sortedColumn, sorting]);
 
   const size = pageSize ?? Infinity;
   const [pageIndex, setPageIndex] = useState(0);
@@ -557,7 +599,7 @@ function DataTableInner<TData>(
             Page {pageIndex + 1} of {Math.max(pageCount, 1)}
           </p>
           <Button
-            variant="secondary"
+            variant="outline"
             size="sm"
             disabled={!canPreviousPage}
             onClick={() => setPageIndex((index) => index - 1)}
@@ -565,7 +607,7 @@ function DataTableInner<TData>(
             Previous
           </Button>
           <Button
-            variant="secondary"
+            variant="outline"
             size="sm"
             disabled={!canNextPage}
             onClick={() => setPageIndex((index) => index + 1)}
