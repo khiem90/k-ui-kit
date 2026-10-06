@@ -36,13 +36,24 @@ const textPairs: [string, string][] = [
   ["--kui-danger-foreground", "--kui-danger"],
   ["--kui-danger", "--kui-background"],
   ["--kui-danger", "--kui-surface-raised"],
+  // Tooltip: cream text on a Bark bubble.
+  ["--kui-surface-raised", "--kui-foreground"],
 ];
 
 /** Every edge and indicator pair the kit draws, as [edge, background]. WCAG 1.4.11 asks 3:1. */
 const edgePairs: [string, string][] = [
   ["--kui-border", "--kui-surface-raised"],
+  // The off Switch track's edge on the page. The on track is primary on background, below.
+  ["--kui-border", "--kui-background"],
   ["--kui-focus-ring", "--kui-background"],
   ["--kui-focus-ring", "--kui-surface-raised"],
+  // A checked Checkbox is a filled Ember box on the page or in a cream table body.
+  ["--kui-primary", "--kui-background"],
+  ["--kui-primary", "--kui-surface-raised"],
+  // A hovered or selected DataTable row is Peach sky, where Ember falls under 3:1. The row draws
+  // its checked box in primary hover and its focus ring in the foreground colour instead.
+  ["--kui-primary-hover", "--kui-tint"],
+  ["--kui-foreground", "--kui-tint"],
 ];
 
 const label = (name: string) => name.replace("--kui-", "");

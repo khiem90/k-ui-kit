@@ -3,11 +3,7 @@ import { expect, fn } from "storybook/test";
 import { useRef, useState } from "react";
 import { Button, RadioGroup, type RadioGroupRootProps } from "../../index";
 
-/**
- * Radix selects the item an arrow key moves focus to, but only while the key is still down. The
- * focus move is a zero-delay timer, and user-event releases a key in the same task it presses it,
- * so the key is held across the timer here the way a finger holds it.
- */
+/** Presses an arrow key and releases it in a separate step, the way a finger does. */
 const pressArrow = async (
   userEvent: { keyboard: (text: string) => Promise<void> },
   key: string,
@@ -241,7 +237,7 @@ export const Controlled: Story = {
 const RadioGroupWithRefs = () => {
   const rootRef = useRef<HTMLDivElement>(null);
   const labelRef = useRef<HTMLSpanElement>(null);
-  const itemRef = useRef<HTMLButtonElement>(null);
+  const itemRef = useRef<HTMLInputElement>(null);
   const [report, setReport] = useState("nothing yet");
   return (
     <div style={{ display: "grid", gap: "var(--kui-space-4)", justifyItems: "start" }}>
@@ -288,6 +284,43 @@ export const FocusThroughRef: Story = {
   },
 };
 
+const TwoGroups = () => (
+  <div style={{ display: "grid", gap: "var(--kui-space-4)", justifyItems: "start" }}>
+    <RadioGroup.Root defaultValue="email">
+      <RadioGroup.Label>Contact method</RadioGroup.Label>
+      <RadioGroup.Item value="email" label="Email" />
+      <RadioGroup.Item value="sms" label="Text message" />
+    </RadioGroup.Root>
+    <RadioGroup.Root name="time" defaultValue="morning">
+      <RadioGroup.Label>Contact time</RadioGroup.Label>
+      <RadioGroup.Item value="morning" label="Morning" />
+      <RadioGroup.Item value="evening" label="Evening" />
+    </RadioGroup.Root>
+  </div>
+);
+
+export const NativeRadios: Story = {
+  render: () => <TwoGroups />,
+  play: async ({ canvas, userEvent }) => {
+    const email = canvas.getByRole("radio", { name: "Email" });
+    const sms = canvas.getByRole("radio", { name: "Text message" });
+    const morning = canvas.getByRole("radio", { name: "Morning" });
+    const evening = canvas.getByRole("radio", { name: "Evening" });
+    for (const radio of [email, sms, morning, evening]) {
+      await expect(radio).toBeInstanceOf(HTMLInputElement);
+      await expect(radio).toHaveAttribute("type", "radio");
+    }
+    const generatedName = email.getAttribute("name");
+    await expect(generatedName).toBeTruthy();
+    await expect(sms).toHaveAttribute("name", generatedName);
+    await expect(morning).toHaveAttribute("name", "time");
+    await expect(evening).toHaveAttribute("name", "time");
+    await userEvent.click(evening);
+    await expect(evening).toBeChecked();
+    await expect(email).toBeChecked();
+  },
+};
+
 const ContactForm = (props: Omit<RadioGroupRootProps, "name" | "children">) => {
   const [submitted, setSubmitted] = useState("nothing yet");
   return (
@@ -331,6 +364,23 @@ export const InForm: Story = {
     await expect(sms).not.toBeChecked();
     await userEvent.click(submit);
     await expect(canvas.getByText("Submitted: no contact field")).toBeVisible();
+  },
+};
+
+export const ResetRestoresDefault: Story = {
+  render: () => <ContactForm defaultValue="email" />,
+  play: async ({ canvas, userEvent }) => {
+    const email = canvas.getByRole("radio", { name: "Email" });
+    const sms = canvas.getByRole("radio", { name: "Text message" });
+    await userEvent.click(sms);
+    await expect(sms.closest("[data-state]")).toHaveAttribute("data-state", "checked");
+    await userEvent.click(canvas.getByRole("button", { name: "Reset" }));
+    await expect(email).toBeChecked();
+    await expect(sms).not.toBeChecked();
+    await expect(email.closest("[data-state]")).toHaveAttribute("data-state", "checked");
+    await expect(sms.closest("[data-state]")).toHaveAttribute("data-state", "unchecked");
+    await userEvent.click(canvas.getByRole("button", { name: "Save" }));
+    await expect(canvas.getByText("Submitted: email")).toBeVisible();
   },
 };
 
