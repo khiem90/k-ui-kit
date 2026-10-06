@@ -12,7 +12,7 @@ import {
   TextField,
   type ColumnDef,
 } from "../index";
-import { contrast, isTransparentIn, toRGB, tokenColour } from "./contrast";
+import { colourIn, contrast, isTransparentIn, toRGB, tokenColour } from "./contrast";
 
 const colours = [
   "--kui-background",
@@ -56,6 +56,22 @@ const paddings = ["--kui-padding-field-inline"];
 const fonts = ["--kui-font-display", "--kui-font-label", "--kui-font-body"];
 const fontSizes = ["sm", "md", "lg", "display"].map((step) => `--kui-font-size-${step}`);
 const labelStyle = ["--kui-label-case", "--kui-label-tracking", "--kui-label-weight"];
+
+/**
+ * Every Token a Theme fills. Motion duration is not among them: a Theme leaves it to the root, so
+ * the reduced-motion rule keeps the last word.
+ */
+const themeTokens = [
+  ...colours,
+  ...shadows,
+  ...radii,
+  ...widths,
+  ...spaces,
+  ...paddings,
+  ...fonts,
+  ...fontSizes,
+  ...labelStyle,
+];
 
 /** Every text pair the kit draws, as [text, background]. WCAG 1.4.3 asks 4.5:1. */
 const textPairs: [string, string][] = [
@@ -398,9 +414,88 @@ function RailedParts() {
   );
 }
 
+/** A Button under the attribute-less root beside one inside a Noren subtree. */
+function ThemedButtons() {
+  return (
+    <div style={{ display: "flex", gap: "var(--kui-space-4)", padding: "var(--kui-space-4)" }}>
+      <Button>Ridgeline</Button>
+      <div data-theme="noren">
+        <Button>Noren</Button>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * The Token sheet and the shaped parts under one Noren root, so the Story reads every Noren value
+ * where the attribute applies, including the Dialog it opens from inside the subtree.
+ */
+function NorenSheet() {
+  return (
+    <div data-theme="noren">
+      <TokenSheet />
+      <div style={{ display: "grid", gap: "var(--kui-space-4)", padding: "var(--kui-space-4)" }}>
+        <TextField label="Email" />
+      </div>
+      <RailedParts />
+    </div>
+  );
+}
+
 /** Reads a Token off the root. An empty string means the Token is not defined. */
 const tokenValue = (name: string) =>
   getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+
+/**
+ * The declarations of the stylesheet rule that selects a Theme by its attribute. A Theme block
+ * that forgets a Token is invisible to computed style, which inherits the root's value, so the
+ * check reads the block itself.
+ */
+function themeDeclarations(theme: string) {
+  for (const sheet of document.styleSheets) {
+    let rules: CSSRuleList;
+    try {
+      rules = sheet.cssRules;
+    } catch {
+      continue;
+    }
+    for (const rule of rules) {
+      if (rule instanceof CSSStyleRule && rule.selectorText.includes(`data-theme="${theme}"`)) {
+        return rule.style;
+      }
+    }
+  }
+  throw new Error(`No stylesheet rule selects data-theme="${theme}"`);
+}
+
+/** The contrast every pair must reach, read inside the given Theme root. */
+async function expectContrastIn(root: Element) {
+  const colour = (name: string) => colourIn(root, name);
+  for (const [text, background] of textPairs) {
+    const ratio = contrast(colour(text), colour(background));
+    await expect(ratio, `${text} on ${background}`).toBeGreaterThanOrEqual(4.5);
+  }
+  for (const [text, background] of textPairsOnOptionalFill) {
+    if (isTransparentIn(root, background)) continue;
+    const ratio = contrast(colour(text), colour(background));
+    await expect(ratio, `${text} on ${background}`).toBeGreaterThanOrEqual(4.5);
+  }
+  for (const [edge, background] of edgePairs) {
+    const ratio = contrast(colour(edge), colour(background));
+    await expect(ratio, `${edge} on ${background}`).toBeGreaterThanOrEqual(3);
+  }
+}
+
+/** A Button's fill once its colour transition has finished. */
+const settledFill = (button: Element) => {
+  for (const animation of button.getAnimations()) animation.finish();
+  return getComputedStyle(button).backgroundColor;
+};
+
+const ember = "rgb(189, 80, 56)";
+const lantern = "rgb(200, 64, 43)";
+const cedar = "rgb(138, 90, 54)";
+const paper = "rgb(255, 248, 232)";
 
 /** The top edge of an element: the Rail, where a Theme draws one. */
 const topEdge = (element: Element) => {
@@ -595,18 +690,7 @@ export const RailTokens: Story = {
 
 export const Ridgeline: Story = {
   play: async () => {
-    for (const name of [
-      ...colours,
-      ...shadows,
-      ...radii,
-      ...widths,
-      ...spaces,
-      ...paddings,
-      ...fonts,
-      ...fontSizes,
-      ...labelStyle,
-      "--kui-motion-duration",
-    ]) {
+    for (const name of [...themeTokens, "--kui-motion-duration"]) {
       await expect(tokenValue(name), `${name} is defined`).not.toBe("");
     }
 
@@ -614,18 +698,81 @@ export const Ridgeline: Story = {
     await expect(contrast([0, 0, 0], [255, 255, 255])).toBeCloseTo(21);
     await expect(contrast([118, 118, 118], [255, 255, 255])).toBeCloseTo(4.54, 2);
 
-    for (const [text, background] of textPairs) {
-      const ratio = contrast(tokenColour(text), tokenColour(background));
-      await expect(ratio, `${text} on ${background}`).toBeGreaterThanOrEqual(4.5);
+    await expectContrastIn(document.body);
+  },
+};
+
+export const Noren: Story = {
+  render: () => <NorenSheet />,
+  play: async ({ canvas, canvasElement, userEvent }) => {
+    const root = canvasElement.querySelector('[data-theme="noren"]');
+    if (!root) throw new Error("The Story has no Noren root");
+
+    // A Token the block leaves out would inherit Ridgeline's value and pass every computed-style
+    // check below, so the block itself is read for each name.
+    const block = themeDeclarations("noren");
+    for (const name of themeTokens) {
+      await expect(block.getPropertyValue(name).trim(), `${name} is in the Noren block`).not.toBe(
+        "",
+      );
     }
-    for (const [text, background] of textPairsOnOptionalFill) {
-      if (isTransparentIn(document.body, background)) continue;
-      const ratio = contrast(tokenColour(text), tokenColour(background));
-      await expect(ratio, `${text} on ${background}`).toBeGreaterThanOrEqual(4.5);
-    }
-    for (const [edge, background] of edgePairs) {
-      const ratio = contrast(tokenColour(edge), tokenColour(background));
-      await expect(ratio, `${edge} on ${background}`).toBeGreaterThanOrEqual(3);
-    }
+
+    await expectContrastIn(root);
+
+    // The three values the spec's notes argue for, where the board's own would fall short.
+    await expect(colourIn(root, "--kui-foreground-muted")).toEqual([0x57, 0x43, 0x33]);
+    await expect(colourIn(root, "--kui-danger")).toEqual([0x9b, 0x23, 0x35]);
+    await expect(colourIn(root, "--kui-surface-stripe")).toEqual([0xf7, 0xee, 0xd8]);
+
+    // The shapes a Consumer sees: an underlined field, a square-topped tab, and the Rail on the
+    // Tabs list and on a Dialog opened from inside the subtree, which renders in Noren too.
+    const input = canvas.getByLabelText("Email");
+    await expect(edges(input)).toEqual(["0px", "0px", "3px", "0px"]);
+    await expect(corners(canvas.getByRole("tab", { name: "Profile" }))).toEqual([
+      "0px",
+      "0px",
+      "6px",
+      "6px",
+    ]);
+    const rail = { width: "10px", style: "solid", colour: cedar };
+    await expect(topEdge(canvas.getByRole("tablist", { name: "Account settings" }))).toEqual(rail);
+    await userEvent.click(canvas.getByRole("button", { name: "Open" }));
+    const dialog = await within(document.body).findByRole("dialog", {}, { timeout: 2000 });
+    const viewport = dialog.querySelector(".kui-dialog__viewport");
+    if (!viewport) throw new Error("The dialog has no viewport");
+    await expect(topEdge(viewport)).toEqual(rail);
+    await expect(getComputedStyle(viewport).backgroundColor).toBe(paper);
+  },
+};
+
+export const ThemeSwitch: Story = {
+  render: () => <ThemedButtons />,
+  play: async ({ canvas }) => {
+    const outside = canvas.getByRole("button", { name: "Ridgeline" });
+    const inside = canvas.getByRole("button", { name: "Noren" });
+    const fills = () => [settledFill(outside), settledFill(inside)];
+
+    await expect(fills()).toEqual([ember, lantern]);
+
+    // The attribute on the html element themes everything under it, and a Consumer's own rule on
+    // :root beats either Theme there, since both blocks carry no specificity. The wrapper is its
+    // own Theme root and keeps Lantern: a rule on :root alone does not reach inside a wrapper, and
+    // a Consumer who themes a subtree overrides on `:root, [data-theme]` instead. The values are
+    // read before the attribute and the override are removed, so a failed assertion never leaks
+    // into the next Story.
+    const html = document.documentElement;
+    html.setAttribute("data-theme", "noren");
+    const onHtml = fills();
+    html.style.setProperty("--kui-primary", "rgb(1, 2, 3)");
+    const overriddenUnderNoren = fills();
+    html.removeAttribute("data-theme");
+    const overriddenUnderRidgeline = fills();
+    html.style.removeProperty("--kui-primary");
+    const restored = fills();
+
+    await expect(onHtml).toEqual([lantern, lantern]);
+    await expect(overriddenUnderNoren).toEqual(["rgb(1, 2, 3)", lantern]);
+    await expect(overriddenUnderRidgeline).toEqual(["rgb(1, 2, 3)", lantern]);
+    await expect(restored).toEqual([ember, lantern]);
   },
 };

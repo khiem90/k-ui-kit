@@ -1,5 +1,8 @@
-/* Ridgeline, the kit's only Theme. It has a light Color scheme only. Token names describe a role,
-   and the palette name sits in a comment beside the value (ADR 0005). */
+/* The kit's two Themes, each a light Color scheme only. Ridgeline sits on the root with no
+   attribute and is the default. Noren follows it, selected by data-theme="noren" on the html
+   element or on any ancestor, and wins by source order alone: both blocks sit in :where(), so a
+   Consumer's own :root rule beats either (ADR 0001). Token names describe a role, and the palette
+   name sits in a comment beside the value (ADR 0005). */
 :where(:root) {
   color-scheme: light;
 
@@ -106,4 +109,106 @@
   :where(:root) {
     --kui-motion-duration: 0ms;
   }
+}
+
+/* Noren, the late-night ramen counter. Its identity is shape as much as colour: cloth Tabs on a
+   Cedar Rail, fields with a bottom edge only, flat square Buttons, and a Rail on the Dialog in
+   place of the arch (ADR 0006). Every role is filled here; a Theme block that left one out would
+   fall through to Ridgeline's value. Motion duration is the one Token this block leaves alone on
+   purpose, so the reduced-motion rule above keeps the last word under Noren too. */
+:where([data-theme="noren"]) {
+  color-scheme: light;
+
+  --kui-background: #efe3c8; /* Washi */
+  --kui-surface-raised: #fff8e8; /* Paper */
+  /* Every other DataTable row: Paper halfway to Washi. */
+  --kui-surface-stripe: #f7eed8;
+  /* The Tabs list draws no track of its own; the cloth hangs straight from the Rail. */
+  --kui-surface-track: transparent;
+  --kui-tint: #e3b04b; /* Broth */
+  --kui-foreground: #1c2022; /* Cat */
+  /* The board's #5a4636 is 4.47:1 on Broth. This is the nearest step towards Cat that clears 4.5:1
+     there, and it is 7.3:1 on Washi and 8.8:1 on Paper. */
+  --kui-foreground-muted: #574333;
+  /* The Dialog title stays Cat, so there is no second patch of red beside the primary Button. */
+  --kui-foreground-display: #1c2022; /* Cat */
+  --kui-border: #1c2022; /* Cat */
+  --kui-primary: #c8402b; /* Lantern */
+  --kui-primary-hover: #8f2a1b; /* The board's link hover */
+  --kui-primary-foreground: #fff8e8; /* Paper */
+  /* The secondary Button: Cedar with Paper text. */
+  --kui-secondary: #8a5a36; /* Cedar */
+  --kui-secondary-hover: #6f4729;
+  --kui-secondary-foreground: #fff8e8; /* Paper */
+  /* An inactive tab is a strip of cloth: Old wall with Paper text. Shopfront teal has no Token,
+     since Paper on it is 3.7:1, under what bold tab text needs. */
+  --kui-tab: #2f5755; /* Old wall */
+  --kui-tab-foreground: #fff8e8; /* Paper */
+  /* The board has no danger colour. This crimson is cool enough to read as "not the lantern". */
+  --kui-danger: #9b2335;
+  --kui-danger-hover: #8c2433;
+  --kui-danger-foreground: #fff8e8; /* Paper */
+  --kui-focus-ring: #c8402b; /* Lantern */
+
+  /* Lantern is 2.5:1 on Broth, so a control drawn on the tint takes Cat instead. */
+  --kui-primary-on-tint: #1c2022; /* Cat */
+  --kui-focus-ring-on-tint: #1c2022; /* Cat */
+
+  /* The page behind a Dialog becomes the shop wall. */
+  --kui-overlay: rgb(47 87 85 / 0.7); /* Old wall at 70% */
+
+  /* A resting surface sits on a card edge rather than a soft drop. */
+  --kui-shadow-rest: 0 3px 0 #d6c6a4; /* Card edge */
+  /* The Tabs list has no track to rest on. */
+  --kui-shadow-track: none;
+  /* Buttons are painted signs, pinned flat. */
+  --kui-shadow-raised: none;
+  /* The lantern glow, on anything lifted off the page. */
+  --kui-shadow-floating: 0 0 0 1px #e3b04b, 0 0 28px rgb(227 176 75 / 0.55); /* Broth */
+
+  /* Served by the optional Noren fonts stylesheet. Without it a Japanese system reaches its own
+     mincho and gothic, and anything else gets Georgia and the system sans. */
+  --kui-font-display: "Shippori Mincho B1", "Hiragino Mincho ProN", "Yu Mincho", Georgia, serif;
+  --kui-font-label: "Zen Kaku Gothic New", "Hiragino Sans", "Yu Gothic", system-ui, sans-serif;
+  --kui-font-body: "Zen Kaku Gothic New", "Hiragino Sans", "Yu Gothic", system-ui, sans-serif;
+  /* Hand-painted signs: bold sentence case with no tracking. */
+  --kui-label-case: none;
+  --kui-label-tracking: 0;
+  --kui-label-weight: 700;
+
+  /* The board's labels, small body, body, and headings. */
+  --kui-font-size-sm: 0.8125rem; /* 13px */
+  --kui-font-size-md: 0.9375rem; /* 15px */
+  --kui-font-size-lg: 1.0625rem; /* 17px */
+  --kui-font-size-display: 1.875rem; /* 30px */
+
+  /* Shape. Fields round only on top and square off at the underline; tabs are cut square where
+     they hang from the Rail and rounded below, like cloth. */
+  --kui-radius-field: 4px 4px 0 0; /* Paper 4 */
+  --kui-radius-button: 4px;
+  --kui-radius-tab: 0 0 6px 6px; /* Curtain */
+  --kui-radius-check: 2px;
+  --kui-radius-row: 2px;
+  --kui-radius-card: 4px;
+  /* Switch keeps its pill, so a toggle still looks like a toggle. */
+  --kui-radius-pill: 999px;
+  /* No arch: the Dialog's top corners match a card and sit under the Rail. */
+  --kui-radius-arch: 4px;
+  /* The field edge is a 3px underline and nothing else. */
+  --kui-border-width-field: 0 0 3px;
+  /* The Rail along the top of a Tabs list and a Dialog. */
+  --kui-rail-width: 10px;
+  --kui-rail-color: #8a5a36; /* Cedar */
+
+  /* A 6px base, the counter planks, extended one step past the board. */
+  --kui-space-1: 6px;
+  --kui-space-2: 12px;
+  --kui-space-3: 18px;
+  --kui-space-4: 24px;
+  --kui-space-5: 36px;
+  --kui-space-6: 48px;
+  --kui-space-7: 72px;
+  --kui-space-8: 96px;
+
+  --kui-padding-field-inline: 16px;
 }
