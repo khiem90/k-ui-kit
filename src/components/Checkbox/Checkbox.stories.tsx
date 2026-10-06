@@ -55,10 +55,12 @@ export const Indeterminate: Story = {
   play: async ({ canvas, userEvent, args }) => {
     const checkbox = canvas.getByRole("checkbox", { name: "Select all rows" });
     await expect(checkbox).toBePartiallyChecked();
-    await expect(checkbox).toHaveAttribute("aria-checked", "mixed");
+    // The mixed state lives on the input's DOM property, which is what assistive technology reads.
+    await expect(checkbox).toHaveProperty("indeterminate", true);
     await userEvent.click(checkbox);
     await expect(args.onCheckedChange).toHaveBeenCalledWith(true);
     await expect(checkbox).toBePartiallyChecked();
+    await expect(checkbox).toHaveProperty("indeterminate", true);
   },
 };
 
@@ -141,7 +143,7 @@ export const Controlled: Story = {
 };
 
 const CheckboxWithFocusButton = () => {
-  const ref = useRef<HTMLButtonElement>(null);
+  const ref = useRef<HTMLInputElement>(null);
   return (
     <div style={{ display: "grid", gap: "var(--kui-space-4)", justifyItems: "start" }}>
       <Checkbox ref={ref} className="newsletter" label="Email me about new releases" />
@@ -200,13 +202,41 @@ export const Required: Story = {
   render: () => <SubscribeForm required />,
   play: async ({ canvas, userEvent }) => {
     const checkbox = canvas.getByRole("checkbox", { name: "Email me about new releases" });
-    await expect(checkbox).toHaveAttribute("aria-required", "true");
+    await expect(checkbox).toBeRequired();
     const submit = canvas.getByRole("button", { name: "Subscribe" });
     await userEvent.click(submit);
     await expect(canvas.getByText("Submitted: nothing yet")).toBeVisible();
     await userEvent.click(checkbox);
     await userEvent.click(submit);
     await expect(canvas.getByText("Submitted: on")).toBeVisible();
+  },
+};
+
+export const NativeInput: Story = {
+  render: () => <SubscribeForm value="weekly" defaultChecked />,
+  play: async ({ canvas, userEvent }) => {
+    // A real checkbox input carries the role, so the browser does the toggling and the submitting.
+    const checkbox = canvas.getByRole("checkbox", { name: "Email me about new releases" });
+    await expect(checkbox).toBeInstanceOf(HTMLInputElement);
+    await expect(checkbox).toHaveAttribute("type", "checkbox");
+    await expect(checkbox).toHaveAttribute("name", "newsletter");
+    await userEvent.click(canvas.getByRole("button", { name: "Subscribe" }));
+    await expect(canvas.getByText("Submitted: weekly")).toBeVisible();
+  },
+};
+
+export const DataState: Story = {
+  render: () => <SelectAll />,
+  play: async ({ canvas, userEvent }) => {
+    // Consumers style against data-state on the root, so it keeps its three values.
+    const root = (name: string) => canvas.getByRole("checkbox", { name }).closest(".kui-checkbox");
+    await expect(root("Select all")).toHaveAttribute("data-state", "unchecked");
+    await userEvent.click(canvas.getByRole("checkbox", { name: "Invoices" }));
+    await expect(root("Invoices")).toHaveAttribute("data-state", "checked");
+    await expect(root("Receipts")).toHaveAttribute("data-state", "unchecked");
+    await expect(root("Select all")).toHaveAttribute("data-state", "indeterminate");
+    await userEvent.click(canvas.getByRole("checkbox", { name: "Select all" }));
+    await expect(root("Select all")).toHaveAttribute("data-state", "checked");
   },
 };
 

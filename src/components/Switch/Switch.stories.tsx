@@ -170,3 +170,70 @@ export const Required: Story = {
     await expect(canvas.getByText("Submitted: on")).toBeVisible();
   },
 };
+
+export const EnterToggles: Story = {
+  play: async ({ canvas, userEvent, args }) => {
+    const toggle = canvas.getByRole("switch", { name: "Push notifications" });
+    await userEvent.tab();
+    await expect(toggle).toHaveFocus();
+    await userEvent.keyboard("{Enter}");
+    await expect(toggle).toBeChecked();
+    await expect(args.onCheckedChange).toHaveBeenLastCalledWith(true);
+    await userEvent.keyboard("{Enter}");
+    await expect(toggle).not.toBeChecked();
+    await expect(args.onCheckedChange).toHaveBeenCalledTimes(2);
+  },
+};
+
+export const RootState: Story = {
+  args: { className: "push" },
+  play: async ({ canvas, canvasElement, userEvent }) => {
+    const root = canvasElement.querySelector(".push");
+    await expect(root).toHaveAttribute("data-state", "unchecked");
+    await expect(root).not.toHaveAttribute("data-disabled");
+    await userEvent.click(canvas.getByRole("switch", { name: "Push notifications" }));
+    await expect(root).toHaveAttribute("data-state", "checked");
+  },
+};
+
+export const DisabledRootState: Story = {
+  args: { className: "push", disabled: true },
+  play: async ({ canvasElement }) => {
+    const root = canvasElement.querySelector(".push");
+    await expect(root).toHaveAttribute("data-state", "unchecked");
+    await expect(root).toHaveAttribute("data-disabled", "");
+  },
+};
+
+const ResettableForm = () => {
+  const [changes, setChanges] = useState(0);
+  return (
+    <form
+      style={{ display: "grid", gap: "var(--kui-space-4)", justifyItems: "start" }}
+      onChange={() => setChanges((count) => count + 1)}
+    >
+      <Switch label="Push notifications" name="notifications" defaultChecked />
+      <Button type="reset" variant="outline">
+        Reset
+      </Button>
+      <output>Changes: {changes}</output>
+    </form>
+  );
+};
+
+export const FormResetAndChange: Story = {
+  render: () => <ResettableForm />,
+  play: async ({ canvas, userEvent }) => {
+    const toggle = canvas.getByRole("switch", { name: "Push notifications" });
+    await expect(toggle).toBeChecked();
+    await userEvent.click(toggle);
+    await expect(toggle).not.toBeChecked();
+    await expect(canvas.getByText("Changes: 1")).toBeVisible();
+    await userEvent.keyboard(" ");
+    await userEvent.keyboard(" ");
+    await expect(toggle).not.toBeChecked();
+    await expect(canvas.getByText("Changes: 3")).toBeVisible();
+    await userEvent.click(canvas.getByRole("button", { name: "Reset" }));
+    await expect(toggle).toBeChecked();
+  },
+};
