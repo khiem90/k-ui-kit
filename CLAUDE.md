@@ -2,6 +2,8 @@
 
 Accessible React component library on npm. Plain CSS with Tokens, Components built on the platform (native dialog and inputs, the Popover API, CSS anchor positioning) with zero runtime dependencies, Stories as tests.
 
+Shared internals live in `src/*.ts(x)` beside `index.ts` (Slot, popover anchoring, compose, controllable state). Check them before writing a helper.
+
 ## Agent skills
 
 ### Issue tracker
