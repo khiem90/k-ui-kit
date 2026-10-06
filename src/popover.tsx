@@ -51,13 +51,19 @@ export interface AnchoredPopoverOptions<P extends HTMLElement> {
   offset: number;
   /** Another ref to the popup element, such as the Component's forwarded ref. */
   ref?: Ref<P>;
+  /**
+   * Keeps the popup mounted and shows it only while this is true. Left out, the popup shows
+   * whenever it is mounted.
+   */
+  open?: boolean;
 }
 
 /**
  * Anchors a popup to a trigger. Spread `anchorStyle` and pass `anchorRef` to the trigger, and
- * spread `popoverProps` onto the popup. Render the popup only while it is open: its ref shows it
- * as a manual popover on mount, and unmounting it hides it. While it is mounted, `data-side` on it
- * holds the side it landed on after any flip.
+ * spread `popoverProps` onto the popup. Either render the popup only while it is open, so its ref
+ * shows it as a manual popover on mount and unmounting it hides it, or pass `open` to keep it
+ * mounted and show it only while that is true. While it shows, `data-side` on it holds the side it
+ * landed on after any flip.
  *
  * The component's CSS resets the UA popover box inside `@supports (position-area: top)`, with
  * `inset: auto` and `margin: 0`, so the offset margin here is the only one. Without anchor
@@ -67,6 +73,7 @@ export function useAnchoredPopover<A extends HTMLElement, P extends HTMLElement>
   side,
   offset,
   ref,
+  open = true,
 }: AnchoredPopoverOptions<P>) {
   // useId's characters are not all valid in a dashed ident, so only the safe ones are kept.
   const anchorName = `--kui-anchor-${useId().replace(/[^a-zA-Z0-9_-]/g, "")}`;
@@ -77,7 +84,11 @@ export function useAnchoredPopover<A extends HTMLElement, P extends HTMLElement>
     (popup: P | null) => {
       stopTracking.current?.();
       stopTracking.current = null;
-      if (popup) {
+      // The callback changes with `open`, so React calls it again whenever the popup opens or closes.
+      if (popup && !open) {
+        if (popup.matches(":popover-open")) popup.hidePopover();
+        delete popup.dataset.side;
+      } else if (popup) {
         if (!popup.matches(":popover-open")) popup.showPopover();
         const update = () => {
           popup.dataset.side = measureSide(popup, anchorRef.current, side);
@@ -94,7 +105,7 @@ export function useAnchoredPopover<A extends HTMLElement, P extends HTMLElement>
       }
       setRef(ref, popup);
     },
-    [side, ref],
+    [side, ref, open],
   );
 
   const anchorStyle = useMemo<CSSProperties>(() => ({ anchorName }), [anchorName]);

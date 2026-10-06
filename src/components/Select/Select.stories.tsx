@@ -3,11 +3,35 @@ import { expect, fn, waitFor, within } from "storybook/test";
 import { useRef, useState, type CSSProperties } from "react";
 import { Button, Select, TextField, type SelectSize } from "../../index";
 
-/** The list renders in a portal at the end of body, outside the Story's canvas. */
+/** The list renders in the browser's top layer. Queries start from body so they find it either way. */
 const findListbox = () => within(document.body).findByRole("listbox", {}, { timeout: 2000 });
 const queryListbox = () => within(document.body).queryByRole("listbox");
 
-/** Radix moves focus into the list a frame after it mounts. */
+/** The gap Select keeps between the trigger and the list. */
+const OFFSET = 4;
+
+/**
+ * The list must sit the offset away from the trigger on the given side, be at least as wide as the
+ * trigger, and overlap it across. A list that falls back to the middle of the viewport, as it would
+ * in a browser without anchor positioning, fails.
+ */
+const expectPlacedOn = async (
+  side: "top" | "bottom",
+  listbox: HTMLElement,
+  trigger: HTMLElement,
+) => {
+  await waitFor(() => {
+    const box = listbox.getBoundingClientRect();
+    const anchor = trigger.getBoundingClientRect();
+    if (side === "bottom") expect(box.top - anchor.bottom).toBeCloseTo(OFFSET, 0);
+    else expect(anchor.top - box.bottom).toBeCloseTo(OFFSET, 0);
+    expect(box.width).toBeGreaterThanOrEqual(anchor.width - 0.5);
+    expect(box.left).toBeLessThan(anchor.right);
+    expect(box.right).toBeGreaterThan(anchor.left);
+  });
+};
+
+/** Focus moves into the list as it opens. */
 const expectFocus = async (element: HTMLElement) => {
   await waitFor(() => expect(element).toHaveFocus());
 };
@@ -224,12 +248,14 @@ export const WithGroups: Story = {
     await expect(trigger).toHaveTextContent("Carrot");
     await expect(args.onValueChange).toHaveBeenLastCalledWith("carrot");
 
-    // Left open so axe audits the list with its groups and the check on the picked option. Focus is
-    // held in the list meanwhile, so the trigger leaves the Tab order until it closes.
+    // Left open so axe audits the list with its groups and the check on the picked option. Nothing
+    // on the page is hidden from assistive technology meanwhile, so the trigger stays in the Tab
+    // order and can still be found by its role.
     await userEvent.keyboard("{Enter}");
     const reopened = await findListbox();
     await expectFocus(within(reopened).getByRole("option", { name: "Carrot" }));
-    await expect(trigger).toHaveAttribute("tabindex", "-1");
+    await expect(trigger).not.toHaveAttribute("tabindex");
+    await expect(canvas.getByRole("combobox", { name: "Produce" })).toBe(trigger);
   },
 };
 
@@ -363,10 +389,6 @@ const months = [
   "December",
 ];
 
-/** The scroll buttons carry no role, so a test names them the way a Consumer's stylesheet would. */
-const queryScrollButton = (side: "up" | "down") =>
-  document.body.querySelector<HTMLElement>(`.kui-select__scroll-button[data-side="${side}"]`);
-
 export const LongList: Story = {
   args: { defaultValue: "january" },
   render: (args) => (
@@ -391,35 +413,140 @@ export const LongList: Story = {
     const december = within(listbox).getByRole("option", { name: "December" });
     await expectFocus(january);
 
-    // The list is capped well under the window, so it scrolls, and only the button for the
-    // direction with more items shows.
+    // The list is capped well under the window, so it scrolls natively, with the browser's own
+    // scrollbar. It opens at the top, with December out of view below.
     await expect(listbox.getBoundingClientRect().height).toBeLessThanOrEqual(320);
+    await expect(getComputedStyle(listbox).overflowY).toBe("auto");
+    await expect(getComputedStyle(listbox).scrollbarWidth).not.toBe("none");
+    await expect(listbox.scrollHeight).toBeGreaterThan(listbox.clientHeight);
+    await expect(listbox.scrollTop).toBe(0);
     await expect(december.getBoundingClientRect().bottom).toBeGreaterThan(
       listbox.getBoundingClientRect().bottom,
     );
-    await waitFor(() => expect(queryScrollButton("down")).toBeVisible());
-    await expect(queryScrollButton("up")).not.toBeInTheDocument();
 
-    // Resting the pointer on a button scrolls the list that way. Moving it off stops the scroll.
-    const viewport = listbox.querySelector<HTMLElement>(".kui-select__viewport");
-    if (!viewport) throw new Error("The viewport is not in the list.");
-    await expect(viewport.scrollTop).toBe(0);
-    await userEvent.hover(queryScrollButton("down") as HTMLElement);
-    await waitFor(() => expect(viewport.scrollTop).toBeGreaterThan(0));
-    await userEvent.hover(listbox);
-
-    // End lands on the last option and brings it into view.
+    // End lands on the last option and scrolls it into view.
     await userEvent.keyboard("{End}");
     await expect(december).toHaveFocus();
-    await waitFor(() => expect(queryScrollButton("up")).toBeVisible());
-    await expect(queryScrollButton("down")).not.toBeInTheDocument();
+    await expect(listbox.scrollTop).toBeGreaterThan(0);
     await expect(december.getBoundingClientRect().bottom).toBeLessThanOrEqual(
       listbox.getBoundingClientRect().bottom,
     );
+    // Home goes back to the top.
+    await userEvent.keyboard("{Home}");
+    await expect(january).toHaveFocus();
+    await expect(listbox.scrollTop).toBe(0);
+    await userEvent.keyboard("{End}");
     await userEvent.keyboard("{Enter}");
     await expectClosed(trigger);
     await expect(trigger).toHaveTextContent("December");
     await expect(args.onValueChange).toHaveBeenLastCalledWith("december");
+  },
+};
+
+export const PlacedBelowTrigger: Story = {
+  render: (args) => (
+    <Select.Root {...args}>
+      <Select.Trigger aria-label="Fruit" style={{ inlineSize: "16rem" }} />
+      <Select.Content>
+        <Select.Item value="apple">Apple</Select.Item>
+        <Select.Item value="banana">Banana</Select.Item>
+      </Select.Content>
+    </Select.Root>
+  ),
+  play: async ({ canvas, userEvent }) => {
+    const trigger = canvas.getByRole("combobox", { name: "Fruit" });
+    await userEvent.click(trigger);
+    await expectPlacedOn("bottom", await findListbox(), trigger);
+  },
+};
+
+export const FlipsWhenNoRoom: Story = {
+  args: { defaultValue: "january" },
+  // Pinned to the bottom of the window, where the list cannot fit below the trigger.
+  render: (args) => (
+    <div style={{ position: "fixed", insetInline: "1rem", insetBlockEnd: "1rem" }}>
+      <Select.Root {...args}>
+        <Select.Trigger aria-label="Month" />
+        <Select.Content>
+          {months.map((month) => (
+            <Select.Item key={month} value={month.toLowerCase()}>
+              {month}
+            </Select.Item>
+          ))}
+        </Select.Content>
+      </Select.Root>
+    </div>
+  ),
+  play: async ({ canvas, userEvent }) => {
+    const trigger = canvas.getByRole("combobox", { name: "Month" });
+    await userEvent.click(trigger);
+    await expectPlacedOn("top", await findListbox(), trigger);
+  },
+};
+
+export const ClosesOnOutsidePress: Story = {
+  render: (args) => (
+    <div style={{ display: "grid", gap: "var(--kui-space-4)", justifyItems: "start" }}>
+      <Select.Root {...args}>
+        <Select.Trigger aria-label="Fruit" style={{ inlineSize: "16rem" }} />
+        <Select.Content>
+          <Select.Item value="apple">Apple</Select.Item>
+          <Select.Item value="banana">Banana</Select.Item>
+        </Select.Content>
+      </Select.Root>
+      <p>Fresh fruit every morning.</p>
+    </div>
+  ),
+  play: async ({ canvas, userEvent, args }) => {
+    const trigger = canvas.getByRole("combobox", { name: "Fruit" });
+    // A press on the trigger itself toggles the list rather than counting as outside.
+    await userEvent.click(trigger);
+    await findListbox();
+    await userEvent.click(trigger);
+    await expectClosed(trigger);
+
+    await userEvent.click(trigger);
+    await findListbox();
+    await userEvent.click(canvas.getByText("Fresh fruit every morning."));
+    await waitFor(() => expect(queryListbox()).not.toBeInTheDocument());
+    await expect(trigger).toHaveAttribute("aria-expanded", "false");
+    await expect(trigger).toHaveTextContent("Apple");
+    await expect(args.onValueChange).not.toHaveBeenCalled();
+  },
+};
+
+export const ClosesWhenFocusLeaves: Story = {
+  render: (args) => (
+    <div style={{ display: "grid", gap: "var(--kui-space-4)", justifyItems: "start" }}>
+      <Select.Root {...args}>
+        <Select.Trigger aria-label="Fruit" style={{ inlineSize: "16rem" }} />
+        <Select.Content>
+          <Select.Item value="apple">Apple</Select.Item>
+          <Select.Item value="banana">Banana</Select.Item>
+        </Select.Content>
+      </Select.Root>
+      <Button variant="outline">Add to basket</Button>
+    </div>
+  ),
+  play: async ({ canvas, userEvent, args }) => {
+    const trigger = canvas.getByRole("combobox", { name: "Fruit" });
+    const basket = canvas.getByRole("button", { name: "Add to basket" });
+
+    // Tab moves on from the list to the next control, and the list closes behind it.
+    await userEvent.tab();
+    await userEvent.keyboard("{Enter}");
+    await expectFocus(within(await findListbox()).getByRole("option", { name: "Apple" }));
+    await userEvent.tab();
+    await expect(basket).toHaveFocus();
+    await waitFor(() => expect(queryListbox()).not.toBeInTheDocument());
+    await expect(trigger).toHaveAttribute("aria-expanded", "false");
+
+    // Shift+Tab from the list lands back on the trigger, which never left the Tab order.
+    await userEvent.click(trigger);
+    await expectFocus(within(await findListbox()).getByRole("option", { name: "Apple" }));
+    await userEvent.tab({ shift: true });
+    await expectClosed(trigger);
+    await expect(args.onValueChange).not.toHaveBeenCalled();
   },
 };
 
@@ -461,7 +588,12 @@ const FruitOrderForm = () => {
           <Select.Item value="cherry">Cherry</Select.Item>
         </Select.Content>
       </Select.Root>
-      <Button type="submit">Order</Button>
+      <div style={{ display: "flex", gap: "var(--kui-space-2)" }}>
+        <Button type="submit">Order</Button>
+        <Button type="reset" variant="outline">
+          Start over
+        </Button>
+      </div>
       <output>Submitted {submitted}</output>
     </form>
   );
@@ -482,6 +614,20 @@ export const InForm: Story = {
     await expectClosed(trigger);
     await userEvent.click(canvas.getByRole("button", { name: "Order" }));
     await expect(canvas.getByText("Submitted banana")).toBeVisible();
+
+    // Resetting the form clears the pick, so required blocks the next submit again.
+    await userEvent.click(canvas.getByRole("button", { name: "Start over" }));
+    await expect(trigger).toHaveTextContent("Pick a fruit");
+    await expect(trigger).toHaveAttribute("data-placeholder", "");
+    await userEvent.click(canvas.getByRole("button", { name: "Order" }));
+    await expect(canvas.getByText("Submitted banana")).toBeVisible();
+
+    // Picked again, the new value is the one submitted.
+    await userEvent.click(trigger);
+    await userEvent.click(within(await findListbox()).getByRole("option", { name: "Cherry" }));
+    await expectClosed(trigger);
+    await userEvent.click(canvas.getByRole("button", { name: "Order" }));
+    await expect(canvas.getByText("Submitted cherry")).toBeVisible();
   },
 };
 
