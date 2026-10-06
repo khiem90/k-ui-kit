@@ -29,6 +29,13 @@ const checks = [
   ["dist/index.d.ts", "declare DataTable", (s) => s.includes("declare const DataTable")],
   ["dist/index.d.ts", "export the ColumnDef type", (s) => s.includes("type ColumnDef")],
   ["dist/styles/index.css", "contain the Tokens", (s) => s.includes("--kui-background:")],
+  // esbuild drops the quotes around an attribute value it does not need, so the Noren selector
+  // comes out as [data-theme=noren]. The block must be there and must fill at least one role.
+  [
+    "dist/styles/index.css",
+    "contain the Noren Theme block",
+    (s) => /:where\(\[data-theme=["']?noren["']?\]\)\s*{[^}]*--kui-primary:/.test(s),
+  ],
   ["dist/styles/index.css", "contain the Button styles", (s) => s.includes(".kui-button")],
   ["dist/styles/index.css", "contain the TextField styles", (s) => s.includes(".kui-text-field")],
   ["dist/styles/index.css", "contain the Checkbox styles", (s) => s.includes(".kui-checkbox")],
