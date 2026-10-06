@@ -3,11 +3,17 @@
   flex-direction: column;
   gap: var(--kui-space-3);
   color: var(--kui-foreground);
-  font-family: var(--kui-font-family);
+  font-family: var(--kui-font-body);
 }
 
+/* The card. Its padding keeps the rows' rounded ends, and any focus ring drawn in them, clear of
+   the corners it clips to. */
 .kui-data-table__scroll {
   overflow-x: auto;
+  padding: var(--kui-space-2) var(--kui-space-3) var(--kui-space-3);
+  border-radius: var(--kui-radius-card);
+  background: var(--kui-surface-raised);
+  box-shadow: var(--kui-shadow-rest);
 }
 
 .kui-data-table__scroll:focus-visible {
@@ -15,16 +21,19 @@
   outline-offset: 2px;
 }
 
+/* Separate borders, because collapsed ones ignore the radius that rounds each row's ends. */
 .kui-data-table__table {
   inline-size: 100%;
-  border-collapse: collapse;
-  font-size: 0.875rem;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: var(--kui-font-size-md);
   line-height: 1.25rem;
 }
 
+/* Inline padding lines the caption up with the text in the cells below it. */
 .kui-data-table__caption {
-  padding-block-end: var(--kui-space-2);
-  font-size: 1rem;
+  padding: var(--kui-space-2) var(--kui-space-3);
+  font-size: var(--kui-font-size-lg);
   font-weight: 600;
   line-height: 1.5rem;
   text-align: start;
@@ -40,13 +49,14 @@
   white-space: nowrap;
 }
 
+/* The label style. The line height stays the cells' 1.25rem, so the selection box centres the same
+   way in the header as in the rows. */
 .kui-data-table__header {
-  border-block-end: 1px solid var(--kui-border);
+  font-family: var(--kui-font-label);
+  font-size: var(--kui-font-size-sm);
   font-weight: 600;
-}
-
-.kui-data-table__cell {
-  border-block-end: 1px solid color-mix(in srgb, var(--kui-border) 40%, transparent);
+  text-transform: var(--kui-label-case);
+  letter-spacing: var(--kui-label-tracking);
 }
 
 /* The button takes the cell's padding so the whole header cell is the hit target. */
@@ -65,7 +75,10 @@
   border: 0;
   background: none;
   color: inherit;
+  /* The browser's button styles reset case and tracking, which the font shorthand leaves alone. */
   font: inherit;
+  text-transform: inherit;
+  letter-spacing: inherit;
   text-align: inherit;
   cursor: pointer;
   appearance: none;
@@ -116,7 +129,7 @@
   flex: 1;
   margin: 0;
   color: var(--kui-foreground-muted);
-  font-size: 0.875rem;
+  font-size: var(--kui-font-size-md);
   line-height: 1.25rem;
 }
 
@@ -127,11 +140,50 @@
 }
 
 .kui-data-table__selection .kui-checkbox {
+  /* stylelint-disable-next-line scale-unlimited/declaration-strict-value -- the two lengths are the
+     cell's line height and the Checkbox's box, not spacing steps */
   margin-block: calc((1.25rem - 1.5rem) / 2);
 }
 
-.kui-data-table__row[data-selected] {
-  background: color-mix(in srgb, var(--kui-primary) 12%, var(--kui-background));
+/* Rows separate by tone, not lines. Odd rows take a light apricot tone and even rows cream, so the
+   first row stands apart from the header. The cells carry the fill, since a row's background
+   would show square corners behind the rounded end cells. */
+.kui-data-table__row > .kui-data-table__cell {
+  background: var(--kui-surface-raised);
+  transition: background-color var(--kui-motion-duration);
+}
+
+.kui-data-table__row:nth-child(odd) > .kui-data-table__cell {
+  background: var(--kui-surface-stripe);
+}
+
+.kui-data-table__row:is(:hover, [data-selected]) > .kui-data-table__cell {
+  background: var(--kui-tint);
+}
+
+/* Hovered and selected rows turn Peach sky, where Ember is under 3:1 (WCAG 1.4.11). Every control
+   in the row, the Checkbox and anything a Consumer puts in a cell, draws its focus ring in the
+   on-tint Token, and the row's Checkbox draws its checked box in primary on tint. Both Tokens live
+   on the root, so a Consumer's root override of them reaches the row. */
+.kui-data-table__row:is(:hover, [data-selected]) {
+  --kui-focus-ring: var(--kui-focus-ring-on-tint);
+}
+
+.kui-data-table__row:is(:hover, [data-selected])
+  .kui-checkbox:where([data-state="checked"], [data-state="indeterminate"])
+  .kui-checkbox__box {
+  border-color: var(--kui-primary-on-tint);
+  background: var(--kui-primary-on-tint);
+}
+
+.kui-data-table__row > .kui-data-table__cell:first-child {
+  border-start-start-radius: var(--kui-radius-field);
+  border-end-start-radius: var(--kui-radius-field);
+}
+
+.kui-data-table__row > .kui-data-table__cell:last-child {
+  border-start-end-radius: var(--kui-radius-field);
+  border-end-end-radius: var(--kui-radius-field);
 }
 
 /* The loading and empty messages sit in one cell that spans the table. Prose, so it may wrap. */

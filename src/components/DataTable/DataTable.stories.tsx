@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, fn, waitFor, within } from "storybook/test";
 import { useRef, useState } from "react";
+import { contrast, luminance, toRGB, tokenColour } from "../../docs/contrast";
 import { Button, DataTable, type ColumnDef, type DataTableProps } from "../../index";
 
 interface Member {
@@ -149,6 +150,33 @@ const getColumnText = (canvas: Canvas, header: string) => {
     (row: HTMLElement) => within(row).getAllByRole("cell")[index]?.textContent,
   );
 };
+
+const backgroundOf = (element: Element) => toRGB(getComputedStyle(element).backgroundColor);
+
+/**
+ * Asserts the element sets type in the label style. The expected values come from a probe styled
+ * with the label Tokens inside the element, so it resolves em-based tracking at the same font size.
+ */
+async function expectLabelStyle(element: HTMLElement) {
+  const probe = document.createElement("span");
+  probe.style.fontFamily = "var(--kui-font-label)";
+  probe.style.textTransform = "var(--kui-label-case)";
+  probe.style.letterSpacing = "var(--kui-label-tracking)";
+  element.append(probe);
+  const expected = getComputedStyle(probe);
+  const want = {
+    fontFamily: expected.fontFamily,
+    textTransform: expected.textTransform,
+    letterSpacing: expected.letterSpacing,
+  };
+  probe.remove();
+  const actual = getComputedStyle(element);
+  await expect({
+    fontFamily: actual.fontFamily,
+    textTransform: actual.textTransform,
+    letterSpacing: actual.letterSpacing,
+  }).toEqual(want);
+}
 
 // An annotation rather than satisfies, so the Stories' args are typed for Member instead of the
 // row type's constraint, which is all StoryObj can infer from a generic Component.
@@ -693,5 +721,326 @@ export const Empty: Story = {
     // Nothing to select, so select-all is disabled. Nothing is loading, so there is no status.
     await expect(canvas.getByRole("checkbox", { name: "Select all rows" })).toBeDisabled();
     await expect(canvas.queryByRole("status")).not.toBeInTheDocument();
+  },
+};
+
+/** Ridgeline's "layer, don't outline" rule. A cream card, label-style headers, and rows told apart by tone. */
+export const Layered: Story = {
+  args: { columns: plainColumns, sortable: true, selectable: true, pageSize: 5 },
+  play: async ({ canvas, userEvent }) => {
+    const table = canvas.getByRole("table", { name: "Team members" });
+    const card = table.closest(".kui-data-table__scroll") as HTMLElement;
+    const cream = tokenColour("--kui-surface-raised");
+
+    // The table sits in a cream card with the card radius.
+    await expect(backgroundOf(card)).toEqual(cream);
+    await expect(getComputedStyle(card).borderRadius).toBe(
+      getComputedStyle(document.documentElement).getPropertyValue("--kui-radius-card").trim(),
+    );
+
+    // Header cells and their sort buttons set type in the label style, and the sort buttons keep
+    // the direction chevron.
+    for (const header of canvas.getAllByRole("columnheader")) await expectLabelStyle(header);
+    const sortButtons = within(table).getAllByRole("button");
+    await expect(sortButtons).toHaveLength(4);
+    for (const button of sortButtons) {
+      await expectLabelStyle(button);
+      await expect(button.querySelector(".kui-data-table__sort-icon svg")).not.toBeNull();
+    }
+
+    // No grid lines anywhere in the table.
+    for (const cell of [...canvas.getAllByRole("columnheader"), ...canvas.getAllByRole("cell")]) {
+      const style = getComputedStyle(cell);
+      await expect([
+        style.borderTopWidth,
+        style.borderRightWidth,
+        style.borderBottomWidth,
+        style.borderLeftWidth,
+      ]).toEqual(["0px", "0px", "0px", "0px"]);
+    }
+
+    // Rows alternate between a light apricot tone and cream, starting with the tone so the first
+    // row stands apart from the header. The tone sits between the page's apricot and cream.
+    const apricot = tokenColour("--kui-background");
+    const rows = getBodyRows(canvas);
+    const tone = backgroundOf(
+      within(rows[0] as HTMLElement).getAllByRole("cell")[1] as HTMLElement,
+    );
+    await expect(tone).not.toEqual(cream);
+    await expect(luminance(tone)).toBeGreaterThan(luminance(apricot));
+    await expect(luminance(tone)).toBeLessThan(luminance(cream));
+    for (const [index, row] of rows.entries()) {
+      for (const cell of within(row).getAllByRole("cell")) {
+        await expect(backgroundOf(cell)).toEqual(index % 2 === 0 ? tone : cream);
+      }
+    }
+
+    // A selected row turns Peach sky, and its text keeps 4.5:1 there. Hover shares the rule, but
+    // a synthetic pointer never matches :hover, so only selection is checked here.
+    const peach = tokenColour("--kui-tint");
+    const [first, second] = rows as [HTMLElement, HTMLElement];
+    await userEvent.click(within(first).getByRole("checkbox"));
+    for (const cell of within(first).getAllByRole("cell")) {
+      await waitFor(() => expect(backgroundOf(cell)).toEqual(peach));
+      const ratio = contrast(toRGB(getComputedStyle(cell).color), peach);
+      await expect(ratio).toBeGreaterThanOrEqual(4.5);
+    }
+    for (const cell of within(second).getAllByRole("cell")) {
+      await expect(backgroundOf(cell)).toEqual(cream);
+    }
+
+    // The checked box and the focus ring around it need 3:1 against the row (WCAG 1.4.11). Ember
+    // on Peach sky is under that, so the row draws both in the on-tint Tokens.
+    const box = first.querySelector(".kui-checkbox__box") as HTMLElement;
+    const boxStyle = () => {
+      void getComputedStyle(box).backgroundColor;
+      for (const animation of box.getAnimations()) animation.finish();
+      return getComputedStyle(box);
+    };
+    await expect(toRGB(boxStyle().backgroundColor)).toEqual(tokenColour("--kui-primary-on-tint"));
+    await expect(contrast(toRGB(boxStyle().backgroundColor), peach)).toBeGreaterThanOrEqual(3);
+    await userEvent.tab();
+    await userEvent.tab({ shift: true });
+    await expect(within(first).getByRole("checkbox")).toHaveFocus();
+    await expect(toRGB(boxStyle().outlineColor)).toEqual(tokenColour("--kui-focus-ring-on-tint"));
+    await expect(contrast(toRGB(boxStyle().outlineColor), peach)).toBeGreaterThanOrEqual(3);
+
+    // The row reads those Tokens where the root defines them, so a Consumer's plain root rule
+    // reaches it like any other.
+    const root = document.documentElement.style;
+    root.setProperty("--kui-primary-on-tint", "rgb(1, 2, 3)");
+    root.setProperty("--kui-focus-ring-on-tint", "rgb(4, 5, 6)");
+    const overridden = [boxStyle().backgroundColor, boxStyle().outlineColor];
+    root.removeProperty("--kui-primary-on-tint");
+    root.removeProperty("--kui-focus-ring-on-tint");
+    await expect(overridden).toEqual(["rgb(1, 2, 3)", "rgb(4, 5, 6)"]);
+
+    // Paging uses the kit's outline Button, outside the card, as it did before Ridgeline.
+    for (const name of ["Previous", "Next"]) {
+      const button = canvas.getByRole("button", { name });
+      await expect(button).toHaveClass("kui-button");
+      await expect(button).toHaveAttribute("data-variant", "outline");
+      await expect(card).not.toContainElement(button);
+    }
+  },
+};
+
+interface Release {
+  id: string;
+  tag: string;
+  owner: string;
+  shipped: Date;
+  downloads: number;
+  sizeMb: number;
+  notes: string;
+}
+
+/** Values chosen so each sort type gives a different order from a plain string comparison. */
+const releases: Release[] = [
+  {
+    id: "r-1",
+    tag: "v1.10",
+    owner: "bao",
+    shipped: new Date("2024-03-01"),
+    downloads: 900,
+    sizeMb: 12,
+    notes: "Bigger",
+  },
+  {
+    id: "r-2",
+    tag: "v1.2",
+    owner: "Ada",
+    shipped: new Date("2023-11-15"),
+    downloads: 1200,
+    sizeMb: 3,
+    notes: "Small",
+  },
+  {
+    id: "r-3",
+    tag: "V1.9",
+    owner: "chiara",
+    shipped: new Date("2024-01-20"),
+    downloads: 40,
+    sizeMb: 120,
+    notes: "Assets",
+  },
+  {
+    id: "r-4",
+    tag: "v1.3",
+    owner: "Dmitri",
+    shipped: new Date("2022-06-30"),
+    downloads: 75,
+    sizeMb: 7,
+    notes: "Fixes",
+  },
+];
+
+/** One column per sort type, an accessor function column, and one that opts out of sorting. */
+const releaseColumns: ColumnDef<Release>[] = [
+  { accessorKey: "tag", header: "Tag" },
+  { accessorKey: "owner", header: "Owner" },
+  {
+    accessorKey: "shipped",
+    header: "Shipped",
+    cell: ({ row }) => row.original.shipped.toISOString().slice(0, 10),
+  },
+  { accessorKey: "downloads", header: "Downloads" },
+  { id: "size", accessorFn: (release) => `${release.sizeMb} MB`, header: "Size" },
+  { accessorKey: "notes", header: "Notes", enableSorting: false },
+];
+
+export const SortTypes: Story = {
+  render: () => (
+    <DataTable
+      caption="Releases"
+      columns={releaseColumns}
+      data={releases}
+      getRowId={byId}
+      sortable
+    />
+  ),
+  play: async ({ canvas, userEvent }) => {
+    const sortBy = (header: string) =>
+      userEvent.click(
+        within(canvas.getByRole("columnheader", { name: header })).getByRole("button", {
+          name: header,
+        }),
+      );
+
+    // Text with digits in it compares the digits as numbers, and case does not count.
+    await sortBy("Tag");
+    await expect(getColumnText(canvas, "Tag")).toEqual(["v1.2", "v1.3", "V1.9", "v1.10"]);
+    await sortBy("Tag");
+    await expect(getColumnText(canvas, "Tag")).toEqual(["v1.10", "V1.9", "v1.3", "v1.2"]);
+
+    // Plain text ignores case too.
+    await sortBy("Owner");
+    await expect(getColumnText(canvas, "Owner")).toEqual(["Ada", "bao", "chiara", "Dmitri"]);
+
+    // Dates sort by time.
+    await sortBy("Shipped");
+    await expect(getColumnText(canvas, "Shipped")).toEqual([
+      "2022-06-30",
+      "2023-11-15",
+      "2024-01-20",
+      "2024-03-01",
+    ]);
+    await sortBy("Shipped");
+    await expect(getColumnText(canvas, "Shipped")).toEqual([
+      "2024-03-01",
+      "2024-01-20",
+      "2023-11-15",
+      "2022-06-30",
+    ]);
+
+    // Numbers sort as numbers, and a value from an accessor function sorts like any other.
+    await sortBy("Downloads");
+    await expect(getColumnText(canvas, "Downloads")).toEqual(["40", "75", "900", "1200"]);
+    await sortBy("Size");
+    await expect(getColumnText(canvas, "Size")).toEqual(["3 MB", "7 MB", "12 MB", "120 MB"]);
+
+    // A column can opt out of sorting, and its header stays plain text.
+    const notes = canvas.getByRole("columnheader", { name: "Notes" });
+    await expect(within(notes).queryByRole("button")).not.toBeInTheDocument();
+  },
+};
+
+/** The order a release team ranks its owners in, which no built-in sort type gives. */
+const ownerRank: Record<string, number> = { Dmitri: 0, chiara: 1, Ada: 2, bao: 3 };
+
+/**
+ * Custom comparators, the function form of `sortFn`. One reads the typed row, the other reads its
+ * own column's value by id, as a comparator written for the TanStack-based build did.
+ */
+const comparatorColumns: ColumnDef<Release>[] = [
+  { accessorKey: "tag", header: "Tag" },
+  {
+    accessorKey: "owner",
+    header: "Owner",
+    sortFn: (rowA, rowB) =>
+      (ownerRank[rowA.original.owner] ?? 0) - (ownerRank[rowB.original.owner] ?? 0),
+  },
+  {
+    accessorKey: "downloads",
+    header: "Downloads",
+    // Most downloaded first when ascending.
+    sortFn: (rowA, rowB, columnId) =>
+      rowB.getValue<number>(columnId) - rowA.getValue<number>(columnId),
+  },
+];
+
+export const CustomSortFn: Story = {
+  render: () => (
+    <DataTable
+      caption="Releases"
+      columns={comparatorColumns}
+      data={releases}
+      getRowId={byId}
+      sortable
+    />
+  ),
+  play: async ({ canvas, userEvent }) => {
+    const sortBy = (header: string) =>
+      userEvent.click(
+        within(canvas.getByRole("columnheader", { name: header })).getByRole("button", {
+          name: header,
+        }),
+      );
+
+    await sortBy("Owner");
+    await expect(getColumnText(canvas, "Owner")).toEqual(["Dmitri", "chiara", "Ada", "bao"]);
+    // Descending reverses whatever the comparator returns.
+    await sortBy("Owner");
+    await expect(getColumnText(canvas, "Owner")).toEqual(["bao", "Ada", "chiara", "Dmitri"]);
+
+    await sortBy("Downloads");
+    await expect(getColumnText(canvas, "Downloads")).toEqual(["1200", "900", "75", "40"]);
+    await expect(canvas.getByRole("columnheader", { name: "Downloads" })).toHaveAttribute(
+      "aria-sort",
+      "ascending",
+    );
+  },
+};
+
+/** A column that puts one of the kit's Buttons in every row. */
+const actionColumns: ColumnDef<Member>[] = [
+  ...plainColumns,
+  {
+    id: "actions",
+    header: "Actions",
+    cell: ({ row }) => (
+      <Button variant="outline" size="sm" aria-label={`Message ${row.original.name}`}>
+        Message
+      </Button>
+    ),
+  },
+];
+
+/**
+ * Any control a Consumer puts in a selected row draws its focus ring in the on-tint Token, since
+ * Ember is under 3:1 on Peach sky, and a root override of that Token reaches it.
+ */
+export const FocusRingOnTint: Story = {
+  args: { columns: actionColumns, selectable: true, defaultSelectedIds: ["m-01"], pageSize: 5 },
+  play: async ({ canvas, userEvent }) => {
+    const row = canvas.getByRole("row", { name: /Lena Fischer/ });
+    await expect(row).toHaveAttribute("data-selected", "");
+    within(row).getByRole("checkbox").focus();
+    await userEvent.tab();
+    const button = within(row).getByRole("button", { name: "Message Lena Fischer" });
+    await expect(button).toHaveFocus();
+    const ring = () => {
+      void getComputedStyle(button).outlineColor;
+      for (const animation of button.getAnimations()) animation.finish();
+      return getComputedStyle(button).outlineColor;
+    };
+    await expect(toRGB(ring())).toEqual(tokenColour("--kui-focus-ring-on-tint"));
+    await expect(contrast(toRGB(ring()), tokenColour("--kui-tint"))).toBeGreaterThanOrEqual(3);
+
+    const root = document.documentElement.style;
+    root.setProperty("--kui-focus-ring-on-tint", "rgb(4, 5, 6)");
+    const overridden = ring();
+    root.removeProperty("--kui-focus-ring-on-tint");
+    await expect(overridden).toBe("rgb(4, 5, 6)");
   },
 };

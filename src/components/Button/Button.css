@@ -5,13 +5,17 @@
   gap: var(--kui-space-2);
   box-sizing: border-box;
   margin: 0;
-  border: 1px solid transparent;
-  border-radius: var(--kui-radius-md);
+  padding-block: 0;
+  /* Every variant keeps a 2px border, so outline is the same size as the rest. */
+  border: 2px solid transparent;
+  border-radius: var(--kui-radius-pill);
   background: transparent;
   color: var(--kui-foreground);
-  font-family: var(--kui-font-family);
-  font-weight: 500;
+  font-family: var(--kui-font-label);
+  font-weight: 600;
   line-height: 1;
+  text-transform: var(--kui-label-case);
+  letter-spacing: var(--kui-label-tracking);
   text-decoration: none;
   white-space: nowrap;
   cursor: pointer;
@@ -29,47 +33,51 @@
 }
 
 .kui-button[data-size="sm"] {
-  min-height: 2rem;
-  padding: 0 var(--kui-space-3);
-  font-size: 0.875rem;
+  padding-inline: var(--kui-space-4);
+  block-size: 36px;
+  font-size: var(--kui-font-size-sm);
 }
 
 .kui-button[data-size="md"] {
-  min-height: 2.5rem;
-  padding: 0 var(--kui-space-4);
-  font-size: 1rem;
+  padding-inline: var(--kui-space-5);
+  block-size: 44px;
+  font-size: var(--kui-font-size-md);
 }
 
 .kui-button[data-size="lg"] {
-  min-height: 3rem;
-  padding: 0 var(--kui-space-5);
-  font-size: 1.125rem;
+  padding-inline: var(--kui-space-6);
+  block-size: 52px;
+  font-size: var(--kui-font-size-lg);
 }
 
 .kui-button[data-variant="primary"] {
   background: var(--kui-primary);
   color: var(--kui-primary-foreground);
+  box-shadow: var(--kui-shadow-raised);
 }
 
-.kui-button[data-variant="primary"]:not([data-disabled]):hover {
-  background: color-mix(in srgb, var(--kui-primary) 88%, var(--kui-foreground));
+.kui-button[data-variant="primary"]:not([data-disabled]):is(:hover, :active) {
+  background: var(--kui-primary-hover);
 }
 
 .kui-button[data-variant="secondary"] {
-  background: var(--kui-background-subtle);
+  background: var(--kui-surface-raised);
+  box-shadow: var(--kui-shadow-raised);
 }
 
-.kui-button[data-variant="secondary"]:not([data-disabled]):hover {
-  background: color-mix(in srgb, var(--kui-background-subtle) 92%, var(--kui-foreground));
+.kui-button[data-variant="ghost"] {
+  text-decoration: underline;
+  text-underline-offset: 6px;
 }
 
 .kui-button[data-variant="outline"] {
-  border-color: var(--kui-border);
+  border-color: var(--kui-foreground);
 }
 
-.kui-button[data-variant="outline"]:not([data-disabled]):hover,
-.kui-button[data-variant="ghost"]:not([data-disabled]):hover {
-  background: var(--kui-background-subtle);
+.kui-button[data-variant="secondary"]:not([data-disabled]):hover,
+.kui-button[data-variant="ghost"]:not([data-disabled]):hover,
+.kui-button[data-variant="outline"]:not([data-disabled]):hover {
+  background: var(--kui-tint);
 }
 
 .kui-button[data-variant="danger"] {
@@ -78,7 +86,7 @@
 }
 
 .kui-button[data-variant="danger"]:not([data-disabled]):hover {
-  background: color-mix(in srgb, var(--kui-danger) 88%, var(--kui-foreground));
+  background: var(--kui-danger-hover);
 }
 
 .kui-button[data-disabled] {

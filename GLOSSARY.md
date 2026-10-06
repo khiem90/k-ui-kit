@@ -12,10 +12,6 @@ _Avoid_: User, client, developer
 A React element exported from the package's public entry.
 _Avoid_: Widget, control
 
-**Primitive**:
-A headless Radix building block a component is built on. Never exported directly.
-_Avoid_: Base, headless component
-
 **Token**:
 A CSS custom property holding a design value such as a colour or spacing step.
 _Avoid_: Variable, theme value, design variable
@@ -25,8 +21,12 @@ A Storybook example of a component. Stories double as the component's tests.
 _Avoid_: Example, demo, test case
 
 **Theme**:
-A complete set of token values. The kit ships light and dark; a consumer switches with `data-theme` or overrides individual tokens.
-_Avoid_: Skin, mode, palette
+A named visual identity, expressed as a complete set of token values for colour, type, shape and depth. Ridgeline is the first and, for now, the only one.
+_Avoid_: Skin, look, style, design system
+
+**Color scheme**:
+The light or dark variant of a Theme. Ridgeline has a light Color scheme only.
+_Avoid_: Mode, theme, appearance
 
 **Simple component**:
 A component used as a single element with flat props, such as Button or Switch.

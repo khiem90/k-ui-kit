@@ -5,11 +5,14 @@ import { defineConfig } from "tsup";
 // entry stays a server-safe module that assembles the composite namespaces. See
 // docs/adr/0003-client-boundary-below-the-entry.md.
 export default defineConfig({
+  // Every module under src/ and src/components/*/ is an entry. Stories are tests and src/docs/ is
+  // Storybook-only, so neither ships. scripts/verify-build.mjs walks src/ by the same rule and fails
+  // the build on a module with no file under dist/.
   entry: [
-    "src/index.ts",
-    "src/icons.tsx",
-    "src/components/*/*.tsx",
-    "!src/components/*/*.stories.tsx",
+    "src/*.{ts,tsx}",
+    "src/components/*/*.{ts,tsx}",
+    "!**/*.stories.tsx",
+    "!src/docs/**",
     "src/styles/index.css",
   ],
   format: ["esm"],
@@ -23,4 +26,6 @@ export default defineConfig({
     // resolve inside dist/, which mirrors src/.
     options.external = [...(options.external ?? []), "./*.js", "../*.js"];
   },
+  // The opt-in fonts stylesheet and its font files are copied, not bundled.
+  onSuccess: "node scripts/copy-fonts.mjs",
 });

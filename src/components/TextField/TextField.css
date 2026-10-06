@@ -1,21 +1,24 @@
 .kui-text-field {
   display: flex;
   flex-direction: column;
-  gap: var(--kui-space-1);
+  gap: var(--kui-space-2);
   color: var(--kui-foreground);
-  font-family: var(--kui-font-family);
+  font-family: var(--kui-font-body);
 }
 
 .kui-text-field__label,
 .kui-text-field__description,
 .kui-text-field__error {
   margin: 0;
-  font-size: 0.875rem;
+  font-size: var(--kui-font-size-md);
   line-height: 1.25rem;
 }
 
 .kui-text-field__label {
-  font-weight: 500;
+  font-family: var(--kui-font-label);
+  font-weight: 600;
+  text-transform: var(--kui-label-case);
+  letter-spacing: var(--kui-label-tracking);
 }
 
 .kui-text-field__description {
@@ -26,15 +29,20 @@
   color: var(--kui-danger);
 }
 
+/* Ridgeline layers rather than outlines, but cream on apricot is 1.17:1, so the field keeps a 2px
+   edge in the border Token to meet WCAG 1.4.11. The Select trigger draws the same box from the
+   same Tokens, so a change here belongs in Select.css too. */
 .kui-text-field__input {
   box-sizing: border-box;
   inline-size: 100%;
   margin: 0;
-  border: 1px solid var(--kui-border);
-  border-radius: var(--kui-radius-md);
-  background: var(--kui-background);
+  padding: 0 var(--kui-padding-field-inline);
+  border: 2px solid var(--kui-border);
+  border-radius: var(--kui-radius-field);
+  background: var(--kui-surface-raised);
   color: var(--kui-foreground);
-  font-family: inherit;
+  font-family: var(--kui-font-body);
+  font-size: var(--kui-font-size-lg);
   line-height: 1;
   appearance: none;
   transition:
@@ -48,27 +56,17 @@
   opacity: 1;
 }
 
-.kui-text-field__input:focus-visible {
-  outline: 2px solid var(--kui-focus-ring);
-  outline-offset: 2px;
-}
-
+/* Heights match Button, so a TextField and a Button line up in a row. */
 .kui-text-field[data-size="sm"] .kui-text-field__input {
-  min-height: 2rem;
-  padding: 0 var(--kui-space-2);
-  font-size: 0.875rem;
+  min-block-size: 36px;
 }
 
 .kui-text-field[data-size="md"] .kui-text-field__input {
-  min-height: 2.5rem;
-  padding: 0 var(--kui-space-3);
-  font-size: 1rem;
+  min-block-size: 44px;
 }
 
 .kui-text-field[data-size="lg"] .kui-text-field__input {
-  min-height: 3rem;
-  padding: 0 var(--kui-space-4);
-  font-size: 1.125rem;
+  min-block-size: 52px;
 }
 
 .kui-text-field:where(:not([data-disabled], [data-readonly], [data-invalid]))
@@ -76,8 +74,15 @@
   border-color: var(--kui-foreground);
 }
 
+/* Ember against the muted border is too close a pair to signal focus alone, so the ring shows too. */
+.kui-text-field .kui-text-field__input:focus-visible {
+  border-color: var(--kui-primary);
+  outline: 2px solid var(--kui-focus-ring);
+  outline-offset: 2px;
+}
+
 .kui-text-field[data-readonly] .kui-text-field__input {
-  background: var(--kui-background-subtle);
+  background: var(--kui-background);
 }
 
 .kui-text-field[data-disabled] .kui-text-field__label {

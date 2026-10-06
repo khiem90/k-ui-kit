@@ -1,20 +1,31 @@
 "use client";
 
-import * as TooltipPrimitive from "@radix-ui/react-tooltip";
 import {
+  Children,
+  cloneElement,
   forwardRef,
-  useState,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
   type HTMLAttributes,
+  type PointerEvent,
   type ReactElement,
   type ReactNode,
+  type Ref,
 } from "react";
+import { composeEventHandlers, composeRefs, getElementRef } from "../../compose.js";
+import { useControllableState } from "../../controllable-state.js";
+import { useAnchoredPopover } from "../../popover.js";
 
 export type TooltipSide = "top" | "right" | "bottom" | "left";
 
-/** Gap between the trigger and the box: the arrow's 5px height plus a hair of daylight. */
+/** Gap between the trigger and the box. */
 const SIDE_OFFSET = 6;
-/** Room the box keeps from the viewport edge before it flips to the other side or slides along. */
-const COLLISION_PADDING = 8;
+/** Milliseconds the pointer has to cross from the trigger onto the box before it closes. */
+const CLOSE_GRACE = 100;
+/** Opening one tooltip closes any other, so two never show at once. */
+const TOOLTIP_OPEN = "kui-tooltip-open";
 
 /**
  * The child is the trigger and receives the hover, focus, and aria wiring. `className`, the ref,
@@ -37,6 +48,8 @@ export interface TooltipProps extends Omit<HTMLAttributes<HTMLDivElement>, "cont
   children: ReactElement;
 }
 
+type TriggerProps = HTMLAttributes<HTMLElement> & { ref?: Ref<HTMLElement> };
+
 /**
  * A short description of its trigger. It opens on hover and keyboard focus, closes on Escape and
  * blur, and screen readers read it as the trigger's description.
@@ -50,45 +63,141 @@ export const Tooltip = forwardRef<HTMLDivElement, TooltipProps>(function Tooltip
     defaultOpen = false,
     onOpenChange,
     className,
+    style,
+    id: idProp,
+    onPointerEnter,
+    onPointerLeave,
     children,
     ...props
   },
   ref,
 ) {
-  // Owning the state puts data-state="open" or "closed" on the trigger and the box, the kit's
-  // vocabulary, in place of the three values Radix would write there.
-  const [uncontrolledOpen, setUncontrolledOpen] = useState(defaultOpen);
-  const isControlled = openProp !== undefined;
-  const open = isControlled ? openProp : uncontrolledOpen;
+  const [open, setOpenState] = useControllableState({
+    prop: openProp,
+    defaultProp: defaultOpen,
+    onChange: onOpenChange,
+  });
   const state = open ? "open" : "closed";
+  const generatedId = useId();
+  const id = idProp ?? generatedId;
 
-  const handleOpenChange = (next: boolean) => {
-    if (!isControlled) setUncontrolledOpen(next);
-    onOpenChange?.(next);
+  // Event handlers and timers read the latest open state here, so onOpenChange fires only on a
+  // real change even when a timer was set before a focus or Escape changed it.
+  const openRef = useRef(open);
+  const openTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const closeTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  // The pointer has rested on the trigger since it last entered, so moving it opens nothing more.
+  const hovering = useRef(false);
+  // A press on the trigger focuses it, and that focus must not open the tooltip.
+  const pressing = useRef(false);
+
+  useEffect(() => {
+    openRef.current = open;
+  });
+
+  const clearTimers = () => {
+    clearTimeout(openTimer.current);
+    clearTimeout(closeTimer.current);
   };
 
-  // Each Tooltip carries its own Radix provider, so a Consumer adds none.
+  const setOpen = (next: boolean) => {
+    clearTimers();
+    if (openRef.current === next) return;
+    openRef.current = next;
+    if (next) document.dispatchEvent(new CustomEvent(TOOLTIP_OPEN));
+    setOpenState(next);
+  };
+
+  const closeAfterGrace = () => {
+    clearTimeout(closeTimer.current);
+    closeTimer.current = setTimeout(() => setOpen(false), CLOSE_GRACE);
+  };
+
+  // Rendered effects hold the latest setOpen in a ref so their listeners stay the same function.
+  const setOpenRef = useRef(setOpen);
+  useEffect(() => {
+    setOpenRef.current = setOpen;
+  });
+
+  useEffect(() => {
+    if (!open) return;
+    const close = () => setOpenRef.current(false);
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") close();
+    };
+    document.addEventListener("keydown", onKeyDown);
+    document.addEventListener(TOOLTIP_OPEN, close);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      document.removeEventListener(TOOLTIP_OPEN, close);
+    };
+  }, [open]);
+
+  useEffect(() => () => clearTimers(), []);
+
+  const { anchorRef, anchorStyle, popoverProps } = useAnchoredPopover<HTMLElement, HTMLDivElement>({
+    side,
+    offset: SIDE_OFFSET,
+    ref,
+  });
+
+  const child = Children.only(children) as ReactElement<TriggerProps>;
+  const childRef = getElementRef<HTMLElement>(child);
+  const triggerRef = useMemo(() => composeRefs(childRef, anchorRef), [childRef, anchorRef]);
+  const describedBy = [child.props["aria-describedby"], open ? id : undefined]
+    .filter(Boolean)
+    .join(" ");
+
+  const trigger = cloneElement(child, {
+    ref: triggerRef,
+    style: { ...child.props.style, ...anchorStyle },
+    "data-state": state,
+    "aria-describedby": describedBy || undefined,
+    onPointerMove: composeEventHandlers(
+      child.props.onPointerMove,
+      (event: PointerEvent<HTMLElement>) => {
+        if (event.pointerType === "touch" || hovering.current) return;
+        hovering.current = true;
+        clearTimeout(closeTimer.current);
+        if (!openRef.current) openTimer.current = setTimeout(() => setOpen(true), delay);
+      },
+    ),
+    onPointerLeave: composeEventHandlers(child.props.onPointerLeave, () => {
+      hovering.current = false;
+      clearTimeout(openTimer.current);
+      if (openRef.current) closeAfterGrace();
+    }),
+    onPointerDown: composeEventHandlers(child.props.onPointerDown, () => {
+      pressing.current = true;
+      document.addEventListener("pointerup", () => (pressing.current = false), { once: true });
+    }),
+    onClick: composeEventHandlers(child.props.onClick, () => setOpen(false)),
+    onFocus: composeEventHandlers(child.props.onFocus, () => {
+      if (!pressing.current) setOpen(true);
+    }),
+    onBlur: composeEventHandlers(child.props.onBlur, () => setOpen(false)),
+  } as TriggerProps);
+
   return (
-    <TooltipPrimitive.Provider delayDuration={delay}>
-      <TooltipPrimitive.Root open={open} onOpenChange={handleOpenChange}>
-        <TooltipPrimitive.Trigger asChild data-state={state}>
-          {children}
-        </TooltipPrimitive.Trigger>
-        <TooltipPrimitive.Portal>
-          <TooltipPrimitive.Content
-            ref={ref}
-            className={["kui-tooltip", className].filter(Boolean).join(" ")}
-            data-state={state}
-            side={side}
-            sideOffset={SIDE_OFFSET}
-            collisionPadding={COLLISION_PADDING}
-            {...props}
-          >
-            {content}
-            <TooltipPrimitive.Arrow className="kui-tooltip__arrow" />
-          </TooltipPrimitive.Content>
-        </TooltipPrimitive.Portal>
-      </TooltipPrimitive.Root>
-    </TooltipPrimitive.Provider>
+    <>
+      {trigger}
+      {open ? (
+        <div
+          {...popoverProps}
+          role="tooltip"
+          id={id}
+          className={["kui-tooltip", className].filter(Boolean).join(" ")}
+          data-state={state}
+          style={{ ...popoverProps.style, ...style }}
+          onPointerEnter={composeEventHandlers(onPointerEnter, () =>
+            clearTimeout(closeTimer.current),
+          )}
+          onPointerLeave={composeEventHandlers(onPointerLeave, closeAfterGrace)}
+          {...props}
+        >
+          {content}
+        </div>
+      ) : null}
+    </>
   );
 });

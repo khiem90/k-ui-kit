@@ -3,18 +3,23 @@ import { expect, fn, waitFor, within } from "storybook/test";
 import { useRef, useState, type CSSProperties } from "react";
 import { Button, Dialog, TextField } from "../../index";
 
-/** The dialog renders in a portal at the end of body, outside the Story's canvas. */
 const findDialog = () => within(document.body).findByRole("dialog", {}, { timeout: 2000 });
 const queryDialog = () => within(document.body).queryByRole("dialog");
 
-/** The overlay carries no role. A Consumer styles it through this class, so a test names it the same way. */
-const getOverlay = () => {
-  const overlay = document.body.querySelector<HTMLElement>(".kui-dialog__overlay");
-  if (!overlay) throw new Error("The overlay is not in the document.");
-  return overlay;
+/**
+ * The overlay is the dialog's ::backdrop, which has no element of its own. A press on it lands on
+ * the dialog element at a point outside the panel's box. Pass this to `userEvent.pointer`.
+ */
+const pressOnBackdrop = (dialog: HTMLElement) => {
+  const box = dialog.getBoundingClientRect();
+  return {
+    keys: "[MouseLeft]",
+    target: dialog,
+    coords: { clientX: box.left / 2, clientY: box.top / 2 },
+  };
 };
 
-/** Radix moves focus a frame after the dialog mounts, and returns it after the close animation. */
+/** Focus can move a frame after the dialog opens or closes, so a test waits for it. */
 const expectFocus = async (element: HTMLElement) => {
   await waitFor(() => expect(element).toHaveFocus());
 };
@@ -49,6 +54,7 @@ const meta = {
         <div
           style={{
             display: "flex",
+            flexWrap: "wrap",
             gap: "var(--kui-space-2)",
             justifyContent: "flex-end",
             marginBlockStart: "var(--kui-space-6)",
@@ -115,8 +121,8 @@ export const ClosesOnOverlayClick: Story = {
   play: async ({ canvas, userEvent, args }) => {
     const trigger = canvas.getByRole("button", { name: "Delete file" });
     await userEvent.click(trigger);
-    await findDialog();
-    await userEvent.click(getOverlay());
+    const dialog = await findDialog();
+    await userEvent.pointer(pressOnBackdrop(dialog));
     await expectDismissed(trigger);
     await expect(args.onOpenChange).toHaveBeenLastCalledWith(false);
   },
@@ -255,11 +261,11 @@ export const LongBody: Story = {
     const dialog = await findDialog();
     // defaultOpen opens the panel without reporting a change.
     await expect(args.onOpenChange).not.toHaveBeenCalled();
-    // Everything behind an open dialog leaves the accessibility tree, the trigger included, so
-    // the role query only finds it with hidden elements included.
-    await expect(canvas.queryByRole("button", { name: "Read the terms" })).not.toBeInTheDocument();
+    // Everything behind an open dialog is inert, the trigger included, so it can't take focus.
     const trigger = canvas.getByRole("button", { name: "Read the terms", hidden: true });
     await expect(trigger).toHaveAttribute("data-state", "open");
+    trigger.focus();
+    await expect(trigger).not.toHaveFocus();
 
     const close = within(dialog).getByRole("button", { name: "Close" });
     const end = within(dialog).getByText(lastClause);
@@ -412,7 +418,7 @@ export const Controlled: Story = {
 
 const ShareWithRefs = () => {
   const triggerRef = useRef<HTMLButtonElement>(null);
-  const contentRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDialogElement>(null);
   const titleRef = useRef<HTMLHeadingElement>(null);
   const descriptionRef = useRef<HTMLParagraphElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
@@ -483,5 +489,193 @@ export const PartsThroughRefs: Story = {
     await expect(
       canvas.getByText("Parts: open from dialog, H2 title, P description, Close button"),
     ).toBeVisible();
+  },
+};
+
+/** What a style resolves to through the browser, so a Token compares with what an element draws. */
+const resolveStyle = (property: "color" | "boxShadow" | "fontFamily", value: string) => {
+  const probe = document.createElement("span");
+  probe.style[property] = value;
+  document.body.append(probe);
+  const resolved = getComputedStyle(probe)[property];
+  probe.remove();
+  return resolved;
+};
+
+const tokenPx = (name: string) =>
+  parseFloat(getComputedStyle(document.documentElement).getPropertyValue(name));
+
+type Corner = "TopLeft" | "TopRight" | "BottomLeft" | "BottomRight";
+
+/** A corner's radius as [horizontal, vertical] pixels. */
+const cornerRadius = (style: CSSStyleDeclaration, corner: Corner) => {
+  const [x = 0, y = x] = style[`border${corner}Radius`].split(" ").map(parseFloat);
+  return [x, y];
+};
+
+/** Checks the Ridgeline look on an open dialog that has settled. */
+const expectRidgeline = async (dialog: HTMLElement) => {
+  const surface = dialog.querySelector<HTMLElement>(".kui-dialog__viewport");
+  if (!surface) throw new Error("The dialog has no viewport");
+  const panel = getComputedStyle(surface);
+  await expect(panel.backgroundColor).toBe(resolveStyle("color", "var(--kui-surface-raised)"));
+  await expect(panel.boxShadow).toBe(resolveStyle("boxShadow", "var(--kui-shadow-floating)"));
+  await expect(getComputedStyle(dialog, "::backdrop").backgroundColor).toBe(
+    resolveStyle("color", "var(--kui-overlay)"),
+  );
+
+  // Each top corner is a quarter circle, never an ellipse, and no wider than half the panel, where
+  // the two quarters meet.
+  const arch = Math.min(tokenPx("--kui-radius-arch"), dialog.getBoundingClientRect().width / 2);
+  const card = tokenPx("--kui-radius-card");
+  await expect(cornerRadius(panel, "TopLeft")).toEqual([arch, arch]);
+  await expect(cornerRadius(panel, "TopRight")).toEqual([arch, arch]);
+  await expect(cornerRadius(panel, "BottomLeft")).toEqual([card, card]);
+  await expect(cornerRadius(panel, "BottomRight")).toEqual([card, card]);
+  // A browser shrinks every corner when a side's two radii add up to more than the side, so the
+  // panel stays tall enough for the arch and a card corner below it.
+  await expect(surface.getBoundingClientRect().height).toBeGreaterThanOrEqual(arch + card);
+
+  // The header is centred on the panel: an italic display Title in Ember, muted body text below.
+  const box = dialog.getBoundingClientRect();
+  const middle = box.left + box.width / 2;
+  const title = within(dialog).getByRole("heading");
+  const description = dialog.querySelector<HTMLElement>(".kui-dialog__description");
+  if (!description) throw new Error("The dialog has no description");
+  for (const part of [title, description]) {
+    const partBox = part.getBoundingClientRect();
+    await expect(partBox.left + partBox.width / 2).toBeCloseTo(middle, 0);
+    await expect(getComputedStyle(part).textAlign).toBe("center");
+  }
+  const titleStyle = getComputedStyle(title);
+  await expect(titleStyle.fontFamily).toBe(resolveStyle("fontFamily", "var(--kui-font-display)"));
+  await expect(titleStyle.fontStyle).toBe("italic");
+  await expect(titleStyle.color).toBe(resolveStyle("color", "var(--kui-primary)"));
+  const descriptionStyle = getComputedStyle(description);
+  await expect(descriptionStyle.fontFamily).toBe(
+    resolveStyle("fontFamily", "var(--kui-font-body)"),
+  );
+  await expect(descriptionStyle.color).toBe(resolveStyle("color", "var(--kui-foreground-muted)"));
+  await expect(description.getBoundingClientRect().top).toBeGreaterThanOrEqual(
+    title.getBoundingClientRect().bottom,
+  );
+
+  // The close button and its focus outline (2px, offset 2px) sit inside the arch's curve. Its outer
+  // corner is the point nearest the panel's clipped corner, so that point is checked against the
+  // circle the corner is cut from.
+  const close = within(dialog).getByRole("button", { name: "Close" });
+  const ring = 4;
+  const closeBox = close.getBoundingClientRect();
+  const fromEnd = box.right - (closeBox.right + ring);
+  const fromTop = closeBox.top - ring - box.top;
+  await expect(fromEnd).toBeGreaterThanOrEqual(0);
+  await expect(fromTop).toBeGreaterThanOrEqual(0);
+  await expect(Math.hypot(arch - fromEnd, arch - fromTop)).toBeLessThanOrEqual(arch);
+  // And it stays clear of the title, which wraps before reaching it.
+  const titleBox = title.getBoundingClientRect();
+  const overlaps =
+    closeBox.left < titleBox.right &&
+    titleBox.left < closeBox.right &&
+    closeBox.top < titleBox.bottom &&
+    titleBox.top < closeBox.bottom;
+  await expect(overlaps).toBe(false);
+  return arch;
+};
+
+const NarrowAndWide = () => (
+  <div style={{ display: "flex", gap: "var(--kui-space-4)" }}>
+    <Dialog.Root>
+      <Dialog.Trigger>
+        <Button variant="outline">Open the narrow dialog</Button>
+      </Dialog.Trigger>
+      {/* The default width on a 320px phone. */}
+      <Dialog.Content style={{ inlineSize: "18rem" }}>
+        <Dialog.Title>Weekend escape</Dialog.Title>
+        <Dialog.Description>Two nights in a cabin above the tree line.</Dialog.Description>
+        <Dialog.Close />
+      </Dialog.Content>
+    </Dialog.Root>
+    <Dialog.Root>
+      <Dialog.Trigger>
+        <Button variant="outline">Open the wide dialog</Button>
+      </Dialog.Trigger>
+      <Dialog.Content style={{ inlineSize: "40rem" }}>
+        <Dialog.Title>Weekend escape</Dialog.Title>
+        <Dialog.Description>
+          Two nights in a cabin above the tree line, with the trail map and the key code sent the
+          day before you arrive.
+        </Dialog.Description>
+        <Dialog.Close />
+      </Dialog.Content>
+    </Dialog.Root>
+  </div>
+);
+
+/**
+ * The top corners take the arch radius, capped at half the panel's width. The narrow panel is
+ * under twice the arch, so its top is a semicircle. The wide one keeps the full arch.
+ */
+export const ArchAtTwoWidths: Story = {
+  render: () => <NarrowAndWide />,
+  play: async ({ canvas, userEvent }) => {
+    for (const name of ["Open the narrow dialog", "Open the wide dialog"]) {
+      const trigger = canvas.getByRole("button", { name });
+      await userEvent.click(trigger);
+      const dialog = await findDialog();
+      await waitFor(() => expect(dialog.getAnimations()).toHaveLength(0));
+      const arch = await expectRidgeline(dialog);
+      // The narrow panel is under twice the arch Token, so the cap applies. The wide one is over it,
+      // and it stays open, so the Story ends showing it.
+      if (name === "Open the narrow dialog") {
+        await expect(arch).toBeLessThan(tokenPx("--kui-radius-arch"));
+        await userEvent.keyboard("{Escape}");
+        await expectDismissed(trigger);
+      } else {
+        await expect(arch).toBe(tokenPx("--kui-radius-arch"));
+      }
+    }
+  },
+};
+
+export const NativeModal: Story = {
+  play: async ({ canvas, canvasElement, userEvent, args }) => {
+    const trigger = canvas.getByRole("button", { name: "Delete file" });
+    await expect(trigger).toHaveAttribute("aria-haspopup", "dialog");
+    await expect(trigger).toHaveAttribute("aria-expanded", "false");
+    await userEvent.click(trigger);
+
+    // The panel is a native dialog opened as modal. The browser lifts it into the top layer where
+    // it is rendered, so no portal moves it out of the Story's canvas.
+    const dialog = await findDialog();
+    await expect(dialog).toBeInstanceOf(HTMLDialogElement);
+    await expect(dialog.matches(":modal")).toBe(true);
+    await expect(canvasElement).toContainElement(dialog);
+    await expect(trigger).toHaveAttribute("aria-expanded", "true");
+    await expect(trigger).toHaveAttribute("aria-controls", dialog.id);
+
+    // Title and Description name and describe the panel through their ids.
+    const title = within(dialog).getByRole("heading", { name: "Delete report.pdf?" });
+    const description = within(dialog).getByText(/^The file goes for everyone/);
+    await expect(dialog).toHaveAttribute("aria-labelledby", title.id);
+    await expect(dialog).toHaveAttribute("aria-describedby", description.id);
+
+    // A press inside the panel's box leaves it open, even where it lands on the panel itself.
+    const box = dialog.getBoundingClientRect();
+    await userEvent.pointer({
+      keys: "[MouseLeft]",
+      target: dialog,
+      coords: { clientX: box.left + 2, clientY: box.top + 2 },
+    });
+    await expect(queryDialog()).toBe(dialog);
+    await expect(args.onOpenChange).toHaveBeenCalledTimes(1);
+
+    // A close request from the browser, such as a back gesture, fires cancel and closes the
+    // dialog the way Escape does.
+    (dialog as HTMLDialogElement).requestClose();
+    await expectDismissed(trigger);
+    await expect(args.onOpenChange).toHaveBeenLastCalledWith(false);
+    await expect(args.onOpenChange).toHaveBeenCalledTimes(2);
+    await expect(trigger).toHaveAttribute("aria-expanded", "false");
+    await expect(trigger).not.toHaveAttribute("aria-controls");
   },
 };

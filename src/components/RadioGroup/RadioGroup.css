@@ -3,7 +3,7 @@
   flex-direction: column;
   gap: var(--kui-space-2);
   color: var(--kui-foreground);
-  font-family: var(--kui-font-family);
+  font-family: var(--kui-font-body);
 }
 
 .kui-radio-group[data-orientation="horizontal"] {
@@ -13,9 +13,12 @@
 }
 
 .kui-radio-group__label {
-  font-size: 0.875rem;
+  font-family: var(--kui-font-label);
+  font-size: var(--kui-font-size-md);
   line-height: 1.25rem;
-  font-weight: 500;
+  font-weight: 600;
+  text-transform: var(--kui-label-case);
+  letter-spacing: var(--kui-label-tracking);
 }
 
 /* The label keeps a line of its own when the items run in a row. */
@@ -33,76 +36,88 @@
   gap: var(--kui-space-2);
 }
 
-/* The button is the 24px target WCAG 2.5.8 asks for; the visible circle is drawn inside it. */
-.kui-radio__circle {
+/* The control is the 24px target WCAG 2.5.8 asks for. The native radio covers it, invisible, so
+   it still takes the clicks, the focus, and the arrow keys; the 22px circle is drawn beneath. */
+.kui-radio__control {
   position: relative;
   display: inline-flex;
   flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  box-sizing: border-box;
   inline-size: 1.5rem;
   block-size: 1.5rem;
-  margin: 0;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  cursor: pointer;
-  appearance: none;
 }
 
-.kui-radio__circle::before {
-  content: "";
+.kui-radio__input {
   position: absolute;
-  inset: 0.125rem;
-  border: 1px solid var(--kui-border);
-  border-radius: var(--kui-radius-full);
-  background: var(--kui-background);
+  inset: 0;
+  inline-size: 100%;
+  block-size: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.kui-radio__circle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  inline-size: 1.375rem;
+  block-size: 1.375rem;
+  border: 2px solid var(--kui-border);
+  border-radius: 50%;
+  background: var(--kui-surface-raised);
+  pointer-events: none;
   transition:
     background-color var(--kui-motion-duration),
     border-color var(--kui-motion-duration);
 }
 
-.kui-radio__circle:focus-visible {
-  outline: none;
-}
-
-.kui-radio__circle:focus-visible::before {
+.kui-radio__input:focus-visible + .kui-radio__circle {
   outline: 2px solid var(--kui-focus-ring);
   outline-offset: 2px;
 }
 
-.kui-radio:where([data-state="checked"]) .kui-radio__circle::before {
+.kui-radio__indicator {
+  inline-size: 0.5rem;
+  block-size: 0.5rem;
+  border-radius: 50%;
+  background: var(--kui-primary-foreground);
+  transform: scale(0);
+  transition: transform var(--kui-motion-duration);
+}
+
+.kui-radio:where([data-state="checked"]) .kui-radio__circle {
   border-color: var(--kui-primary);
   background: var(--kui-primary);
 }
 
-.kui-radio:where([data-state="unchecked"]:not([data-disabled])):hover .kui-radio__circle::before {
+.kui-radio:where([data-state="checked"]) .kui-radio__indicator {
+  transform: scale(1);
+}
+
+.kui-radio:where([data-state="unchecked"]:not([data-disabled])):hover .kui-radio__circle {
   border-color: var(--kui-foreground);
 }
 
-.kui-radio:where([data-state="checked"]:not([data-disabled])):hover .kui-radio__circle::before {
-  border-color: color-mix(in srgb, var(--kui-primary) 88%, var(--kui-foreground));
-  background: color-mix(in srgb, var(--kui-primary) 88%, var(--kui-foreground));
-}
-
-.kui-radio__indicator {
-  position: relative;
-  display: block;
-  inline-size: 0.5rem;
-  block-size: 0.5rem;
-  border-radius: var(--kui-radius-full);
-  background: var(--kui-primary-foreground);
+.kui-radio:where([data-state="checked"]:not([data-disabled])):hover .kui-radio__circle {
+  border-color: var(--kui-primary-hover);
+  background: var(--kui-primary-hover);
 }
 
 .kui-radio__label {
-  font-size: 1rem;
+  font-family: var(--kui-font-body);
+  font-size: var(--kui-font-size-lg);
   line-height: 1.5rem;
   cursor: pointer;
 }
 
 .kui-radio[data-disabled] .kui-radio__circle {
   opacity: 0.5;
+}
+
+.kui-radio[data-disabled] .kui-radio__input {
   cursor: not-allowed;
 }
 

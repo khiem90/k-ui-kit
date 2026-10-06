@@ -1,73 +1,72 @@
+/* Ridgeline, the kit's only Theme. It has a light Color scheme only. Token names describe a role,
+   and the palette name sits in a comment beside the value (ADR 0005). */
 :where(:root) {
-  --kui-font-family: system-ui, sans-serif;
-
-  --kui-space-1: 0.25rem;
-  --kui-space-2: 0.5rem;
-  --kui-space-3: 0.75rem;
-  --kui-space-4: 1rem;
-  --kui-space-5: 1.25rem;
-  --kui-space-6: 1.5rem;
-  --kui-space-7: 1.75rem;
-  --kui-space-8: 2rem;
-
-  --kui-radius-sm: 0.25rem;
-  --kui-radius-md: 0.5rem;
-  --kui-radius-lg: 0.75rem;
-  --kui-radius-full: 9999px;
-
-  --kui-motion-duration: 150ms;
-
-  /* The scrim over the page behind a modal. One value for both Themes: it dims whatever is under it. */
-  --kui-overlay: rgb(0 0 0 / 0.5);
-}
-
-:where(:root),
-:where([data-theme="light"]) {
   color-scheme: light;
 
-  --kui-background: #ffffff;
-  --kui-background-subtle: #f4f4f5;
-  --kui-foreground: #18181b;
-  --kui-foreground-muted: #52525b;
-  --kui-border: #86868f;
-  --kui-primary: #2563eb;
-  --kui-primary-foreground: #ffffff;
-  --kui-danger: #dc2626;
-  --kui-danger-foreground: #ffffff;
-  --kui-focus-ring: #2563eb;
-}
+  --kui-background: #f6e6d6; /* Apricot */
+  --kui-surface-raised: #fff9f2; /* Cream */
+  /* Every other DataTable row: Apricot 70% into Cream. */
+  --kui-surface-stripe: #f9ecde;
+  --kui-tint: #f2b8a2; /* Peach sky */
+  --kui-foreground: #3a2b26; /* Bark */
+  /* The board's #6b4f45 is 4.3:1 on Peach sky. This is the nearest step towards Bark that clears
+     4.5:1 there, so muted text passes on every surface the kit draws it on. */
+  --kui-foreground-muted: #654b41;
+  --kui-border: #6b4f45;
+  --kui-primary: #bd5038; /* Ember */
+  --kui-primary-hover: #8e3826;
+  --kui-primary-foreground: #fff9f2; /* Cream */
+  --kui-danger: #9b2335;
+  /* Danger 85% into Bark. */
+  --kui-danger-hover: #8c2433;
+  --kui-danger-foreground: #fff9f2; /* Cream */
+  --kui-focus-ring: #bd5038; /* Ember */
 
-/* Dark values appear twice on purpose, under the attribute and under the media query. Edit both. */
-:where([data-theme="dark"]) {
-  color-scheme: dark;
+  /* Ember is under 3:1 on Peach sky, so a control drawn on the tint (a hovered or selected
+     DataTable row, the highlighted Select option) takes these instead of primary and focus ring. */
+  --kui-primary-on-tint: #8e3826;
+  --kui-focus-ring-on-tint: #3a2b26; /* Bark */
 
-  --kui-background: #0f0f11;
-  --kui-background-subtle: #27272a;
-  --kui-foreground: #fafafa;
-  --kui-foreground-muted: #a1a1aa;
-  --kui-border: #75757f;
-  --kui-primary: #60a5fa;
-  --kui-primary-foreground: #0f0f11;
-  --kui-danger: #f87171;
-  --kui-danger-foreground: #0f0f11;
-  --kui-focus-ring: #60a5fa;
-}
+  /* The scrim over the page behind a modal. */
+  --kui-overlay: rgb(58 43 38 / 0.5); /* Bark at 50% */
 
-@media (prefers-color-scheme: dark) {
-  :where(:root:not([data-theme="light"])) {
-    color-scheme: dark;
+  --kui-shadow-rest: 0 2px 0 rgb(58 43 38 / 0.08); /* Bark at 8% */
+  --kui-shadow-raised: 0 10px 24px -8px rgb(140 60 40 / 0.35);
+  --kui-shadow-floating: 0 24px 48px -16px rgb(90 35 25 / 0.45);
 
-    --kui-background: #0f0f11;
-    --kui-background-subtle: #27272a;
-    --kui-foreground: #fafafa;
-    --kui-foreground-muted: #a1a1aa;
-    --kui-border: #75757f;
-    --kui-primary: #60a5fa;
-    --kui-primary-foreground: #0f0f11;
-    --kui-danger: #f87171;
-    --kui-danger-foreground: #0f0f11;
-    --kui-focus-ring: #60a5fa;
-  }
+  /* The families are served by the optional fonts stylesheet. Without it the fallbacks apply. */
+  --kui-font-display: "Fraunces", Georgia, serif;
+  --kui-font-label: "Josefin Sans", system-ui, sans-serif;
+  --kui-font-body: "Nunito Sans", system-ui, sans-serif;
+  --kui-label-case: uppercase;
+  --kui-label-tracking: 0.24em;
+
+  /* The type scale, in rem so it follows the page's root font size. sm, md, and lg are the three
+     Button sizes, and display is the Dialog title. */
+  --kui-font-size-sm: 0.75rem; /* 12px */
+  --kui-font-size-md: 0.875rem; /* 14px */
+  --kui-font-size-lg: 1rem; /* 16px */
+  --kui-font-size-display: 1.5rem; /* 24px */
+
+  --kui-radius-field: 12px;
+  --kui-radius-card: 24px;
+  --kui-radius-pill: 999px;
+  /* Component CSS caps it at half the element's width, so a narrow arch stays a semicircle. */
+  --kui-radius-arch: 160px;
+
+  --kui-space-1: 4px;
+  --kui-space-2: 8px;
+  --kui-space-3: 12px;
+  --kui-space-4: 16px;
+  --kui-space-5: 24px;
+  --kui-space-6: 32px;
+  --kui-space-7: 48px;
+  --kui-space-8: 72px;
+
+  /* The inline padding inside a TextField input and a Select trigger. */
+  --kui-padding-field-inline: 18px;
+
+  --kui-motion-duration: 150ms;
 }
 
 @media (prefers-reduced-motion: reduce) {

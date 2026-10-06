@@ -1,3 +1,6 @@
+/* The trigger is drawn as a TextField. Ridgeline layers rather than outlines, but cream on apricot is
+   1.17:1, so it keeps a 2px edge in the border Token to meet WCAG 1.4.11. Only the height changes
+   with the size, and the heights match TextField and Button so they line up in a row. */
 .kui-select__trigger {
   display: flex;
   align-items: center;
@@ -6,11 +9,13 @@
   box-sizing: border-box;
   inline-size: 100%;
   margin: 0;
-  border: 1px solid var(--kui-border);
-  border-radius: var(--kui-radius-md);
-  background: var(--kui-background);
+  padding: 0 var(--kui-padding-field-inline);
+  border: 2px solid var(--kui-border);
+  border-radius: var(--kui-radius-field);
+  background: var(--kui-surface-raised);
   color: var(--kui-foreground);
-  font-family: var(--kui-font-family);
+  font-family: var(--kui-font-body);
+  font-size: var(--kui-font-size-lg);
   line-height: 1;
   text-align: start;
   cursor: pointer;
@@ -22,21 +27,15 @@
 }
 
 .kui-select__trigger[data-size="sm"] {
-  min-block-size: 2rem;
-  padding: 0 var(--kui-space-2);
-  font-size: 0.875rem;
+  min-block-size: 36px;
 }
 
 .kui-select__trigger[data-size="md"] {
-  min-block-size: 2.5rem;
-  padding: 0 var(--kui-space-3);
-  font-size: 1rem;
+  min-block-size: 44px;
 }
 
 .kui-select__trigger[data-size="lg"] {
-  min-block-size: 3rem;
-  padding: 0 var(--kui-space-4);
-  font-size: 1.125rem;
+  min-block-size: 52px;
 }
 
 .kui-select__value {
@@ -59,8 +58,7 @@
 }
 
 .kui-select__icon > svg,
-.kui-select__item-indicator > svg,
-.kui-select__scroll-button > svg {
+.kui-select__item-indicator > svg {
   inline-size: 1rem;
   block-size: 1rem;
 }
@@ -69,13 +67,23 @@
   transform: rotate(180deg);
 }
 
-.kui-select__trigger:where(:not([data-disabled])):hover {
+.kui-select__trigger:where(
+    :not([data-disabled], [aria-invalid]:not([aria-invalid="false"]))
+  ):hover {
   border-color: var(--kui-foreground);
 }
 
+/* Ember against the muted edge is too close a pair to signal focus alone, so the ring shows too. */
 .kui-select__trigger:focus-visible {
+  border-color: var(--kui-primary);
   outline: 2px solid var(--kui-focus-ring);
   outline-offset: 2px;
+}
+
+/* Select has no error prop, so a Consumer marks the trigger with aria-invalid. The danger edge
+   outranks the focus rule's Ember edge, so the error stays visible while the trigger has focus. */
+.kui-select__trigger[aria-invalid]:not([aria-invalid="false"]) {
+  border-color: var(--kui-danger);
 }
 
 .kui-select__trigger[data-disabled] {
@@ -83,26 +91,48 @@
   cursor: not-allowed;
 }
 
-/* The list is portaled to the end of body, so document order already puts it above earlier content
-   and it carries no z-index. */
+/* The list is a manual popover in the browser's top layer, so it needs no portal and no z-index.
+   src/popover.tsx anchors it below the trigger with inline position-anchor, position-area, and
+   position-try-fallbacks, which flip it above when there is no room, plus the offset margin on the
+   side facing the trigger. */
 .kui-select__content {
   box-sizing: border-box;
-  min-inline-size: var(--radix-select-trigger-width);
-  /* Capped so a long list scrolls instead of covering the page. */
-  max-block-size: min(20rem, var(--radix-select-content-available-height));
-  overflow: hidden;
-  border: 1px solid var(--kui-border);
-  border-radius: var(--kui-radius-md);
-  background: var(--kui-background);
+  min-inline-size: anchor-size(width);
+  /* Capped so a long list scrolls instead of covering the page. A list taller than the room below
+     the trigger flips above it; the cap keeps it inside a short window either way. */
+  max-block-size: min(20rem, calc(100dvh - 2 * var(--kui-space-2)));
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  /* Room around the options for the focus ring, which sits 4px outside the highlighted one. The
+     scroll padding keeps that room when the arrow keys scroll an option into view. */
+  padding: var(--kui-space-2);
+  scroll-padding-block: var(--kui-space-2);
+  /* A cream card that floats on its shadow, with no stroke. The transparent edge shows only under
+     forced colours, where the shadow and the fill are dropped. */
+  border: 1px solid transparent;
+  border-radius: var(--kui-radius-card);
+  background: var(--kui-surface-raised);
+  box-shadow: var(--kui-shadow-floating);
   color: var(--kui-foreground);
-  font-family: var(--kui-font-family);
-  font-size: 1rem;
-  transform-origin: var(--radix-select-content-transform-origin);
+  font-family: var(--kui-font-body);
+  font-size: var(--kui-font-size-lg);
+  /* The list takes focus itself only while the pointer rests on a disabled option or a label. */
+  outline: none;
 }
 
-/* Only the open state animates, and only scale. The same animation on the closed state would make
-   Radix hold a list closed mid-entrance until it ended, and a fade would leave text half transparent
-   when axe measures its contrast. The motion Token is 0ms under prefers-reduced-motion. */
+/* The UA centres a popover with inset 0 and auto margins. Where anchor positioning works those give
+   way to the anchor. Elsewhere they stay, and the list opens in the centre of the viewport. */
+@supports (position-area: bottom) {
+  .kui-select__content {
+    inset: auto;
+    margin: 0;
+  }
+}
+
+/* The list stays mounted while closed, and the UA hides it until it opens. Only the open state
+   animates, and only scale: a fade would leave text half transparent when axe measures its
+   contrast. The motion Token is 0ms under prefers-reduced-motion. */
 .kui-select__content:where([data-state="open"]) {
   animation: kui-select-in var(--kui-motion-duration) ease-out;
 }
@@ -113,50 +143,27 @@
   }
 }
 
-.kui-select__viewport {
-  padding: var(--kui-space-1);
-}
-
-/* Radix renders each button only while the list can scroll its way, and hides the viewport's own
-   scrollbar, so the buttons are the only sign that more options exist. */
-.kui-select__scroll-button {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  block-size: 1.5rem;
-  color: var(--kui-foreground-muted);
-  cursor: default;
-}
-
-.kui-select__scroll-button[data-side="up"] > svg {
-  transform: rotate(180deg);
-}
-
 /* Room on the inline start for the check, so the text of every option lines up. */
 .kui-select__item {
   position: relative;
   display: flex;
   align-items: center;
   box-sizing: border-box;
-  min-block-size: 2rem;
-  padding-block: var(--kui-space-1);
-  padding-inline: var(--kui-space-8) var(--kui-space-3);
-  border-radius: var(--kui-radius-sm);
-  line-height: 1.25rem;
+  min-block-size: 40px;
+  padding-block: var(--kui-space-2);
+  padding-inline: var(--kui-space-6) var(--kui-space-4);
+  border-radius: var(--kui-radius-field);
+  line-height: 1.5rem;
   cursor: pointer;
   user-select: none;
 }
 
-/* Radix focuses the option under the pointer or the arrow keys, so one state covers hover and
-   keyboard focus. */
+/* Select focuses the option under the pointer or the arrow keys, so one state covers hover and
+   keyboard focus. Peach sky on cream is about 1.6:1, too faint to mark focus alone, so the
+   highlighted option also takes the focus ring. It sits on the cream around the option, where
+   Ember is 4.6:1. */
 .kui-select__item[data-highlighted] {
-  background: var(--kui-primary);
-  color: var(--kui-primary-foreground);
-}
-
-/* The option under the arrow keys holds real focus, and the ring says so where the fill cannot,
-   such as under forced colours. */
-.kui-select__item:focus-visible {
+  background: var(--kui-tint);
   outline: 2px solid var(--kui-focus-ring);
   outline-offset: 2px;
 }
@@ -170,13 +177,24 @@
   position: absolute;
   inset-inline-start: var(--kui-space-2);
   display: inline-flex;
+  color: var(--kui-primary);
 }
 
+/* Ember on Peach sky is under 3:1, so the check on a highlighted option takes primary on tint, as
+   DataTable's checked box does on a Peach sky row. */
+.kui-select__item[data-highlighted] .kui-select__item-indicator {
+  color: var(--kui-primary-on-tint);
+}
+
+/* The label sits in line with the option text below it. */
 .kui-select__group-label {
-  padding-block: var(--kui-space-2) var(--kui-space-1);
-  padding-inline: var(--kui-space-8) var(--kui-space-3);
+  padding-block: var(--kui-space-3) var(--kui-space-1);
+  padding-inline: var(--kui-space-6) var(--kui-space-4);
   color: var(--kui-foreground-muted);
-  font-size: 0.75rem;
+  font-family: var(--kui-font-label);
+  font-size: var(--kui-font-size-sm);
   font-weight: 600;
   line-height: 1rem;
+  text-transform: var(--kui-label-case);
+  letter-spacing: var(--kui-label-tracking);
 }

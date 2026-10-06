@@ -50,23 +50,121 @@ export const WithError: Story = {
   },
 };
 
+/** Resolves a colour Token the way the browser computes it, so it compares with a computed style. */
+const tokenColour = (name: string) => {
+  const probe = document.createElement("span");
+  probe.style.color = `var(${name})`;
+  document.body.append(probe);
+  const colour = getComputedStyle(probe).color;
+  probe.remove();
+  return colour;
+};
+
+/** Reads a Token off the root as written, such as a font stack or a text-transform keyword. */
+const tokenValue = (name: string) =>
+  getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+
+/**
+ * The border colour transitions. Reading the style starts any pending transition, and finishing
+ * every running one means the assertion sees the settled colour, not the starting one. Finishing
+ * rather than waiting also works in a background tab, where transitions don't advance.
+ */
+const expectBorder = async (input: HTMLElement, colour: string) => {
+  const style = getComputedStyle(input);
+  await expect(style.borderTopStyle).toBe("solid");
+  await expect(style.borderTopWidth).toBe("2px");
+  for (const animation of input.getAnimations()) animation.finish();
+  await expect(getComputedStyle(input).borderTopColor).toBe(tokenColour(colour));
+};
+
+/** Changes the field padding Token and the root font size, and expects the field to follow. */
+const expectFollowsRoot = async (field: HTMLElement) => {
+  const root = document.documentElement.style;
+  root.setProperty("--kui-padding-field-inline", "20px");
+  root.fontSize = "20px";
+  const style = getComputedStyle(field);
+  const followed = [style.paddingInlineStart, style.paddingInlineEnd, style.fontSize];
+  root.removeProperty("--kui-padding-field-inline");
+  root.removeProperty("font-size");
+  await expect(followed).toEqual(["20px", "20px", "20px"]);
+};
+
+export const Ridgeline: Story = {
+  args: { description: "We only use this for receipts." },
+  play: async ({ canvas }) => {
+    const input = canvas.getByLabelText("Email");
+    const field = getComputedStyle(input);
+    await expect(field.backgroundColor).toBe(tokenColour("--kui-surface-raised"));
+    await expect(field.borderTopLeftRadius).toBe("12px");
+    await expect(field.paddingInlineStart).toBe("18px");
+    await expect(field.paddingInlineEnd).toBe("18px");
+    await expect(field.fontFamily).toBe(tokenValue("--kui-font-body"));
+    await expect(field.fontSize).toBe("16px");
+    await expectBorder(input, "--kui-border");
+    // The padding follows its Token and the type follows the root size, so a Consumer's root
+    // rule reaches both.
+    await expectFollowsRoot(input);
+
+    const label = getComputedStyle(canvas.getByText("Email"));
+    await expect(label.fontFamily).toBe(tokenValue("--kui-font-label"));
+    await expect(label.textTransform).toBe(tokenValue("--kui-label-case"));
+    await expect(label.letterSpacing).toBe(
+      `${parseFloat(tokenValue("--kui-label-tracking")) * parseFloat(label.fontSize)}px`,
+    );
+
+    const description = getComputedStyle(canvas.getByText("We only use this for receipts."));
+    await expect(description.fontFamily).toBe(tokenValue("--kui-font-body"));
+    await expect(description.color).toBe(tokenColour("--kui-foreground-muted"));
+  },
+};
+
+export const Focused: Story = {
+  play: async ({ canvas, userEvent }) => {
+    const input = canvas.getByLabelText("Email");
+    await userEvent.tab();
+    await expect(input).toHaveFocus();
+    await expectBorder(input, "--kui-primary");
+    const field = getComputedStyle(input);
+    await expect(field.outlineStyle).toBe("solid");
+    await expect(field.outlineWidth).toBe("2px");
+    await expect(field.outlineColor).toBe(tokenColour("--kui-focus-ring"));
+  },
+};
+
+export const ErrorColours: Story = {
+  args: { error: "Enter an email address that contains @.", defaultValue: "khiem" },
+  play: async ({ canvas, userEvent }) => {
+    const input = canvas.getByLabelText("Email");
+    await expectBorder(input, "--kui-danger");
+    await expect(getComputedStyle(canvas.getByRole("alert")).color).toBe(
+      tokenColour("--kui-danger"),
+    );
+
+    // Focus adds the ring but keeps the danger border, so the error stays visible while typing.
+    await userEvent.tab();
+    await expect(input).toHaveFocus();
+    await expectBorder(input, "--kui-danger");
+    await expect(getComputedStyle(input).outlineColor).toBe(tokenColour("--kui-focus-ring"));
+  },
+};
+
 const expectHeight = async (input: HTMLElement, px: number) => {
   await expect(input.getBoundingClientRect().height).toBe(px);
 };
 
 export const Small: Story = {
   args: { size: "sm" },
-  play: async ({ canvas }) => expectHeight(canvas.getByLabelText("Email"), 32),
+  play: async ({ canvas }) => expectHeight(canvas.getByLabelText("Email"), 36),
 };
 
 export const Medium: Story = {
   args: { size: "md" },
-  play: async ({ canvas }) => expectHeight(canvas.getByLabelText("Email"), 40),
+  play: async ({ canvas }) => expectHeight(canvas.getByLabelText("Email"), 44),
 };
 
 export const Large: Story = {
   args: { size: "lg" },
-  play: async ({ canvas }) => expectHeight(canvas.getByLabelText("Email"), 48),
+  play: async ({ canvas }) => expectHeight(canvas.getByLabelText("Email"), 52),
 };
 
 export const Required: Story = {

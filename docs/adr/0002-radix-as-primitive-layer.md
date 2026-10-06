@@ -1,3 +1,7 @@
+---
+status: superseded by ADR-0004
+---
+
 # Radix Primitives as the Primitive layer, Base UI as the fallback
 
 Dialog, Select, Tooltip, Tabs, RadioGroup, Checkbox, and Switch take their keyboard handling, focus management, and ARIA wiring from Radix Primitives instead of code we write. Radix is unstyled, carries the client directive in its own output, and follows the WAI-ARIA Authoring Practices, which is the part we least want to own. Button and TextField stay hand-rolled because the native element already does the job.

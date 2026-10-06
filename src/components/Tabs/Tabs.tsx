@@ -1,9 +1,47 @@
 "use client";
 
-import * as TabsPrimitive from "@radix-ui/react-tabs";
-import { forwardRef, type ButtonHTMLAttributes, type HTMLAttributes } from "react";
+import {
+  createContext,
+  forwardRef,
+  useCallback,
+  useContext,
+  useId,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ButtonHTMLAttributes,
+  type HTMLAttributes,
+  type KeyboardEvent,
+} from "react";
+import { composeEventHandlers, composeRefs } from "../../compose.js";
+import { useControllableState } from "../../controllable-state.js";
 
 export type TabsOrientation = "horizontal" | "vertical";
+
+interface TabsContextValue {
+  baseId: string;
+  value: string | undefined;
+  select: (value: string) => void;
+  orientation: TabsOrientation;
+}
+
+const TabsContext = createContext<TabsContextValue | null>(null);
+
+function useTabsContext(part: string) {
+  const context = useContext(TabsContext);
+  if (!context) throw new Error(`Tabs.${part} must be rendered inside Tabs.Root.`);
+  return context;
+}
+
+// The id of the tab that holds the Tab stop when no enabled tab is active.
+const FallbackStopContext = createContext<string | undefined>(undefined);
+
+// Spaces would split an id reference list, so they become hyphens.
+const partId = (baseId: string, part: string, value: string) =>
+  `${baseId}-${part}-${value.replace(/\s/g, "-")}`;
+
+const join = (...classNames: (string | undefined)[]) => classNames.filter(Boolean).join(" ");
 
 /**
  * The ref, `className`, and every other prop go to the element that wraps the list and the panels.
@@ -27,16 +65,39 @@ export interface TabsRootProps extends Omit<
 }
 
 const Root = forwardRef<HTMLDivElement, TabsRootProps>(function TabsRoot(
-  { orientation = "horizontal", className, ...props },
+  {
+    value: valueProp,
+    defaultValue,
+    onValueChange,
+    orientation = "horizontal",
+    className,
+    ...props
+  },
   ref,
 ) {
+  const baseId = useId();
+  const [value, setValue] = useControllableState({
+    prop: valueProp,
+    defaultProp: defaultValue,
+    onChange: onValueChange,
+  });
+
+  const select = useCallback(
+    (next: string) => {
+      if (next !== value) setValue(next);
+    },
+    [value, setValue],
+  );
+
   return (
-    <TabsPrimitive.Root
-      ref={ref}
-      className={["kui-tabs", className].filter(Boolean).join(" ")}
-      orientation={orientation}
-      {...props}
-    />
+    <TabsContext.Provider value={{ baseId, value, select, orientation }}>
+      <div
+        ref={ref}
+        className={join("kui-tabs", className)}
+        data-orientation={orientation}
+        {...props}
+      />
+    </TabsContext.Provider>
   );
 });
 
@@ -46,16 +107,46 @@ const Root = forwardRef<HTMLDivElement, TabsRootProps>(function TabsRoot(
  */
 export type TabsListProps = HTMLAttributes<HTMLDivElement>;
 
+function tabsIn(list: Element) {
+  return Array.from(list.querySelectorAll<HTMLButtonElement>('[role="tab"]')).filter(
+    (tab) => tab.closest('[role="tablist"]') === list,
+  );
+}
+
 const List = forwardRef<HTMLDivElement, TabsListProps>(function TabsList(
-  { className, ...props },
-  ref,
+  { className, children, ...props },
+  forwardedRef,
 ) {
+  const { orientation, value } = useTabsContext("List");
+  const listRef = useRef<HTMLDivElement | null>(null);
+  const [fallbackStop, setFallbackStop] = useState<string>();
+
+  // When no enabled tab is active, the first enabled tab holds the Tab stop, so keyboard users can
+  // still reach the list. The answer reads the rendered tabs, and changes when the active value
+  // does or when the children change, since that is how a tab gains or loses `disabled`.
+  useLayoutEffect(() => {
+    const list = listRef.current;
+    if (!list) return;
+    const enabled = tabsIn(list).filter((tab) => !tab.disabled);
+    const hasActive = enabled.some((tab) => tab.getAttribute("aria-selected") === "true");
+    setFallbackStop(hasActive ? undefined : enabled[0]?.id);
+  }, [value, children]);
+
+  const setRef = useMemo(() => composeRefs(forwardedRef, listRef), [forwardedRef]);
+
   return (
-    <TabsPrimitive.List
-      ref={ref}
-      className={["kui-tabs__list", className].filter(Boolean).join(" ")}
-      {...props}
-    />
+    <FallbackStopContext.Provider value={fallbackStop}>
+      <div
+        ref={setRef}
+        role="tablist"
+        aria-orientation={orientation}
+        className={join("kui-tabs__list", className)}
+        data-orientation={orientation}
+        {...props}
+      >
+        {children}
+      </div>
+    </FallbackStopContext.Provider>
   );
 });
 
@@ -69,14 +160,73 @@ export interface TabsTriggerProps extends Omit<
 }
 
 const Trigger = forwardRef<HTMLButtonElement, TabsTriggerProps>(function TabsTrigger(
-  { className, ...props },
+  { value, disabled = false, className, onMouseDown, onFocus, onKeyDown, ...props },
   ref,
 ) {
+  const context = useTabsContext("Trigger");
+  const fallbackStop = useContext(FallbackStopContext);
+  const id = partId(context.baseId, "trigger", value);
+  const isActive = context.value === value;
+  const isTabStop = (isActive && !disabled) || fallbackStop === id;
+
+  const moveFocus = (event: KeyboardEvent<HTMLButtonElement>) => {
+    if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+    const list = event.currentTarget.closest('[role="tablist"]');
+    if (!list) return;
+    const horizontal = context.orientation === "horizontal";
+    const rtl = horizontal && getComputedStyle(list).direction === "rtl";
+    const intent: Record<string, "previous" | "next" | "first" | "last" | undefined> = {
+      ArrowLeft: horizontal ? (rtl ? "next" : "previous") : undefined,
+      ArrowRight: horizontal ? (rtl ? "previous" : "next") : undefined,
+      ArrowUp: horizontal ? undefined : "previous",
+      ArrowDown: horizontal ? undefined : "next",
+      Home: "first",
+      PageUp: "first",
+      End: "last",
+      PageDown: "last",
+    };
+    const move = intent[event.key];
+    if (!move) return;
+    event.preventDefault();
+    const tabs = tabsIn(list).filter((tab) => !tab.disabled);
+    if (tabs.length === 0) return;
+    const current = tabs.indexOf(event.currentTarget);
+    const index =
+      move === "first"
+        ? 0
+        : move === "last"
+          ? tabs.length - 1
+          : (current + (move === "next" ? 1 : -1) + tabs.length) % tabs.length;
+    // Focusing a tab activates it, through the focus handler below.
+    tabs[index]?.focus();
+  };
+
   return (
-    <TabsPrimitive.Trigger
+    <button
       ref={ref}
-      className={["kui-tabs__trigger", className].filter(Boolean).join(" ")}
+      type="button"
+      role="tab"
+      id={id}
+      aria-selected={isActive}
+      aria-controls={partId(context.baseId, "content", value)}
+      tabIndex={isTabStop ? 0 : -1}
+      disabled={disabled}
+      data-state={isActive ? "active" : "inactive"}
+      data-disabled={disabled ? "" : undefined}
+      data-orientation={context.orientation}
+      className={join("kui-tabs__trigger", className)}
       {...props}
+      // A primary press activates before focus lands, so the tab and its panel switch together.
+      // Other buttons and Ctrl-click leave focus where it is.
+      onMouseDown={composeEventHandlers(onMouseDown, (event) => {
+        if (disabled) return;
+        if (event.button === 0 && !event.ctrlKey) context.select(value);
+        else event.preventDefault();
+      })}
+      onFocus={composeEventHandlers(onFocus, () => {
+        if (!disabled) context.select(value);
+      })}
+      onKeyDown={composeEventHandlers(onKeyDown, moveFocus)}
     />
   );
 });
@@ -91,15 +241,27 @@ export interface TabsContentProps extends HTMLAttributes<HTMLDivElement> {
 }
 
 const Content = forwardRef<HTMLDivElement, TabsContentProps>(function TabsContent(
-  { className, ...props },
+  { value, className, children, ...props },
   ref,
 ) {
+  const context = useTabsContext("Content");
+  const isActive = context.value === value;
   return (
-    <TabsPrimitive.Content
+    <div
       ref={ref}
-      className={["kui-tabs__content", className].filter(Boolean).join(" ")}
+      role="tabpanel"
+      id={partId(context.baseId, "content", value)}
+      aria-labelledby={partId(context.baseId, "trigger", value)}
+      // The panel is a Tab stop, so keyboard users reach content that has no focusable element.
+      tabIndex={0}
+      hidden={!isActive}
+      data-state={isActive ? "active" : "inactive"}
+      data-orientation={context.orientation}
+      className={join("kui-tabs__content", className)}
       {...props}
-    />
+    >
+      {isActive ? children : null}
+    </div>
   );
 });
 

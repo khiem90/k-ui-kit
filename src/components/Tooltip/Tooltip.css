@@ -1,28 +1,35 @@
-/* The box is portaled to the end of body, so document order already puts it above earlier content
-   and it carries no z-index. */
+/* The box is a manual popover in the browser's top layer, so it needs no portal and no z-index.
+   src/popover.tsx anchors it to the trigger with inline position-anchor, position-area, and
+   position-try-fallbacks, plus the offset margin on the side facing the trigger. A bubble with no
+   arrow: a CSS arrow cannot follow the box reliably when it flips. */
 .kui-tooltip {
   box-sizing: border-box;
   max-inline-size: 20rem;
-  padding: var(--kui-space-1) var(--kui-space-2);
-  border-radius: var(--kui-radius-sm);
+  border: 0;
+  padding: var(--kui-space-2) var(--kui-space-3);
+  border-radius: var(--kui-radius-card);
   background: var(--kui-foreground);
-  color: var(--kui-background);
-  font-family: var(--kui-font-family);
-  font-size: 0.875rem;
+  color: var(--kui-surface-raised);
+  box-shadow: var(--kui-shadow-floating);
+  font-family: var(--kui-font-body);
+  font-size: var(--kui-font-size-md);
   line-height: 1.25rem;
   overflow-wrap: break-word;
   user-select: none;
-  transform-origin: var(--radix-tooltip-content-transform-origin);
 }
 
-/* Only the open state animates. If the closed state kept the same animation, Radix would hold a box
-   closed mid-entrance in the DOM until that animation ended. */
+/* The UA centres a popover with inset 0 and auto margins. Where anchor positioning works those give
+   way to the anchor. Elsewhere they stay, and the box opens in the centre of the viewport. */
+@supports (position-area: top) {
+  .kui-tooltip {
+    inset: auto;
+    margin: 0;
+  }
+}
+
+/* Only the open state exists in the DOM, so only it animates. */
 .kui-tooltip:where([data-state="open"]) {
   animation: kui-tooltip-in var(--kui-motion-duration) ease-out;
-}
-
-.kui-tooltip__arrow {
-  fill: var(--kui-foreground);
 }
 
 /* Scale only. A fade would leave the box half transparent when axe measures its contrast. The

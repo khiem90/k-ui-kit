@@ -1,5 +1,5 @@
-import { readdirSync, readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
 const components = readdirSync("src/components");
@@ -39,7 +39,38 @@ const checks = [
   ["dist/styles/index.css", "contain the Dialog styles", (s) => s.includes(".kui-dialog")],
   ["dist/styles/index.css", "contain the Select styles", (s) => s.includes(".kui-select")],
   ["dist/styles/index.css", "contain the DataTable styles", (s) => s.includes(".kui-data-table")],
+  // The pre-Ridgeline Token names are gone. A Consumer overrides the role names only.
+  ...[
+    "--kui-background-subtle",
+    "--kui-radius-sm",
+    "--kui-radius-md",
+    "--kui-radius-lg",
+    "--kui-radius-full",
+    "--kui-font-family",
+  ].map((name) => [
+    "dist/styles/index.css",
+    `leave out the old Token ${name}`,
+    (s) => !new RegExp(`${name}(?![\\w-])`).test(s),
+  ]),
+  // A Consumer who already serves the fonts must not download them twice.
+  ["dist/styles/index.css", "contain no font-face rules", (s) => !s.includes("@font-face")],
+  [
+    "package.json",
+    "export the fonts stylesheet",
+    (s) => fontsExport(s) === "./dist/styles/fonts.css",
+  ],
+  // The kit has no runtime dependencies (ADR 0004). Even an empty field invites the next one back.
+  ["package.json", "leave out the dependencies field", (s) => !("dependencies" in JSON.parse(s))],
+  ...["fraunces", "josefin-sans", "nunito-sans"].map((family) => [
+    `dist/fonts/${family}/OFL.txt`,
+    "carry the SIL Open Font License",
+    (s) => s.includes("SIL OPEN FONT LICENSE Version 1.1"),
+  ]),
 ];
+
+function fontsExport(manifest) {
+  return JSON.parse(manifest).exports?.["./fonts.css"];
+}
 
 /** What the entry exports, and the parts each composite namespace carries. */
 const shape = {
@@ -76,6 +107,113 @@ for (const [file, expectation, passes] of checks) {
   }
   const ok = passes(content);
   report(ok, `${file} does ${ok ? "" : "not "}${expectation}`);
+}
+
+// tsup builds one file per source module and dist/ mirrors src/ (ADR 0003), so every TypeScript
+// file under src/ other than the Stories and the docs pages must have its file under dist/. The
+// entry globs in tsup.config.ts decide what gets built; this walk does not read them, so a module
+// in a folder they miss fails here by name instead of as a crash in the Node import below.
+const sourceModules = readdirSync("src", { recursive: true, withFileTypes: true })
+  .filter((file) => file.isFile() && /\.tsx?$/.test(file.name))
+  .map((file) => join(file.parentPath, file.name).replaceAll("\\", "/"))
+  .filter((path) => !path.endsWith(".stories.tsx") && !path.startsWith("src/docs/"));
+for (const source of sourceModules) {
+  const built = source.replace(/^src\//, "dist/").replace(/\.tsx?$/, ".js");
+  const ok = existsSync(built);
+  report(ok, `${built} ${ok ? "is" : "is not"} built from ${source}`);
+}
+report(
+  sourceModules.length > 0,
+  `src/ has modules to mirror in dist/ (${sourceModules.length} found)`,
+);
+
+// The fonts stylesheet is copied, not bundled, so nothing else notices a font file that never made
+// it into dist/. Every url() must resolve to a shipped file, and every face the Theme draws must be
+// declared for both subsets.
+const fontsSheet = "dist/styles/fonts.css";
+const latin = "U+0000-00FF";
+const latinExt = "U+0100-02BA";
+const faces = [
+  ["Fraunces", "italic", 400],
+  ["Fraunces", "italic", 600],
+  ["Fraunces", "normal", 600],
+  ["Josefin Sans", "normal", 400],
+  ["Josefin Sans", "normal", 600],
+  ["Nunito Sans", "normal", 400],
+  ["Nunito Sans", "normal", 600],
+  ["Nunito Sans", "normal", 700],
+];
+let fontRules = [];
+try {
+  fontRules = [...readFileSync(fontsSheet, "utf8").matchAll(/@font-face\s*{([^}]*)}/g)].map(
+    ([, body]) => body,
+  );
+} catch {
+  report(false, `${fontsSheet} is missing`);
+}
+for (const body of fontRules) {
+  const urls = [...body.matchAll(/url\(\s*["']?([^"')]+)["']?\s*\)/g)].map(([, url]) => url);
+  report(urls.length > 0, `${fontsSheet} has a face with a url: ${body.trim().split("\n")[0]}`);
+  for (const url of urls) {
+    report(existsSync(resolve(dirname(fontsSheet), url)), `${fontsSheet} ships ${url}`);
+  }
+  report(/font-display:\s*swap/.test(body), `${fontsSheet} swaps ${urls[0]}`);
+  report(/unicode-range:/.test(body), `${fontsSheet} limits ${urls[0]} to a unicode range`);
+}
+for (const [family, style, weight] of faces) {
+  for (const subset of [latin, latinExt]) {
+    const declared = fontRules.some(
+      (body) =>
+        body.includes(`font-family: "${family}"`) &&
+        body.includes(`font-style: ${style}`) &&
+        coversWeight(body, weight) &&
+        body.includes(subset),
+    );
+    report(declared, `${fontsSheet} declares ${family} ${style} ${weight} from ${subset}`);
+  }
+}
+
+function coversWeight(body, weight) {
+  const match = body.match(/font-weight:\s*(\d+)(?:\s+(\d+))?/);
+  if (!match) return false;
+  const low = Number(match[1]);
+  const high = Number(match[2] ?? match[1]);
+  return low <= weight && weight <= high;
+}
+
+// With no dependencies field, a bare import of anything but React would break in a Consumer's app,
+// or quietly lean on whatever their lockfile happens to hold. Scan every module and declaration file
+// in dist/ for one. This runs before the Node import below, which would throw on a missing package.
+const allowed = ["react", "react-dom"];
+const importPatterns = [
+  /\b(?:from|import)\s*["']([^"']+)["']/g,
+  /\bimport\s*\(\s*["']([^"']+)["']\s*\)/g,
+  /\brequire\s*\(\s*["']([^"']+)["']\s*\)/g,
+];
+let scanned = 0;
+for (const file of readdirSync("dist", { recursive: true, withFileTypes: true })) {
+  if (!file.isFile() || !/\.(?:m?js|d\.ts)$/.test(file.name)) continue;
+  const path = join(file.parentPath, file.name).replaceAll("\\", "/");
+  const content = readFileSync(path, "utf8");
+  scanned += 1;
+  const specifiers = new Set(
+    importPatterns.flatMap((pattern) => [...content.matchAll(pattern)].map(([, s]) => s)),
+  );
+  for (const specifier of specifiers) {
+    if (isRelative(specifier)) continue;
+    const name = packageName(specifier);
+    report(allowed.includes(name), `${path} imports ${specifier}`);
+  }
+}
+report(scanned > 0, `dist/ has modules to scan for package imports (${scanned} found)`);
+
+function isRelative(specifier) {
+  return specifier.startsWith("./") || specifier.startsWith("../");
+}
+
+function packageName(specifier) {
+  const [first, second] = specifier.split("/");
+  return first.startsWith("@") ? `${first}/${second}` : first;
 }
 
 // Importing the entry in Node proves every relative import in dist/ resolves without a bundler,
