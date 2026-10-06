@@ -13,4 +13,4 @@ Token names describe a role, such as `--kui-primary`, `--kui-surface-raised`, or
 ## Consequences
 
 - A Theme that needs a structurally different component, not just different values, can't be expressed. Revisit this ADR when a real Theme needs it, rather than adding Theme selectors to component CSS.
-- While Ridgeline is the only Theme, its values sit on `:root` with no attribute. When a second Theme arrives, `data-theme="<name>"` selects it and `data-color-scheme` selects light or dark. The old `data-theme="light|dark"` switch is gone.
+- Ridgeline is the default, so its values sit on `:root` with no attribute. `data-theme="<name>"` selects another Theme, Noren since ADR 0006, and `data-color-scheme` is reserved to select light or dark. The old `data-theme="light|dark"` switch is gone.

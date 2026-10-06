@@ -1,6 +1,6 @@
 # k-ui-kit
 
-Accessible React component library on npm. Plain CSS with Tokens, Components built on the platform (native dialog and inputs, the Popover API, CSS anchor positioning) with zero runtime dependencies, Stories as tests.
+Accessible React component library on npm. Plain CSS with Tokens in two Themes (Ridgeline by default, Noren through `data-theme="noren"`, both in `src/styles/tokens.css`, each with its own opt-in fonts stylesheet), Components built on the platform (native dialog and inputs, the Popover API, CSS anchor positioning) with zero runtime dependencies, Stories as tests.
 
 Shared internals live in `src/*.ts(x)` beside `index.ts` (Slot, popover anchoring, compose, controllable state). Check them before writing a helper.
 

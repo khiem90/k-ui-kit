@@ -1,6 +1,6 @@
 # k-ui-kit
 
-Accessible React Components styled with plain CSS. Ten Components that meet WCAG 2.2 AA, dressed in Ridgeline: warm apricot and cream surfaces, Ember actions, pill Buttons, an arched Dialog, and three bundled typefaces. One stylesheet, no styling runtime, and no runtime dependencies besides React.
+Accessible React Components styled with plain CSS. Ten Components that meet WCAG 2.2 AA, in two Themes. Ridgeline, the default, is warm apricot and cream surfaces, Ember actions, pill Buttons, and an arched Dialog. Noren, one attribute away, is Washi and Paper surfaces, Cat text, a Lantern red primary, Tabs hung like cloth from a Cedar Rail, underlined fields, and flat square Buttons. One stylesheet holds both, each has a bundled fonts stylesheet, and there is no styling runtime and no runtime dependency besides React.
 
 Browse every Component in the Storybook at https://khiem90.github.io/k-ui-kit/. The package is on npm at https://www.npmjs.com/package/k-ui-kit.
 
@@ -18,11 +18,22 @@ import { Button } from "k-ui-kit";
 <Button variant="primary">Save</Button>;
 ```
 
-`k-ui-kit/fonts.css` is optional. It loads Fraunces, Josefin Sans, and Nunito Sans from files inside the package, under their SIL Open Font License. Leave it out if you already serve those fonts, or to fall back to Georgia and `system-ui`. The main stylesheet loads no font files.
+That is Ridgeline. For Noren, set `data-theme="noren"` on the html element, or on any ancestor, and import its fonts stylesheet instead:
+
+```tsx
+import "k-ui-kit/styles.css";
+import "k-ui-kit/fonts/noren.css";
+
+<html lang="en" data-theme="noren">
+  <body>{children}</body>
+</html>;
+```
+
+Both fonts stylesheets are optional. `k-ui-kit/fonts.css` loads Fraunces, Josefin Sans, and Nunito Sans, and `k-ui-kit/fonts/noren.css` loads Shippori Mincho B1 and Zen Kaku Gothic New, each from files inside the package under the SIL Open Font License. Leave one out if you already serve those fonts, or to fall back to Georgia and `system-ui`. On a Japanese machine Noren reaches the system mincho and gothic first. The Noren files are the latin and latin-ext subsets, and the two families draw almost no latin-ext letters, so Japanese text and most accented Central European letters fall back to the next family in the stack. The main stylesheet loads no font files.
 
 React and React DOM 18 or later are peer dependencies, and the package has no other dependencies. Every Component is the kit's own code, built on the native dialog element, the Popover API, CSS anchor positioning, and real form inputs. Every Component renders from a React Server Component with no client boundary in your app.
 
-Ridgeline is the only Theme, and it has a light Color scheme only. It applies as soon as the stylesheet loads. Restyle it by overriding Tokens such as `--kui-primary` or `--kui-radius-pill` in a plain `:root` rule. See the Getting started page in Storybook for the full Token list and a form example.
+Both Themes have a light Color scheme only, and both ship in the one stylesheet. Restyle either by overriding Tokens such as `--kui-primary` or `--kui-radius-button` in a plain `:root` rule, or `:root, [data-theme]` to reach a Theme set on a wrapper below the root. See the Getting started page in Storybook for every Token with its value in each Theme and a form example.
 
 ## Develop it
 
@@ -77,8 +88,8 @@ Tokens expire, so repeat steps 2 and 3 when a Release run fails with an authenti
 ## Repository layout
 
 - `src/components/<Name>/` holds a Component's source, CSS, and Stories.
-- `src/styles/` holds the Ridgeline Tokens, the main entry stylesheet, and the opt-in fonts stylesheet.
-- `src/fonts/` holds the woff2 files and each family's OFL.txt. The build copies them to `dist/fonts/` unchanged.
+- `src/styles/` holds the Tokens of both Themes in `tokens.css`, the main entry stylesheet, and the two opt-in fonts stylesheets, `fonts.css` for Ridgeline and `fonts-noren.css` for Noren.
+- `src/fonts/` holds the woff2 files and each family's OFL.txt, one folder per family across both Themes. The build copies them to `dist/fonts/` unchanged.
 - `src/icons.tsx` holds the inline SVG icons the kit's own Components use. `src/slot.tsx` holds the Slot behind `asChild`, and `src/popover.tsx` the anchored popover hook Tooltip and Select share. `src/compose.ts` merges refs and event handlers, and `src/controllable-state.ts` holds the controlled or uncontrolled state every stateful Component uses. None of them are exported, and each needs its own line in the tsup entry list.
 - `src/index.ts` is the public entry. It carries no client directive and assembles the composite namespaces, so a server component can render `Dialog.Root`. Each Component's file carries its own directive and is built to its own file under `dist/`. `docs/adr/0003-client-boundary-below-the-entry.md` has the reasoning.
 - `scripts/` holds the build verifier and the Consumer smoke test.
