@@ -41,6 +41,8 @@ const textPairs: [string, string][] = [
 /** Every edge and indicator pair the kit draws, as [edge, background]. WCAG 1.4.11 asks 3:1. */
 const edgePairs: [string, string][] = [
   ["--kui-border", "--kui-surface-raised"],
+  // The off Switch track's edge on the page. The on track is primary on background, below.
+  ["--kui-border", "--kui-background"],
   ["--kui-focus-ring", "--kui-background"],
   ["--kui-focus-ring", "--kui-surface-raised"],
   // A checked Checkbox is a filled Ember box on the page or in a cream table body.
