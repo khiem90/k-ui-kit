@@ -1,5 +1,5 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
 const components = readdirSync("src/components");
@@ -41,6 +41,19 @@ const checks = [
   ["dist/styles/index.css", "contain the Dialog styles", (s) => s.includes(".kui-dialog")],
   ["dist/styles/index.css", "contain the Select styles", (s) => s.includes(".kui-select")],
   ["dist/styles/index.css", "contain the DataTable styles", (s) => s.includes(".kui-data-table")],
+  // The pre-Ridgeline Token names are gone. A Consumer overrides the role names only.
+  ...[
+    "--kui-background-subtle",
+    "--kui-radius-sm",
+    "--kui-radius-md",
+    "--kui-radius-lg",
+    "--kui-radius-full",
+    "--kui-font-family",
+  ].map((name) => [
+    "dist/styles/index.css",
+    `leave out the old Token ${name}`,
+    (s) => !new RegExp(`${name}(?![\\w-])`).test(s),
+  ]),
   // A Consumer who already serves the fonts must not download them twice.
   ["dist/styles/index.css", "contain no font-face rules", (s) => !s.includes("@font-face")],
   [
@@ -48,6 +61,8 @@ const checks = [
     "export the fonts stylesheet",
     (s) => fontsExport(s) === "./dist/styles/fonts.css",
   ],
+  // The kit has no runtime dependencies (ADR 0004). Even an empty field invites the next one back.
+  ["package.json", "leave out the dependencies field", (s) => !("dependencies" in JSON.parse(s))],
   ...["fraunces", "josefin-sans", "nunito-sans"].map((family) => [
     `dist/fonts/${family}/OFL.txt`,
     "carry the SIL Open Font License",
@@ -148,6 +163,41 @@ function coversWeight(body, weight) {
   const low = Number(match[1]);
   const high = Number(match[2] ?? match[1]);
   return low <= weight && weight <= high;
+}
+
+// With no dependencies field, a bare import of anything but React would break in a Consumer's app,
+// or quietly lean on whatever their lockfile happens to hold. Scan every module and declaration file
+// in dist/ for one. This runs before the Node import below, which would throw on a missing package.
+const allowed = ["react", "react-dom"];
+const importPatterns = [
+  /\b(?:from|import)\s*["']([^"']+)["']/g,
+  /\bimport\s*\(\s*["']([^"']+)["']\s*\)/g,
+  /\brequire\s*\(\s*["']([^"']+)["']\s*\)/g,
+];
+let scanned = 0;
+for (const file of readdirSync("dist", { recursive: true, withFileTypes: true })) {
+  if (!file.isFile() || !/\.(?:m?js|d\.ts)$/.test(file.name)) continue;
+  const path = join(file.parentPath, file.name).replaceAll("\\", "/");
+  const content = readFileSync(path, "utf8");
+  scanned += 1;
+  const specifiers = new Set(
+    importPatterns.flatMap((pattern) => [...content.matchAll(pattern)].map(([, s]) => s)),
+  );
+  for (const specifier of specifiers) {
+    if (isRelative(specifier)) continue;
+    const name = packageName(specifier);
+    report(allowed.includes(name), `${path} imports ${specifier}`);
+  }
+}
+report(scanned > 0, `dist/ has modules to scan for package imports (${scanned} found)`);
+
+function isRelative(specifier) {
+  return specifier.startsWith("./") || specifier.startsWith("../");
+}
+
+function packageName(specifier) {
+  const [first, second] = specifier.split("/");
+  return first.startsWith("@") ? `${first}/${second}` : first;
 }
 
 // Importing the entry in Node proves every relative import in dist/ resolves without a bundler,
