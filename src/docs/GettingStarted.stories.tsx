@@ -1,5 +1,12 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import type { CSSProperties } from "react";
 import { Button, Checkbox, Select, TextField } from "../index";
+
+const labelStyle: CSSProperties = {
+  font: "600 0.875rem/1.25rem var(--kui-font-label)",
+  textTransform: "var(--kui-label-case)" as CSSProperties["textTransform"],
+  letterSpacing: "var(--kui-label-tracking)",
+};
 
 /** The form on the Getting started page. Keep it in step with the code block there. */
 function SignUpForm() {
@@ -10,8 +17,10 @@ function SignUpForm() {
       style={{ display: "grid", gap: "var(--kui-space-4)", maxWidth: "24rem" }}
     >
       <TextField label="Email" name="email" type="email" autoComplete="email" required />
-      <div style={{ display: "grid", gap: "var(--kui-space-1)" }}>
-        <label htmlFor="plan">Plan</label>
+      <div style={{ display: "grid", gap: "var(--kui-space-2)" }}>
+        <label htmlFor="plan" style={labelStyle}>
+          Plan
+        </label>
         <Select.Root name="plan" defaultValue="free">
           <Select.Trigger id="plan" />
           <Select.Content>

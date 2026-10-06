@@ -41,19 +41,34 @@ const bodyCss = `body {
 }
 `;
 
-// A panel forced dark and a panel forced light, so both apps can prove the attribute wins.
-const themePanels = `      <section id="dark-panel" data-theme="dark">
-        <Button variant="primary">Dark panel</Button>
-      </section>
-      <section id="light-panel" data-theme="light">
-        <Button variant="primary">Light panel</Button>
-      </section>`;
+// The Vite app overrides one Token in a plain :root rule, the way the Getting started page says to.
+const OVERRIDE_PRIMARY = "#2f6f5e";
+const overrideCss = `:root {
+  --kui-primary: ${OVERRIDE_PRIMARY};
+}
+`;
 
-// A server component: no client directive, no function props, every Component uncontrolled.
+// Every face the Ridgeline Theme draws, each tried with a latin and a latin-ext sample so both
+// files of a subset family load. Kept in step with src/docs/Fonts.stories.tsx.
+const fontFaces = [
+  'italic 400 16px "Fraunces"',
+  'italic 600 16px "Fraunces"',
+  'normal 600 16px "Fraunces"',
+  'normal 400 16px "Josefin Sans"',
+  'normal 600 16px "Josefin Sans"',
+  'normal 400 16px "Nunito Sans"',
+  'normal 600 16px "Nunito Sans"',
+  'normal 700 16px "Nunito Sans"',
+];
+const fontSamples = ["Weekend escape", "Łódź, Ærøskøbing"];
+
+// A server component: no client directive, no function props, every Component uncontrolled. It also
+// loads the opt-in fonts stylesheet, so the Next.js build has to resolve the bundled font files.
 const nextFiles = {
   "app/globals.css": bodyCss,
   "app/layout.tsx": `import type { Metadata } from "next";
 import "k-ui-kit/styles.css";
+import "k-ui-kit/fonts.css";
 import "./globals.css";
 
 export const metadata: Metadata = { title: "k-ui-kit smoke test" };
@@ -109,10 +124,10 @@ export default function Home() {
         <Switch label="Notifications" />
       </section>
       <section id="radio-group">
-        <RadioGroup.Root defaultValue="light">
-          <RadioGroup.Label>Appearance</RadioGroup.Label>
-          <RadioGroup.Item value="light" label="Light" />
-          <RadioGroup.Item value="dark" label="Dark" />
+        <RadioGroup.Root defaultValue="comfortable">
+          <RadioGroup.Label>Density</RadioGroup.Label>
+          <RadioGroup.Item value="comfortable" label="Comfortable" />
+          <RadioGroup.Item value="compact" label="Compact" />
         </RadioGroup.Root>
       </section>
       <section id="tooltip">
@@ -154,16 +169,16 @@ export default function Home() {
       <section id="data-table">
         <DataTable columns={columns} data={people} caption="People" sortable selectable />
       </section>
-${themePanels}
     </main>
   );
 }
 `,
 };
 
-// Imports two Components only, so the production bundle shows what tree-shaking dropped.
+// Imports two Components only, so the production bundle shows what tree-shaking dropped. It skips
+// the fonts stylesheet, so the bundle proves the main stylesheet pulls in no font files.
 const viteFiles = {
-  "src/app.css": bodyCss,
+  "src/app.css": bodyCss + overrideCss,
   "src/main.tsx": `import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import "k-ui-kit/styles.css";
@@ -188,7 +203,6 @@ export function App() {
       <section id="text-field">
         <TextField label="Name" />
       </section>
-${themePanels}
     </main>
   );
 }
@@ -219,17 +233,19 @@ const root = reused
   : mkdtempSync(join(tmpdir(), `${pkg.name}-smoke-`));
 mkdirSync(root, { recursive: true });
 
-// The primary colour in each Theme, read from the Tokens so a Token change cannot pass unnoticed.
-// Each value is taken from the block its Theme attribute selects, so block order does not matter.
+// Ridgeline colours, read from the Tokens so a Token change cannot pass unnoticed. Ridgeline is
+// the only Theme and has one root block, so each Token is declared once.
 const tokens = readFileSync(join(kit, "src/styles/tokens.css"), "utf8");
-const primaryIn = (theme) => {
-  const block = tokens.match(new RegExp(`\\[data-theme="${theme}"\\]\\)\\s*\\{([^}]*)\\}`));
-  const hex = block?.[1].match(/--kui-primary:\s*#([0-9a-f]{6})/i)?.[1];
-  if (!hex) throw new Error(`tokens.css has no --kui-primary for the ${theme} Theme`);
-  return `rgb(${[0, 2, 4].map((i) => parseInt(hex.slice(i, i + 2), 16)).join(", ")})`;
+const rgb = (hex) => `rgb(${[1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16)).join(", ")})`;
+const tokenRgb = (name) => {
+  const hex = tokens.match(new RegExp(`${name}:\\s*(#[0-9a-f]{6})\\b`, "i"))?.[1];
+  if (!hex) throw new Error(`tokens.css has no hex value for ${name}`);
+  return rgb(hex);
 };
-const lightPrimary = primaryIn("light");
-const darkPrimary = primaryIn("dark");
+const ridgeline = {
+  background: tokenRgb("--kui-background"),
+  primary: tokenRgb("--kui-primary"),
+};
 
 const problems = [];
 
@@ -317,41 +333,100 @@ async function inBrowser(url, checks) {
   }
 }
 
-async function verifyThemes(page, url) {
-  const background = (selector) =>
-    page
-      .locator(selector)
-      .first()
-      .evaluate(
-        (element) => element.ownerDocument.defaultView.getComputedStyle(element).backgroundColor,
-      );
-  // Colours transition over --kui-motion-duration, so a reading taken right after a Theme change
-  // lands mid-transition. Poll until the colour settles on the expected value or time runs out.
-  const settles = async (selector, expected) => {
-    const deadline = Date.now() + 2_000;
-    let actual = await background(selector);
-    while (actual !== expected && Date.now() < deadline) {
-      await new Promise((resolveWait) => setTimeout(resolveWait, 50));
-      actual = await background(selector);
-    }
-    return actual === expected;
-  };
+/**
+ * Ridgeline applies with no attribute and ignores a dark system preference, since it has a light
+ * Color scheme only. `primary` is the colour the app's primary Button should show.
+ */
+function verifyRidgeline(primary) {
+  return async (page, url) => {
+    const background = (selector) =>
+      page
+        .locator(selector)
+        .first()
+        .evaluate(
+          (element) => element.ownerDocument.defaultView.getComputedStyle(element).backgroundColor,
+        );
+    // Colours transition over --kui-motion-duration, so a reading taken right after a change lands
+    // mid-transition. Poll until the colour settles on the expected value or time runs out.
+    const settles = async (selector, expected) => {
+      const deadline = Date.now() + 2_000;
+      let actual = await background(selector);
+      while (actual !== expected && Date.now() < deadline) {
+        await new Promise((resolveWait) => setTimeout(resolveWait, 50));
+        actual = await background(selector);
+      }
+      return actual === expected;
+    };
 
-  check(await settles("#button .kui-button", lightPrimary), `${url} light Theme by default`);
-  check(
-    await settles("#dark-panel .kui-button", darkPrimary),
-    `${url} dark Theme from data-theme on an ancestor`,
+    check(await settles("body", ridgeline.background), `${url} Ridgeline background on the page`);
+    check(await settles("#button .kui-button", primary), `${url} primary Button is ${primary}`);
+    await page.emulateMedia({ colorScheme: "dark" });
+    check(
+      (await settles("body", ridgeline.background)) &&
+        (await settles("#button .kui-button", primary)),
+      `${url} a dark system preference changes nothing`,
+    );
+    await page.emulateMedia({ colorScheme: "light" });
+  };
+}
+
+/** Every Ridgeline face resolves to a bundled file the app's build copied and served. */
+async function verifyFonts(page, url) {
+  const button = page.locator("#button .kui-button");
+  const results = await button.evaluate(
+    async (element, { faces, samples }) => {
+      const { fonts } = element.ownerDocument;
+      const out = [];
+      for (const font of faces) {
+        for (const sample of samples) {
+          try {
+            // load() resolves with no faces when nothing matches, and rejects when a file fails.
+            const loaded = await fonts.load(font, sample);
+            const ok = loaded.length > 0 && loaded.every((face) => face.status === "loaded");
+            out.push({ font, sample, ok, detail: `${loaded.length} face(s)` });
+          } catch (error) {
+            out.push({ font, sample, ok: false, detail: String(error) });
+          }
+        }
+      }
+      return out;
+    },
+    { faces: fontFaces, samples: fontSamples },
   );
-  await page.emulateMedia({ colorScheme: "dark" });
+  const failed = results.filter((result) => !result.ok);
   check(
-    await settles("#button .kui-button", darkPrimary),
-    `${url} dark Theme from the system preference`,
+    failed.length === 0,
+    `${url} loads all ${fontFaces.length} Ridgeline faces in both ranges` +
+      failed.map((f) => `\n  ${f.font} for "${f.sample}": ${f.detail}`).join(""),
   );
+  const label = await button.evaluate((element) => {
+    const { fontFamily, fontWeight } = element.ownerDocument.defaultView.getComputedStyle(element);
+    const family = fontFamily.split(",")[0];
+    // fonts.check() is true when no face matches at all, so look for a loaded face instead.
+    const weight = Number(fontWeight);
+    const ready = [...element.ownerDocument.fonts].some((face) => {
+      const [min, max = min] = face.weight.split(" ").map(Number);
+      return (
+        `"${face.family.replace(/"/g, "")}"` === family &&
+        face.status === "loaded" &&
+        weight >= min &&
+        weight <= max
+      );
+    });
+    return { family, ready };
+  });
   check(
-    await settles("#light-panel .kui-button", lightPrimary),
-    `${url} data-theme="light" wins over the system preference`,
+    label.family === '"Josefin Sans"' && label.ready,
+    `${url} Button labels draw in Josefin Sans (${label.family}, loaded: ${label.ready})`,
   );
-  await page.emulateMedia({ colorScheme: "light" });
+}
+
+/** The kit's entry in an app's lockfile, so a runtime dependency would show up as an install. */
+function kitDependencies(appDir) {
+  const lock = JSON.parse(readFileSync(join(appDir, "package-lock.json"), "utf8"));
+  const entry = lock.packages?.[`node_modules/${pkg.name}`];
+  if (!entry) throw new Error(`${appDir} lockfile has no ${pkg.name} entry`);
+  return Object.keys(entry.dependencies ?? {});
 }
 
 /** Every Component is on the page, and each one answers to input, so its parts reached the browser as working client references. */
@@ -397,9 +472,9 @@ async function verifyEveryComponent(page, url) {
     await page.locator('#data-table th[aria-sort="ascending"]').waitFor();
   });
   await attempt(`${url} Checkbox toggles`, async () => {
-    const box = page.locator("#checkbox [role=checkbox]");
+    const box = page.locator("#checkbox").getByRole("checkbox");
     await box.click();
-    if ((await box.getAttribute("aria-checked")) !== "false") throw new Error("still checked");
+    if (await box.isChecked()) throw new Error("still checked");
   });
   await attempt(`${url} Switch toggles`, async () => {
     const control = page.locator("#switch [role=switch]");
@@ -407,9 +482,9 @@ async function verifyEveryComponent(page, url) {
     if ((await control.getAttribute("aria-checked")) !== "true") throw new Error("still off");
   });
   await attempt(`${url} RadioGroup selects`, async () => {
-    const dark = page.locator("#radio-group").getByRole("radio", { name: "Dark" });
-    await dark.click();
-    if ((await dark.getAttribute("aria-checked")) !== "true") throw new Error("not selected");
+    const compact = page.locator("#radio-group").getByRole("radio", { name: "Compact" });
+    await compact.click();
+    if (!(await compact.isChecked())) throw new Error("not selected");
   });
 }
 
@@ -423,11 +498,16 @@ const nextDir = join(root, "next-app");
 if (!existsSync(nextDir)) run(NEXT_SCAFFOLD, root);
 write(nextDir, nextFiles);
 run(`npm install --no-audit --no-fund --loglevel=error "${tarball}"`, nextDir);
+const nextDependencies = kitDependencies(nextDir);
+check(
+  nextDependencies.length === 0,
+  `the installed kit has no runtime dependencies${nextDependencies.length ? `: ${nextDependencies.join(", ")}` : ""}`,
+);
 run("npm run build", nextDir);
 const nextUrl = `http://localhost:${NEXT_PORT}/`;
 const nextServer = await serve(`npx next start -p ${NEXT_PORT}`, nextDir, nextUrl);
 try {
-  await inBrowser(nextUrl, [verifyThemes, verifyEveryComponent]);
+  await inBrowser(nextUrl, [verifyRidgeline(ridgeline.primary), verifyFonts, verifyEveryComponent]);
 } finally {
   stop(nextServer);
 }
@@ -455,6 +535,10 @@ check(
   css.includes(".kui-button") && css.includes("--kui-background:"),
   "Vite bundle includes the stylesheet",
 );
+check(
+  !css.includes("@font-face") && !readdirSync(assets).some((file) => file.endsWith(".woff2")),
+  "Vite bundle has no font files without the fonts stylesheet",
+);
 
 const viteUrl = `http://localhost:${VITE_PORT}/`;
 const viteServer = await serve(
@@ -463,7 +547,8 @@ const viteServer = await serve(
   viteUrl,
 );
 try {
-  await inBrowser(viteUrl, [verifyThemes]);
+  // The app's plain :root override of --kui-primary beats the kit's :where(:root) Tokens.
+  await inBrowser(viteUrl, [verifyRidgeline(rgb(OVERRIDE_PRIMARY))]);
 } finally {
   stop(viteServer);
 }
