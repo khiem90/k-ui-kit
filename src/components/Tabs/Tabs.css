@@ -41,7 +41,7 @@
   padding: 0 var(--kui-space-4);
   border: 0;
   border-radius: var(--kui-radius-tab);
-  /* The inactive look. The hover and active rules below carry more specificity and win. */
+  /* The inactive state. The hover and active rules below carry more specificity and win. */
   background: var(--kui-tab);
   color: var(--kui-tab-foreground);
   font-family: var(--kui-font-label);

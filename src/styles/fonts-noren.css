@@ -10,8 +10,9 @@
  * Kaku Gothic New adds the Welsh circumflexes and the capital sharp s), so most latin-ext letters
  * fall back as well. The files are Google Fonts' latin and latin-ext subsets, as served.
  *
- * Noren draws Shippori Mincho B1 at 800 for Dialog titles and Zen Kaku Gothic New at 400 and 700
- * for everything else. Both are static fonts, so each file carries one weight.
+ * The Dialog title asks for Shippori Mincho B1 at --kui-label-weight, which Noren sets to 700, and
+ * the browser picks the one face shipped, 800. Zen Kaku Gothic New is at 400 and 700 for
+ * everything else. Both are static fonts, so each file carries one weight.
  */
 
 @font-face {
