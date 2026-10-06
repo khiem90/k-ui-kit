@@ -34,7 +34,7 @@
 .kui-data-table__caption {
   padding: var(--kui-space-2) var(--kui-space-3);
   font-size: var(--kui-font-size-lg);
-  font-weight: 600;
+  font-weight: var(--kui-label-weight);
   line-height: 1.5rem;
   text-align: start;
 }
@@ -54,7 +54,7 @@
 .kui-data-table__header {
   font-family: var(--kui-font-label);
   font-size: var(--kui-font-size-sm);
-  font-weight: 600;
+  font-weight: var(--kui-label-weight);
   text-transform: var(--kui-label-case);
   letter-spacing: var(--kui-label-tracking);
 }

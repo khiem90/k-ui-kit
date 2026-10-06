@@ -550,7 +550,7 @@ const expectRidgeline = async (dialog: HTMLElement) => {
   const titleStyle = getComputedStyle(title);
   await expect(titleStyle.fontFamily).toBe(resolveStyle("fontFamily", "var(--kui-font-display)"));
   await expect(titleStyle.fontStyle).toBe("italic");
-  await expect(titleStyle.color).toBe(resolveStyle("color", "var(--kui-primary)"));
+  await expect(titleStyle.color).toBe(resolveStyle("color", "var(--kui-foreground-display)"));
   const descriptionStyle = getComputedStyle(description);
   await expect(descriptionStyle.fontFamily).toBe(
     resolveStyle("fontFamily", "var(--kui-font-body)"),
@@ -634,6 +634,24 @@ export const ArchAtTwoWidths: Story = {
         await expect(arch).toBe(tokenPx("--kui-radius-arch"));
       }
     }
+  },
+};
+
+export const DisplayForegroundToken: Story = {
+  args: { defaultOpen: true },
+  play: async () => {
+    const dialog = await findDialog();
+    const title = within(dialog).getByRole("heading");
+    // The title has its own colour role, so a Consumer recolours it without touching primary. The
+    // value is read before the override is removed, so a failed assertion never leaks.
+    const root = document.documentElement.style;
+    root.setProperty("--kui-foreground-display", "rgb(1, 2, 3)");
+    const overridden = getComputedStyle(title).color;
+    root.removeProperty("--kui-foreground-display");
+    await expect(overridden).toBe("rgb(1, 2, 3)");
+    await expect(getComputedStyle(title).color).toBe(
+      resolveStyle("color", "var(--kui-foreground-display)"),
+    );
   },
 };
 

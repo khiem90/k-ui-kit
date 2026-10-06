@@ -339,7 +339,7 @@ const labelStyle: CSSProperties = {
   fontFamily: "var(--kui-font-label)",
   fontSize: "0.875rem",
   lineHeight: "1.25rem",
-  fontWeight: 600,
+  fontWeight: "var(--kui-label-weight)",
   textTransform: "var(--kui-label-case)" as CSSProperties["textTransform"],
   letterSpacing: "var(--kui-label-tracking)",
 };

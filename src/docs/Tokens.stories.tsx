@@ -1,20 +1,37 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { CSSProperties, ReactNode } from "react";
-import { expect } from "storybook/test";
-import { contrast, tokenColour } from "./contrast";
+import { expect, within } from "storybook/test";
+import {
+  Button,
+  DataTable,
+  Dialog,
+  RadioGroup,
+  Select,
+  Tabs,
+  TextField,
+  type ColumnDef,
+} from "../index";
+import { contrast, isTransparentIn, tokenColour } from "./contrast";
 
 const colours = [
   "--kui-background",
   "--kui-surface-raised",
   "--kui-surface-stripe",
+  "--kui-surface-track",
   "--kui-tint",
   "--kui-foreground",
   "--kui-foreground-muted",
+  "--kui-foreground-display",
   "--kui-border",
   "--kui-primary",
   "--kui-primary-hover",
   "--kui-primary-foreground",
   "--kui-primary-on-tint",
+  "--kui-secondary",
+  "--kui-secondary-hover",
+  "--kui-secondary-foreground",
+  "--kui-tab",
+  "--kui-tab-foreground",
   "--kui-danger",
   "--kui-danger-hover",
   "--kui-danger-foreground",
@@ -22,13 +39,18 @@ const colours = [
   "--kui-focus-ring-on-tint",
   "--kui-overlay",
 ];
-const shadows = ["--kui-shadow-rest", "--kui-shadow-raised", "--kui-shadow-floating"];
+const shadows = [
+  "--kui-shadow-rest",
+  "--kui-shadow-track",
+  "--kui-shadow-raised",
+  "--kui-shadow-floating",
+];
 const radii = ["--kui-radius-field", "--kui-radius-card", "--kui-radius-pill", "--kui-radius-arch"];
 const spaces = [1, 2, 3, 4, 5, 6, 7, 8].map((step) => `--kui-space-${step}`);
 const paddings = ["--kui-padding-field-inline"];
 const fonts = ["--kui-font-display", "--kui-font-label", "--kui-font-body"];
 const fontSizes = ["sm", "md", "lg", "display"].map((step) => `--kui-font-size-${step}`);
-const labelStyle = ["--kui-label-case", "--kui-label-tracking"];
+const labelStyle = ["--kui-label-case", "--kui-label-tracking", "--kui-label-weight"];
 
 /** Every text pair the kit draws, as [text, background]. WCAG 1.4.3 asks 4.5:1. */
 const textPairs: [string, string][] = [
@@ -42,14 +64,29 @@ const textPairs: [string, string][] = [
   ["--kui-foreground-muted", "--kui-tint"],
   ["--kui-primary-foreground", "--kui-primary"],
   ["--kui-primary-foreground", "--kui-primary-hover"],
+  // The secondary Button at rest and hovered.
+  ["--kui-secondary-foreground", "--kui-secondary"],
+  ["--kui-secondary-foreground", "--kui-secondary-hover"],
   ["--kui-danger-foreground", "--kui-danger"],
   ["--kui-danger-foreground", "--kui-danger-hover"],
   ["--kui-danger", "--kui-background"],
   ["--kui-danger", "--kui-surface-raised"],
   // Tooltip: cream text on a Bark bubble.
   ["--kui-surface-raised", "--kui-foreground"],
-  // Dialog: the Ember title on the cream panel.
-  ["--kui-primary", "--kui-surface-raised"],
+  // Dialog: the display title on the panel.
+  ["--kui-foreground-display", "--kui-surface-raised"],
+];
+
+/**
+ * Text pairs whose background a Theme may leave transparent. A transparent fill draws nothing, so
+ * the text sits on whatever is under it and the pair is skipped.
+ */
+const textPairsOnOptionalFill: [string, string][] = [
+  // Tabs: an inactive tab's text on its own fill.
+  ["--kui-tab-foreground", "--kui-tab"],
+  // Tabs: an inactive tab's text on the track, where the tab itself is transparent.
+  ["--kui-tab-foreground", "--kui-surface-track"],
+  ["--kui-foreground", "--kui-surface-track"],
 ];
 
 /** Every edge and indicator pair the kit draws, as [edge, background]. WCAG 1.4.11 asks 3:1. */
@@ -231,6 +268,58 @@ function TokenSheet() {
   );
 }
 
+interface Guest {
+  id: string;
+  name: string;
+}
+
+const guestColumns: ColumnDef<Guest>[] = [{ accessorKey: "name", header: "Name" }];
+const guests: Guest[] = [{ id: "g-1", name: "Lena Fischer" }];
+
+/** Every part the kit sets in the label style, plus the two headings that share its weight. */
+function LabelledParts() {
+  return (
+    <div style={{ display: "grid", gap: "var(--kui-space-4)", padding: "var(--kui-space-4)" }}>
+      <Button>Save</Button>
+      <TextField label="Email" />
+      <RadioGroup.Root>
+        <RadioGroup.Label>Contact method</RadioGroup.Label>
+        <RadioGroup.Item value="post" label="Post" />
+      </RadioGroup.Root>
+      <Tabs.Root defaultValue="profile">
+        <Tabs.List aria-label="Account settings">
+          <Tabs.Trigger value="profile">Profile</Tabs.Trigger>
+        </Tabs.List>
+        <Tabs.Content value="profile">Update your name and photo.</Tabs.Content>
+      </Tabs.Root>
+      <Select.Root defaultValue="lemon">
+        <Select.Trigger aria-label="Fruit" />
+        <Select.Content>
+          <Select.Group label="Citrus">
+            <Select.Item value="lemon">Lemon</Select.Item>
+          </Select.Group>
+        </Select.Content>
+      </Select.Root>
+      <DataTable
+        caption="Guests"
+        columns={guestColumns}
+        data={guests}
+        getRowId={(row) => row.id}
+        sortable
+      />
+      <Dialog.Root>
+        <Dialog.Trigger>
+          <Button variant="outline">Open</Button>
+        </Dialog.Trigger>
+        <Dialog.Content>
+          <Dialog.Title>Weekend escape</Dialog.Title>
+          <Dialog.Close />
+        </Dialog.Content>
+      </Dialog.Root>
+    </div>
+  );
+}
+
 /** Reads a Token off the root. An empty string means the Token is not defined. */
 const tokenValue = (name: string) =>
   getComputedStyle(document.documentElement).getPropertyValue(name).trim();
@@ -243,6 +332,45 @@ const meta = {
 
 export default meta;
 type Story = StoryObj<typeof meta>;
+
+export const LabelWeight: Story = {
+  render: () => <LabelledParts />,
+  play: async ({ canvas, userEvent }) => {
+    const header = canvas.getByRole("columnheader", { name: /Name/ });
+    await userEvent.click(canvas.getByRole("combobox", { name: "Fruit" }));
+    const groupLabel = await within(document.body).findByText("Citrus");
+    await userEvent.keyboard("{Escape}");
+    await userEvent.click(canvas.getByRole("button", { name: "Open" }));
+    const dialog = await within(document.body).findByRole("dialog", {}, { timeout: 2000 });
+    const parts: Record<string, HTMLElement> = {
+      button: canvas.getByRole("button", { name: "Save" }),
+      textFieldLabel: canvas.getByText("Email", { selector: "label" }),
+      radioGroupLabel: canvas.getByText("Contact method"),
+      tab: canvas.getByRole("tab", { name: "Profile" }),
+      selectGroupLabel: groupLabel,
+      dataTableCaption: canvas.getByText("Guests"),
+      dataTableHeader: header,
+      dataTableSort: within(header).getByRole("button"),
+      dialogTitle: within(dialog).getByRole("heading"),
+    };
+    const weights = () =>
+      Object.fromEntries(
+        Object.entries(parts).map(([name, part]) => [name, getComputedStyle(part).fontWeight]),
+      );
+    const every = (weight: string) =>
+      Object.fromEntries(Object.keys(parts).map((name) => [name, weight]));
+
+    await expect(weights()).toEqual(every("600"));
+
+    // One override moves every label. The values are read before it is removed, so a failed
+    // assertion never leaks into the next Story.
+    const root = document.documentElement.style;
+    root.setProperty("--kui-label-weight", "300");
+    const overridden = weights();
+    root.removeProperty("--kui-label-weight");
+    await expect(overridden).toEqual(every("300"));
+  },
+};
 
 export const Ridgeline: Story = {
   play: async () => {
@@ -265,6 +393,11 @@ export const Ridgeline: Story = {
     await expect(contrast([118, 118, 118], [255, 255, 255])).toBeCloseTo(4.54, 2);
 
     for (const [text, background] of textPairs) {
+      const ratio = contrast(tokenColour(text), tokenColour(background));
+      await expect(ratio, `${text} on ${background}`).toBeGreaterThanOrEqual(4.5);
+    }
+    for (const [text, background] of textPairsOnOptionalFill) {
+      if (isTransparentIn(document.body, background)) continue;
       const ratio = contrast(tokenColour(text), tokenColour(background));
       await expect(ratio, `${text} on ${background}`).toBeGreaterThanOrEqual(4.5);
     }
