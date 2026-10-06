@@ -1,11 +1,22 @@
 "use client";
 
-import * as SwitchPrimitive from "@radix-ui/react-switch";
-import { forwardRef, useId, useState, type ButtonHTMLAttributes, type ReactNode } from "react";
+import {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type ButtonHTMLAttributes,
+  type MouseEvent,
+  type ReactNode,
+} from "react";
 
 /**
  * `className` lands on the root element. Every other prop, including the ref, goes to the button
- * that carries the switch role, so `name`, `value`, and `required` reach the surrounding form.
+ * that carries the switch role. Inside a form, a hidden checkbox also takes `name`, `value`,
+ * `required`, `disabled`, and `form`, so the switch submits, validates, and resets like a native
+ * checkbox.
  */
 export interface SwitchProps extends Omit<
   ButtonHTMLAttributes<HTMLButtonElement>,
@@ -25,8 +36,15 @@ export interface SwitchProps extends Omit<
   value?: string;
 }
 
+// The native setter skips React's value tracker on the input, so a click dispatched afterwards
+// reads as a change and a Consumer's onChange on the form fires.
+const setNativeChecked = (input: HTMLInputElement, checked: boolean) => {
+  Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "checked")?.set?.call(input, checked);
+};
+
 /**
- * A labelled on/off switch. Space toggles it, and the thumb slides between the two positions.
+ * A labelled on/off switch. Space and Enter toggle it, and the thumb slides between the two
+ * positions.
  */
 export const Switch = forwardRef<HTMLButtonElement, SwitchProps>(function Switch(
   {
@@ -35,8 +53,13 @@ export const Switch = forwardRef<HTMLButtonElement, SwitchProps>(function Switch
     defaultChecked = false,
     onCheckedChange,
     disabled,
+    required,
+    name,
+    value = "on",
+    form,
     id: idProp,
     className,
+    onClick,
     ...props
   },
   ref,
@@ -48,29 +71,111 @@ export const Switch = forwardRef<HTMLButtonElement, SwitchProps>(function Switch
   const [uncontrolledChecked, setUncontrolledChecked] = useState(defaultChecked);
   const isControlled = checkedProp !== undefined;
   const checked = isControlled ? checkedProp : uncontrolledChecked;
+  const state = checked ? "checked" : "unchecked";
+  const [initialChecked] = useState(checked);
 
-  const handleCheckedChange = (next: boolean) => {
-    if (!isControlled) setUncontrolledChecked(next);
-    onCheckedChange?.(next);
+  const [button, setButton] = useState<HTMLButtonElement | null>(null);
+  const buttonRef = useCallback(
+    (node: HTMLButtonElement | null) => {
+      setButton(node);
+      if (typeof ref === "function") ref(node);
+      else if (ref) ref.current = node;
+    },
+    [ref],
+  );
+  const inputRef = useRef<HTMLInputElement>(null);
+  // The state a user toggle asked for, and whether the Consumer stopped its click. A change that
+  // lands on that state is announced to the form with a click from the hidden input.
+  const pendingToggle = useRef<{ checked: boolean; bubbles: boolean } | null>(null);
+
+  // Until the button mounts, assume a form, so server-rendered markup submits without JavaScript.
+  const isFormControl = button ? button.form !== null : true;
+
+  const setChecked = useCallback(
+    (next: boolean) => {
+      if (next === checked) return;
+      if (!isControlled) setUncontrolledChecked(next);
+      onCheckedChange?.(next);
+    },
+    [checked, isControlled, onCheckedChange],
+  );
+
+  const handleClick = (event: MouseEvent<HTMLButtonElement>) => {
+    onClick?.(event);
+    if (event.defaultPrevented) return;
+    const next = !checked;
+    if (isFormControl) {
+      // The hidden input repeats this click once the state lands, so the form hears it once.
+      pendingToggle.current = { checked: next, bubbles: !event.isPropagationStopped() };
+      event.stopPropagation();
+    }
+    setChecked(next);
   };
+
+  useEffect(() => {
+    const input = inputRef.current;
+    if (!input || input.checked === checked) return;
+    setNativeChecked(input, checked);
+    const toggle = pendingToggle.current;
+    pendingToggle.current = null;
+    if (toggle?.checked === checked && toggle.bubbles) {
+      input.dispatchEvent(new Event("click", { bubbles: true }));
+    }
+  }, [checked]);
+
+  const owningForm = button?.form;
+  useEffect(() => {
+    if (!owningForm) return;
+    const reset = () => setChecked(initialChecked);
+    owningForm.addEventListener("reset", reset);
+    return () => owningForm.removeEventListener("reset", reset);
+  }, [owningForm, initialChecked, setChecked]);
 
   return (
     <div
       className={["kui-switch", className].filter(Boolean).join(" ")}
-      data-state={checked ? "checked" : "unchecked"}
+      data-state={state}
       data-disabled={disabled ? "" : undefined}
     >
-      <SwitchPrimitive.Root
-        ref={ref}
+      {isFormControl && (
+        // Carries the value, required, and disabled into the form. The button is what people and
+        // assistive technology use, so this stays hidden from both.
+        <input
+          ref={inputRef}
+          className="kui-switch__input"
+          type="checkbox"
+          aria-hidden
+          tabIndex={-1}
+          defaultChecked={initialChecked}
+          name={name}
+          value={value}
+          form={form}
+          required={required}
+          disabled={disabled}
+          style={{ position: "absolute", margin: 0, opacity: 0, pointerEvents: "none" }}
+        />
+      )}
+      <button
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        aria-required={required}
+        data-state={state}
+        data-disabled={disabled ? "" : undefined}
         id={id}
         className="kui-switch__track"
-        checked={checked}
-        onCheckedChange={handleCheckedChange}
         disabled={disabled}
+        form={form}
         {...props}
+        ref={buttonRef}
+        onClick={handleClick}
       >
-        <SwitchPrimitive.Thumb className="kui-switch__thumb" />
-      </SwitchPrimitive.Root>
+        <span
+          className="kui-switch__thumb"
+          data-state={state}
+          data-disabled={disabled ? "" : undefined}
+        />
+      </button>
       <label className="kui-switch__label" htmlFor={id}>
         {label}
       </label>

@@ -41,6 +41,9 @@ const textPairs: [string, string][] = [
 /** Every edge and indicator pair the kit draws, as [edge, background]. WCAG 1.4.11 asks 3:1. */
 const edgePairs: [string, string][] = [
   ["--kui-border", "--kui-surface-raised"],
+  // The Switch track's edge on the page, off and on.
+  ["--kui-border", "--kui-background"],
+  ["--kui-primary", "--kui-background"],
   ["--kui-focus-ring", "--kui-background"],
   ["--kui-focus-ring", "--kui-surface-raised"],
 ];
