@@ -3,3 +3,4 @@ dist/
 storybook-static/
 pnpm-lock.yaml
 .scratch/
+.claude/
