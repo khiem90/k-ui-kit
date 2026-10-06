@@ -17,15 +17,6 @@ const checks = [
     "start with the client directive",
     (s) => s.startsWith('"use client";'),
   ]),
-  // Tooltip and Select import the shared popover anchoring from outside their own folders.
-  ["dist/popover.js", "export useAnchoredPopover", (s) => s.includes("useAnchoredPopover")],
-  // Components share the ref, event handler, and controlled state helpers from these two.
-  ["dist/compose.js", "export composeRefs", (s) => s.includes("composeRefs")],
-  [
-    "dist/controllable-state.js",
-    "export useControllableState",
-    (s) => s.includes("useControllableState"),
-  ],
   ["dist/index.d.ts", "declare Button", (s) => s.includes("declare const Button")],
   ["dist/index.d.ts", "declare TextField", (s) => s.includes("declare const TextField")],
   ["dist/index.d.ts", "declare Checkbox", (s) => s.includes("declare const Checkbox")],
@@ -117,6 +108,24 @@ for (const [file, expectation, passes] of checks) {
   const ok = passes(content);
   report(ok, `${file} does ${ok ? "" : "not "}${expectation}`);
 }
+
+// tsup builds one file per source module and dist/ mirrors src/ (ADR 0003), so every TypeScript
+// file under src/ other than the Stories and the docs pages must have its file under dist/. The
+// entry globs in tsup.config.ts decide what gets built; this walk does not read them, so a module
+// in a folder they miss fails here by name instead of as a crash in the Node import below.
+const sourceModules = readdirSync("src", { recursive: true, withFileTypes: true })
+  .filter((file) => file.isFile() && /\.tsx?$/.test(file.name))
+  .map((file) => join(file.parentPath, file.name).replaceAll("\\", "/"))
+  .filter((path) => !path.endsWith(".stories.tsx") && !path.startsWith("src/docs/"));
+for (const source of sourceModules) {
+  const built = source.replace(/^src\//, "dist/").replace(/\.tsx?$/, ".js");
+  const ok = existsSync(built);
+  report(ok, `${built} ${ok ? "is" : "is not"} built from ${source}`);
+}
+report(
+  sourceModules.length > 0,
+  `src/ has modules to mirror in dist/ (${sourceModules.length} found)`,
+);
 
 // The fonts stylesheet is copied, not bundled, so nothing else notices a font file that never made
 // it into dist/. Every url() must resolve to a shipped file, and every face the Theme draws must be

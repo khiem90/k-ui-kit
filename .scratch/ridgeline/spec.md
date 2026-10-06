@@ -263,3 +263,5 @@ Select reset. Radix 2.3.7 restored the starting value on reset and reported it o
 Docs. CLAUDE.md describes the kit as built on the platform with zero runtime dependencies. The Getting started page uses Color scheme wording and lists the new Tokens. The first release, DataTable, DataTable selection, and Select changesets describe these changes.
 
 Left as they were, per the review: Dialog's `container-type`, the Select `aria-invalid` edge, the read-only TextField tint, the old Token name build check, and the muted foreground value.
+
+2026-10-06: The tsup entry list became two globs, `src/*.{ts,tsx}` and `src/components/*/*.{ts,tsx}`, with Stories and `src/docs/` excluded. The build check walks `src/` by the same rule and fails on any module with no file under `dist/`, and the three check lines for `popover`, `compose`, and `controllable-state` are gone. A new shared module needs neither a tsup entry nor a check line.
