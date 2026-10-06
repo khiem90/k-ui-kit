@@ -118,14 +118,221 @@ export const Default: Story = {
   },
 };
 
+/** Resolves a colour Token the way the browser computes it, so it compares with a computed style. */
+const tokenColour = (name: string) => {
+  const probe = document.createElement("span");
+  probe.style.color = `var(${name})`;
+  document.body.append(probe);
+  const colour = getComputedStyle(probe).color;
+  probe.remove();
+  return colour;
+};
+
+/** Reads a Token off the root as written, such as a font stack or a text-transform keyword. */
+const tokenValue = (name: string) =>
+  getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+
+/**
+ * Reads a style once any running transition has finished. Reading the style starts a pending
+ * transition, and finishing it means the assertion sees the settled value, not the starting one.
+ * Finishing rather than waiting also works in a background tab, where transitions don't advance.
+ */
+const settledStyle = (element: HTMLElement) => {
+  void getComputedStyle(element).borderTopColor;
+  for (const animation of element.getAnimations()) animation.finish();
+  return getComputedStyle(element);
+};
+
+/** The trigger keeps TextField's 2px edge, in the given colour Token. */
+const expectBorder = async (trigger: HTMLElement, colour: string) => {
+  const style = settledStyle(trigger);
+  await expect(style.borderTopStyle).toBe("solid");
+  await expect(style.borderTopWidth).toBe("2px");
+  await expect(style.borderTopColor).toBe(tokenColour(colour));
+};
+
+/** The standard focus ring: 2px of the focus ring Token, 2px clear of the element. */
+const expectFocusRing = async (element: HTMLElement) => {
+  const style = settledStyle(element);
+  await expect(style.outlineStyle).toBe("solid");
+  await expect(style.outlineWidth).toBe("2px");
+  await expect(style.outlineOffset).toBe("2px");
+  await expect(style.outlineColor).toBe(tokenColour("--kui-focus-ring"));
+};
+
+/** The trigger is drawn as a TextField: a cream field with the field radius and body text. */
+export const Ridgeline: Story = {
+  render: (args) => (
+    <div style={{ display: "grid", gap: "var(--kui-space-4)", justifyItems: "start" }}>
+      {(["sm", "md", "lg"] as const).map((size) => (
+        <Select.Root key={size} {...args}>
+          <Select.Trigger
+            aria-label={`Fruit ${size}`}
+            size={size}
+            style={{ inlineSize: "16rem" }}
+          />
+          <Select.Content>
+            <Select.Item value="apple">Apple</Select.Item>
+            <Select.Item value="banana">Banana</Select.Item>
+          </Select.Content>
+        </Select.Root>
+      ))}
+    </div>
+  ),
+  play: async ({ canvas }) => {
+    for (const size of ["sm", "md", "lg"]) {
+      const trigger = canvas.getByRole("combobox", { name: `Fruit ${size}` });
+      const style = getComputedStyle(trigger);
+      await expect(style.backgroundColor).toBe(tokenColour("--kui-surface-raised"));
+      await expect(style.color).toBe(tokenColour("--kui-foreground"));
+      await expect(style.borderTopLeftRadius).toBe("12px");
+      await expect(style.paddingInlineStart).toBe("18px");
+      await expect(style.paddingInlineEnd).toBe("18px");
+      await expect(style.fontFamily).toBe(tokenValue("--kui-font-body"));
+      // Only the height changes with the size, as in TextField.
+      await expect(style.fontSize).toBe("16px");
+      await expectBorder(trigger, "--kui-border");
+    }
+  },
+};
+
+/** Ember against the muted edge is too close a pair to show focus alone, so the ring shows too. */
+export const Focused: Story = {
+  play: async ({ canvas, userEvent }) => {
+    const trigger = canvas.getByRole("combobox", { name: "Fruit" });
+    await userEvent.tab();
+    await expect(trigger).toHaveFocus();
+    await expectBorder(trigger, "--kui-primary");
+    await expectFocusRing(trigger);
+  },
+};
+
+/**
+ * Select has no error prop. A Consumer who marks the trigger invalid gets TextField's danger edge,
+ * and it stays danger under focus, so the error is still visible while the Consumer picks.
+ */
+export const Invalid: Story = {
+  render: (args) => (
+    <div style={{ display: "grid", gap: "var(--kui-space-2)", justifyItems: "start" }}>
+      <Select.Root {...args}>
+        <Select.Trigger
+          aria-label="Fruit"
+          aria-invalid
+          aria-describedby="fruit-error"
+          style={{ inlineSize: "16rem" }}
+        />
+        <Select.Content>
+          <Select.Item value="apple">Apple</Select.Item>
+          <Select.Item value="banana">Banana</Select.Item>
+        </Select.Content>
+      </Select.Root>
+      <p id="fruit-error" style={{ margin: 0, color: "var(--kui-danger)" }}>
+        We are out of apples.
+      </p>
+    </div>
+  ),
+  play: async ({ canvas, userEvent }) => {
+    const trigger = canvas.getByRole("combobox", { name: "Fruit" });
+    await expect(trigger).toBeInvalid();
+    await expect(trigger).toHaveAccessibleDescription("We are out of apples.");
+    await expectBorder(trigger, "--kui-danger");
+
+    await userEvent.tab();
+    await expect(trigger).toHaveFocus();
+    await expectBorder(trigger, "--kui-danger");
+    await expectFocusRing(trigger);
+  },
+};
+
+/** Resolves a shadow Token the way the browser computes it, so it compares with a computed style. */
+const tokenShadow = (name: string) => {
+  const probe = document.createElement("span");
+  probe.style.boxShadow = `var(${name})`;
+  document.body.append(probe);
+  const shadow = getComputedStyle(probe).boxShadow;
+  probe.remove();
+  return shadow;
+};
+
+/** The list floats as a cream card with the deepest shadow, and its text is body text. */
+export const RidgelineList: Story = {
+  render: (args) => (
+    <Select.Root {...args}>
+      <Select.Trigger aria-label="Produce" style={{ inlineSize: "16rem" }} />
+      <Select.Content>
+        <Select.Group label="Fruit">
+          <Select.Item value="apple">Apple</Select.Item>
+          <Select.Item value="banana">Banana</Select.Item>
+        </Select.Group>
+        <Select.Group label="Vegetables">
+          <Select.Item value="carrot">Carrot</Select.Item>
+          <Select.Item value="leek">Leek</Select.Item>
+        </Select.Group>
+      </Select.Content>
+    </Select.Root>
+  ),
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.click(canvas.getByRole("combobox", { name: "Produce" }));
+    const listbox = await findListbox();
+    const list = getComputedStyle(listbox);
+    await expect(list.backgroundColor).toBe(tokenColour("--kui-surface-raised"));
+    await expect(list.color).toBe(tokenColour("--kui-foreground"));
+    await expect(list.borderTopLeftRadius).toBe("24px");
+    await expect(list.boxShadow).toBe(tokenShadow("--kui-shadow-floating"));
+    await expect(list.fontFamily).toBe(tokenValue("--kui-font-body"));
+    await expect(list.fontSize).toBe("16px");
+
+    // Group labels use the label style, in muted text.
+    const label = getComputedStyle(within(listbox).getByText("Vegetables"));
+    await expect(label.fontFamily).toBe(tokenValue("--kui-font-label"));
+    await expect(label.textTransform).toBe(tokenValue("--kui-label-case"));
+    await expect(label.letterSpacing).toBe(
+      `${parseFloat(tokenValue("--kui-label-tracking")) * parseFloat(label.fontSize)}px`,
+    );
+    await expect(label.color).toBe(tokenColour("--kui-foreground-muted"));
+
+    const apple = within(listbox).getByRole("option", { name: "Apple" });
+    const banana = within(listbox).getByRole("option", { name: "Banana" });
+    const check = () => apple.querySelector<HTMLElement>(".kui-select__item-indicator")!;
+    await expectFocus(apple);
+    await userEvent.keyboard("{ArrowDown}");
+    await expect(banana).toHaveAttribute("data-highlighted", "");
+
+    // Options use the field radius. The selected one shows an Ember check.
+    await expect(getComputedStyle(apple).borderTopLeftRadius).toBe("12px");
+    await expect(getComputedStyle(apple).backgroundColor).toBe("rgba(0, 0, 0, 0)");
+    await expect(getComputedStyle(check()).color).toBe(tokenColour("--kui-primary"));
+
+    // The highlighted option is Peach sky. The fill is about 1.6:1 on cream, too faint to mark
+    // focus alone, so the focus ring shows as well.
+    await expect(settledStyle(banana).backgroundColor).toBe(tokenColour("--kui-tint"));
+    await expect(getComputedStyle(banana).color).toBe(tokenColour("--kui-foreground"));
+    await expectFocusRing(banana);
+
+    // Ember on Peach sky is under 3:1, so a highlighted check darkens to primary hover.
+    await userEvent.keyboard("{ArrowUp}");
+    await expect(apple).toHaveAttribute("data-highlighted", "");
+    await expect(settledStyle(apple).backgroundColor).toBe(tokenColour("--kui-tint"));
+    await expect(getComputedStyle(check()).color).toBe(tokenColour("--kui-primary-hover"));
+    await expectFocusRing(apple);
+  },
+};
+
 /** The kit ships no label class for Select, so a Consumer styles their own. This one matches TextField's. */
-const labelStyle: CSSProperties = { fontSize: "0.875rem", lineHeight: "1.25rem", fontWeight: 500 };
+const labelStyle: CSSProperties = {
+  fontFamily: "var(--kui-font-label)",
+  fontSize: "0.875rem",
+  lineHeight: "1.25rem",
+  fontWeight: 600,
+  textTransform: "var(--kui-label-case)" as CSSProperties["textTransform"],
+  letterSpacing: "var(--kui-label-tracking)",
+};
 
 /** A form row: a TextField and a Select of the same size, each under a visible label. */
 const OrderRow = ({ size }: { size: SelectSize }) => (
   <div style={{ display: "flex", gap: "var(--kui-space-4)", alignItems: "flex-end" }}>
     <TextField label="Quantity" size={size} defaultValue="2" />
-    <div style={{ display: "flex", flex: 1, flexDirection: "column", gap: "var(--kui-space-1)" }}>
+    <div style={{ display: "flex", flex: 1, flexDirection: "column", gap: "var(--kui-space-2)" }}>
       <label htmlFor={`fruit-${size}`} style={labelStyle}>
         Fruit
       </label>
@@ -440,6 +647,40 @@ export const LongList: Story = {
     await expectClosed(trigger);
     await expect(trigger).toHaveTextContent("December");
     await expect(args.onValueChange).toHaveBeenLastCalledWith("december");
+  },
+};
+
+/** The arrow keys scroll far enough that the focus ring around the option is in view too. */
+export const ScrollsRingIntoView: Story = {
+  ...LongList,
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.click(canvas.getByRole("combobox", { name: "Month" }));
+    const listbox = await findListbox();
+    const visible = () => {
+      const box = listbox.getBoundingClientRect();
+      const top = box.top + listbox.clientTop;
+      return { top, bottom: top + listbox.clientHeight };
+    };
+    // The ring is 2px wide and 2px clear of the option.
+    const ring = 4;
+
+    await expectFocus(within(listbox).getByRole("option", { name: "January" }));
+    for (const month of months.slice(1, -1)) {
+      await userEvent.keyboard("{ArrowDown}");
+      const option = within(listbox).getByRole("option", { name: month });
+      await expect(option).toHaveFocus();
+      await expect(option.getBoundingClientRect().bottom + ring).toBeLessThanOrEqual(
+        visible().bottom,
+      );
+    }
+    await expect(listbox.scrollTop).toBeGreaterThan(0);
+    for (const month of months.slice(1, -1).reverse().slice(1)) {
+      await userEvent.keyboard("{ArrowUp}");
+      const option = within(listbox).getByRole("option", { name: month });
+      await expect(option).toHaveFocus();
+      await expect(option.getBoundingClientRect().top - ring).toBeGreaterThanOrEqual(visible().top);
+    }
+    await userEvent.keyboard("{Escape}");
   },
 };
 
