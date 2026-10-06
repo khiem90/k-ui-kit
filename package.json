@@ -58,9 +58,7 @@
     "react": ">=18",
     "react-dom": ">=18"
   },
-  "dependencies": {
-    "@radix-ui/react-select": "^2.3.7"
-  },
+  "dependencies": {},
   "devDependencies": {
     "@changesets/changelog-github": "^1.0.1",
     "@changesets/cli": "^3.0.3",

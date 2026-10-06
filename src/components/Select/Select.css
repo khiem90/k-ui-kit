@@ -59,8 +59,7 @@
 }
 
 .kui-select__icon > svg,
-.kui-select__item-indicator > svg,
-.kui-select__scroll-button > svg {
+.kui-select__item-indicator > svg {
   inline-size: 1rem;
   block-size: 1rem;
 }
@@ -83,26 +82,42 @@
   cursor: not-allowed;
 }
 
-/* The list is portaled to the end of body, so document order already puts it above earlier content
-   and it carries no z-index. */
+/* The list is a manual popover in the browser's top layer, so it needs no portal and no z-index.
+   src/popover.tsx anchors it below the trigger with inline position-anchor, position-area, and
+   position-try-fallbacks, which flip it above when there is no room, plus the offset margin on the
+   side facing the trigger. */
 .kui-select__content {
   box-sizing: border-box;
-  min-inline-size: var(--radix-select-trigger-width);
-  /* Capped so a long list scrolls instead of covering the page. */
-  max-block-size: min(20rem, var(--radix-select-content-available-height));
-  overflow: hidden;
+  min-inline-size: anchor-size(width);
+  /* Capped so a long list scrolls instead of covering the page. A list taller than the room below
+     the trigger flips above it; the cap keeps it inside a short window either way. */
+  max-block-size: min(20rem, calc(100dvh - 2 * var(--kui-space-2)));
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: var(--kui-space-1);
   border: 1px solid var(--kui-border);
   border-radius: var(--kui-radius-md);
   background: var(--kui-background);
   color: var(--kui-foreground);
   font-family: var(--kui-font-family);
   font-size: 1rem;
-  transform-origin: var(--radix-select-content-transform-origin);
+  /* The list takes focus itself only while the pointer rests on a disabled option or a label. */
+  outline: none;
 }
 
-/* Only the open state animates, and only scale. The same animation on the closed state would make
-   Radix hold a list closed mid-entrance until it ended, and a fade would leave text half transparent
-   when axe measures its contrast. The motion Token is 0ms under prefers-reduced-motion. */
+/* The UA centres a popover with inset 0 and auto margins. Where anchor positioning works those give
+   way to the anchor. Elsewhere they stay, and the list opens in the centre of the viewport. */
+@supports (position-area: bottom) {
+  .kui-select__content {
+    inset: auto;
+    margin: 0;
+  }
+}
+
+/* The list stays mounted while closed, and the UA hides it until it opens. Only the open state
+   animates, and only scale: a fade would leave text half transparent when axe measures its
+   contrast. The motion Token is 0ms under prefers-reduced-motion. */
 .kui-select__content:where([data-state="open"]) {
   animation: kui-select-in var(--kui-motion-duration) ease-out;
 }
@@ -111,25 +126,6 @@
   from {
     transform: scale(0.96);
   }
-}
-
-.kui-select__viewport {
-  padding: var(--kui-space-1);
-}
-
-/* Radix renders each button only while the list can scroll its way, and hides the viewport's own
-   scrollbar, so the buttons are the only sign that more options exist. */
-.kui-select__scroll-button {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  block-size: 1.5rem;
-  color: var(--kui-foreground-muted);
-  cursor: default;
-}
-
-.kui-select__scroll-button[data-side="up"] > svg {
-  transform: rotate(180deg);
 }
 
 /* Room on the inline start for the check, so the text of every option lines up. */
@@ -147,7 +143,7 @@
   user-select: none;
 }
 
-/* Radix focuses the option under the pointer or the arrow keys, so one state covers hover and
+/* Select focuses the option under the pointer or the arrow keys, so one state covers hover and
    keyboard focus. */
 .kui-select__item[data-highlighted] {
   background: var(--kui-primary);
