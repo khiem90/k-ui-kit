@@ -9,6 +9,7 @@ export default defineConfig({
     "src/index.ts",
     "src/icons.tsx",
     "src/slot.tsx",
+    "src/popover.tsx",
     "src/components/*/*.tsx",
     "!src/components/*/*.stories.tsx",
     "src/styles/index.css",
