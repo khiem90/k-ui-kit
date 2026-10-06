@@ -107,7 +107,7 @@ The values below come from the Ridgeline board. Token names are roles (ADR 0005)
 | surface raised              | #FFF9F2                                 | Cream        | Fields, secondary Button, popups, Dialog, table body         |
 | tint                        | #F2B8A2                                 | Peach sky    | Hover, highlighted option, selected row                      |
 | foreground                  | #3A2B26                                 | Bark         | Text                                                         |
-| foreground muted            | #6B4F45                                 |              | Secondary text, descriptions                                 |
+| foreground muted            | #654B41                                 |              | Secondary text, descriptions                                 |
 | border                      | #6B4F45                                 |              | Field and unchecked-control edge only (see Accessibility)    |
 | primary                     | #BD5038                                 | Ember        | Primary Button, checked controls, active Tab, focus          |
 | primary hover               | #8E3826                                 |              | Primary Button hover and press                               |
@@ -146,7 +146,7 @@ The values below come from the Ridgeline board. Token names are roles (ADR 0005)
 - "Layer, don't outline" gets one exception. TextField, the Select trigger, an unchecked Checkbox, an unchecked radio, and the off Switch track draw a 2px border in the border Token (7.1:1 on cream). The cream field on apricot alone is 1.17:1, which fails WCAG 1.4.11.
 - On focus, a field's border turns Ember and the standard focus ring also shows. Ember against the muted border is too close a pair to be the only focus signal.
 - On error, a field's border and its error message use the danger colour (6.4:1 on apricot).
-- Measured pairs: Bark on apricot 11.1:1, muted on apricot 6.1:1, cream on Ember 4.6:1, cream on danger 7.5:1, Bark on Peach sky 7.8:1, Ember focus ring on apricot 3.9:1.
+- Measured pairs: Bark on apricot 11.1:1, muted on apricot 6.5:1, muted on Peach sky 4.6:1, cream on Ember 4.6:1, cream on danger 7.5:1, Bark on Peach sky 7.8:1, Ember focus ring on apricot 3.9:1.
 
 ### Component styling
 
