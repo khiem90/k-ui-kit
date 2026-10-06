@@ -65,14 +65,15 @@ const tokenValue = (name: string) =>
   getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 
 /**
- * The border colour transitions. Reading the style starts any pending transition, and waiting for
- * every running one to finish means the assertion sees the settled colour, not the starting one.
+ * The border colour transitions. Reading the style starts any pending transition, and finishing
+ * every running one means the assertion sees the settled colour, not the starting one. Finishing
+ * rather than waiting also works in a background tab, where transitions don't advance.
  */
 const expectBorder = async (input: HTMLElement, colour: string) => {
   const style = getComputedStyle(input);
   await expect(style.borderTopStyle).toBe("solid");
   await expect(style.borderTopWidth).toBe("2px");
-  await Promise.all(input.getAnimations().map((animation) => animation.finished));
+  for (const animation of input.getAnimations()) animation.finish();
   await expect(getComputedStyle(input).borderTopColor).toBe(tokenColour(colour));
 };
 
