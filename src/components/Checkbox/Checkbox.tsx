@@ -1,16 +1,24 @@
 "use client";
 
-import * as CheckboxPrimitive from "@radix-ui/react-checkbox";
-import { forwardRef, useId, useState, type ButtonHTMLAttributes, type ReactNode } from "react";
+import {
+  forwardRef,
+  useId,
+  useImperativeHandle,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type InputHTMLAttributes,
+  type ReactNode,
+} from "react";
 import { CheckIcon, MinusIcon } from "../../icons.js";
 
 /**
- * `className` lands on the root element. Every other prop, including the ref, goes to the button
- * that carries the checkbox role, so `name`, `value`, and `required` reach the surrounding form.
+ * `className` lands on the root element. Every other prop, including the ref, goes to the native
+ * checkbox input, so `name`, `value`, and `required` reach the surrounding form.
  */
 export interface CheckboxProps extends Omit<
-  ButtonHTMLAttributes<HTMLButtonElement>,
-  "defaultChecked" | "onChange" | "type" | "value" | "children"
+  InputHTMLAttributes<HTMLInputElement>,
+  "checked" | "defaultChecked" | "onChange" | "type" | "value" | "children"
 > {
   /** Visible label. It is also the checkbox's accessible name, and clicking it toggles the box. */
   label: ReactNode;
@@ -39,7 +47,7 @@ export interface CheckboxProps extends Omit<
 /**
  * A labelled checkbox with checked, unchecked, and mixed states. Space toggles it; Enter does not.
  */
-export const Checkbox = forwardRef<HTMLButtonElement, CheckboxProps>(function Checkbox(
+export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(function Checkbox(
   {
     label,
     hideLabel = false,
@@ -56,18 +64,19 @@ export const Checkbox = forwardRef<HTMLButtonElement, CheckboxProps>(function Ch
 ) {
   const generatedId = useId();
   const id = idProp ?? generatedId;
-  // Owning the state keeps Radix controlled at all times, so an uncontrolled box toggled while
+  const inputRef = useRef<HTMLInputElement>(null);
+  useImperativeHandle(ref, () => inputRef.current as HTMLInputElement, []);
+  // Owning the state keeps the input controlled at all times, so an uncontrolled box toggled while
   // indeterminate lands on checked once the Consumer clears that prop.
   const [uncontrolledChecked, setUncontrolledChecked] = useState(defaultChecked);
   const isControlled = checkedProp !== undefined;
   const checked = isControlled ? checkedProp : uncontrolledChecked;
   const state = indeterminate ? "indeterminate" : checked ? "checked" : "unchecked";
 
-  const handleCheckedChange = (next: CheckboxPrimitive.CheckedState) => {
-    const nextChecked = next === true;
-    if (!isControlled) setUncontrolledChecked(nextChecked);
-    onCheckedChange?.(nextChecked);
-  };
+  // The mixed state has no HTML attribute. Only the DOM property reaches assistive technology.
+  useLayoutEffect(() => {
+    if (inputRef.current) inputRef.current.indeterminate = indeterminate;
+  }, [indeterminate]);
 
   return (
     <div
@@ -76,19 +85,28 @@ export const Checkbox = forwardRef<HTMLButtonElement, CheckboxProps>(function Ch
       data-disabled={disabled ? "" : undefined}
       data-label-hidden={hideLabel ? "" : undefined}
     >
-      <CheckboxPrimitive.Root
-        ref={ref}
-        id={id}
-        className="kui-checkbox__box"
-        checked={indeterminate ? "indeterminate" : checked}
-        onCheckedChange={handleCheckedChange}
-        disabled={disabled}
-        {...props}
-      >
-        <CheckboxPrimitive.Indicator className="kui-checkbox__indicator">
-          {indeterminate ? <MinusIcon /> : <CheckIcon />}
-        </CheckboxPrimitive.Indicator>
-      </CheckboxPrimitive.Root>
+      <span className="kui-checkbox__control">
+        <input
+          ref={inputRef}
+          id={id}
+          type="checkbox"
+          className="kui-checkbox__input"
+          checked={checked}
+          disabled={disabled}
+          onChange={(event) => {
+            const nextChecked = indeterminate ? true : !checked;
+            // A click clears the property. Put it back until the Consumer drops the prop, since a
+            // Consumer that ignores the change causes no render to do it.
+            event.currentTarget.indeterminate = indeterminate;
+            if (!isControlled) setUncontrolledChecked(nextChecked);
+            onCheckedChange?.(nextChecked);
+          }}
+          {...props}
+        />
+        <span className="kui-checkbox__box" aria-hidden="true">
+          {state === "unchecked" ? null : indeterminate ? <MinusIcon /> : <CheckIcon />}
+        </span>
+      </span>
       <label className="kui-checkbox__label" htmlFor={id}>
         {label}
       </label>
