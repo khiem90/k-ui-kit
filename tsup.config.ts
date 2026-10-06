@@ -23,4 +23,6 @@ export default defineConfig({
     // resolve inside dist/, which mirrors src/.
     options.external = [...(options.external ?? []), "./*.js", "../*.js"];
   },
+  // The opt-in fonts stylesheet and its font files are copied, not bundled.
+  onSuccess: "node scripts/copy-fonts.mjs",
 });
