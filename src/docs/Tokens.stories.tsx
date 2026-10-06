@@ -43,6 +43,9 @@ const edgePairs: [string, string][] = [
   ["--kui-border", "--kui-surface-raised"],
   ["--kui-focus-ring", "--kui-background"],
   ["--kui-focus-ring", "--kui-surface-raised"],
+  // A checked Checkbox is a filled Ember box on the page or in a cream table body.
+  ["--kui-primary", "--kui-background"],
+  ["--kui-primary", "--kui-surface-raised"],
 ];
 
 const label = (name: string) => name.replace("--kui-", "");
