@@ -7,15 +7,26 @@
   --kui-surface-raised: #fff9f2; /* Cream */
   /* Every other DataTable row: Apricot 70% into Cream. */
   --kui-surface-stripe: #f9ecde;
+  /* The Tabs list, the track behind the tabs. */
+  --kui-surface-track: #fff9f2; /* Cream */
   --kui-tint: #f2b8a2; /* Peach sky */
   --kui-foreground: #3a2b26; /* Bark */
   /* The board's #6b4f45 is 4.3:1 on Peach sky. This is the nearest step towards Bark that clears
      4.5:1 there, so muted text passes on every surface the kit draws it on. */
   --kui-foreground-muted: #654b41;
+  /* The Dialog title. */
+  --kui-foreground-display: #bd5038; /* Ember */
   --kui-border: #6b4f45;
   --kui-primary: #bd5038; /* Ember */
   --kui-primary-hover: #8e3826;
   --kui-primary-foreground: #fff9f2; /* Cream */
+  /* The secondary Button: its fill, its hover, and its text. */
+  --kui-secondary: #fff9f2; /* Cream */
+  --kui-secondary-hover: #f2b8a2; /* Peach sky */
+  --kui-secondary-foreground: #3a2b26; /* Bark */
+  /* An inactive tab: its fill and its text. Ridgeline fills nothing, so the track shows through. */
+  --kui-tab: transparent;
+  --kui-tab-foreground: #654b41; /* The muted foreground */
   --kui-danger: #9b2335;
   /* Danger 85% into Bark. */
   --kui-danger-hover: #8c2433;
@@ -31,6 +42,8 @@
   --kui-overlay: rgb(58 43 38 / 0.5); /* Bark at 50% */
 
   --kui-shadow-rest: 0 2px 0 rgb(58 43 38 / 0.08); /* Bark at 8% */
+  /* The Tabs list, which sits on the page like a resting surface. */
+  --kui-shadow-track: 0 2px 0 rgb(58 43 38 / 0.08); /* Bark at 8% */
   --kui-shadow-raised: 0 10px 24px -8px rgb(140 60 40 / 0.35);
   --kui-shadow-floating: 0 24px 48px -16px rgb(90 35 25 / 0.45);
 
@@ -40,6 +53,7 @@
   --kui-font-body: "Nunito Sans", system-ui, sans-serif;
   --kui-label-case: uppercase;
   --kui-label-tracking: 0.24em;
+  --kui-label-weight: 600;
 
   /* The type scale, in rem so it follows the page's root font size. sm, md, and lg are the three
      Button sizes, and display is the Dialog title. */

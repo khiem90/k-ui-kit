@@ -67,6 +67,61 @@ export const Sizes: Story = {
   },
 };
 
+/** A style as the browser resolves it, so a Token compares with what a Button draws. */
+const resolveColour = (value: string) => {
+  const probe = document.createElement("span");
+  probe.style.color = value;
+  document.body.append(probe);
+  const resolved = getComputedStyle(probe).color;
+  probe.remove();
+  return resolved;
+};
+
+/** The settled fill and text of a Button, with any colour transition finished. */
+const settled = (button: HTMLElement) => {
+  for (const animation of button.getAnimations()) animation.finish();
+  const style = getComputedStyle(button);
+  return { fill: style.backgroundColor, text: style.color };
+};
+
+export const SecondaryTokens: Story = {
+  render: (args) => (
+    <div style={{ display: "flex", gap: "var(--kui-space-3)" }}>
+      <Button {...args} variant="primary">
+        Primary
+      </Button>
+      <Button {...args} variant="secondary">
+        Secondary
+      </Button>
+      <Button {...args} variant="outline">
+        Outline
+      </Button>
+    </div>
+  ),
+  play: async ({ canvas }) => {
+    const primary = canvas.getByRole("button", { name: "Primary" });
+    const secondary = canvas.getByRole("button", { name: "Secondary" });
+    const outline = canvas.getByRole("button", { name: "Outline" });
+    const before = { primary: settled(primary), outline: settled(outline) };
+
+    // A Consumer moves the secondary Button alone through its own fill and text. The values are
+    // read before the override is removed, so a failed assertion never leaks into the next Story.
+    // The hover fill is not read: a synthetic pointer never matches :hover.
+    const root = document.documentElement.style;
+    root.setProperty("--kui-secondary", "rgb(1, 2, 3)");
+    root.setProperty("--kui-secondary-foreground", "rgb(4, 5, 6)");
+    const overridden = settled(secondary);
+    const others = { primary: settled(primary), outline: settled(outline) };
+    root.removeProperty("--kui-secondary");
+    root.removeProperty("--kui-secondary-foreground");
+
+    await expect(overridden).toEqual({ fill: "rgb(1, 2, 3)", text: "rgb(4, 5, 6)" });
+    await expect(others).toEqual(before);
+    await expect(before.primary.fill).toBe(resolveColour("var(--kui-primary)"));
+    await expect(before.outline.fill).toBe("rgba(0, 0, 0, 0)");
+  },
+};
+
 export const WithIcons: Story = {
   args: { leadingIcon: <PlusIcon />, trailingIcon: <ArrowIcon />, children: "Add item" },
   play: async ({ canvas }) => {

@@ -16,7 +16,7 @@
 
 .kui-text-field__label {
   font-family: var(--kui-font-label);
-  font-weight: 600;
+  font-weight: var(--kui-label-weight);
   text-transform: var(--kui-label-case);
   letter-spacing: var(--kui-label-tracking);
 }

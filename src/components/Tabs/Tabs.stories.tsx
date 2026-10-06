@@ -371,3 +371,39 @@ export const FocusThroughRef: Story = {
     await expect(panel).toHaveAttribute("data-part", "panel");
   },
 };
+
+/** The settled fill, text, and shadow of an element, with any transition finished. */
+const settled = (element: HTMLElement) => {
+  for (const animation of element.getAnimations()) animation.finish();
+  const style = getComputedStyle(element);
+  return { fill: style.backgroundColor, text: style.color, shadow: style.boxShadow };
+};
+
+export const TrackAndTabTokens: Story = {
+  play: async ({ canvas }) => {
+    const list = canvas.getByRole("tablist", { name: "Account settings" });
+    const active = canvas.getByRole("tab", { name: "Profile" });
+    const inactive = canvas.getByRole("tab", { name: "Security" });
+    const activeBefore = settled(active);
+
+    // A Consumer restyles the track and the inactive tabs through their own roles, and the active
+    // tab keeps reading primary. The values are read before the overrides are removed, so a failed
+    // assertion never leaks into the next Story.
+    const root = document.documentElement.style;
+    root.setProperty("--kui-surface-track", "rgb(1, 2, 3)");
+    root.setProperty("--kui-shadow-track", "rgb(4, 5, 6) 0px 1px 0px 0px");
+    root.setProperty("--kui-tab", "rgb(7, 8, 9)");
+    root.setProperty("--kui-tab-foreground", "rgb(10, 11, 12)");
+    const track = settled(list);
+    const tab = settled(inactive);
+    const activeAfter = settled(active);
+    for (const name of ["surface-track", "shadow-track", "tab", "tab-foreground"]) {
+      root.removeProperty(`--kui-${name}`);
+    }
+
+    await expect(track.fill).toBe("rgb(1, 2, 3)");
+    await expect(track.shadow).toBe("rgb(4, 5, 6) 0px 1px 0px 0px");
+    await expect(tab).toMatchObject({ fill: "rgb(7, 8, 9)", text: "rgb(10, 11, 12)" });
+    await expect(activeAfter).toEqual(activeBefore);
+  },
+};

@@ -193,7 +193,7 @@
   color: var(--kui-foreground-muted);
   font-family: var(--kui-font-label);
   font-size: var(--kui-font-size-sm);
-  font-weight: 600;
+  font-weight: var(--kui-label-weight);
   line-height: 1rem;
   text-transform: var(--kui-label-case);
   letter-spacing: var(--kui-label-tracking);

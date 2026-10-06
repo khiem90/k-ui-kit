@@ -9,7 +9,7 @@
   flex-direction: row;
 }
 
-/* A cream track that hugs its tabs. It layers on the page with the rest shadow instead of a line. */
+/* A track that hugs its tabs. It layers on the page with its own shadow instead of a line. */
 .kui-tabs__list {
   display: flex;
   flex-shrink: 0;
@@ -17,8 +17,8 @@
   gap: var(--kui-space-1);
   padding: var(--kui-space-1);
   border-radius: var(--kui-radius-pill);
-  background: var(--kui-surface-raised);
-  box-shadow: var(--kui-shadow-rest);
+  background: var(--kui-surface-track);
+  box-shadow: var(--kui-shadow-track);
 }
 
 /* A full pill radius on a tall column would curve past the first and last tabs, so the column
@@ -38,11 +38,12 @@
   padding: 0 var(--kui-space-4);
   border: 0;
   border-radius: var(--kui-radius-pill);
-  background: transparent;
-  color: var(--kui-foreground-muted);
+  /* The inactive look. The hover and active rules below carry more specificity and win. */
+  background: var(--kui-tab);
+  color: var(--kui-tab-foreground);
   font-family: var(--kui-font-label);
   font-size: var(--kui-font-size-md);
-  font-weight: 600;
+  font-weight: var(--kui-label-weight);
   line-height: 1;
   letter-spacing: var(--kui-label-tracking);
   text-transform: var(--kui-label-case);
