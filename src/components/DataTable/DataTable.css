@@ -152,19 +152,26 @@
 }
 
 .kui-data-table__row:nth-child(odd) > .kui-data-table__cell {
-  background: color-mix(in srgb, var(--kui-background) 70%, var(--kui-surface-raised));
-}
-
-/* Hovered and selected rows turn Peach sky. Ember is under 3:1 there, so the row deepens the
-   checked box to primary hover and draws the focus ring in the foreground colour, keeping both at
-   3:1 (WCAG 1.4.11). */
-.kui-data-table__row:is(:hover, [data-selected]) {
-  --kui-primary: var(--kui-primary-hover);
-  --kui-focus-ring: var(--kui-foreground);
+  background: var(--kui-surface-stripe);
 }
 
 .kui-data-table__row:is(:hover, [data-selected]) > .kui-data-table__cell {
   background: var(--kui-tint);
+}
+
+/* Hovered and selected rows turn Peach sky, where Ember is under 3:1 (WCAG 1.4.11). Every control
+   in the row, the Checkbox and anything a Consumer puts in a cell, draws its focus ring in the
+   on-tint Token, and the row's Checkbox draws its checked box in primary on tint. Both Tokens live
+   on the root, so a Consumer's root override of them reaches the row. */
+.kui-data-table__row:is(:hover, [data-selected]) {
+  --kui-focus-ring: var(--kui-focus-ring-on-tint);
+}
+
+.kui-data-table__row:is(:hover, [data-selected])
+  .kui-checkbox:where([data-state="checked"], [data-state="indeterminate"])
+  .kui-checkbox__box {
+  border-color: var(--kui-primary-on-tint);
+  background: var(--kui-primary-on-tint);
 }
 
 .kui-data-table__row > .kui-data-table__cell:first-child {

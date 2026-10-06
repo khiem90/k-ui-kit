@@ -1,4 +1,5 @@
 import { useCallback, useId, useMemo, useRef, type CSSProperties, type Ref } from "react";
+import { setRef } from "./compose.js";
 
 // Shared by every Component that opens a popup next to a trigger: Tooltip, and the Select list.
 // The popup is a manual popover, so it renders in the browser's top layer without a portal, and
@@ -15,19 +16,6 @@ const facingMargin = {
   left: "marginRight",
   right: "marginLeft",
 } as const;
-
-/** Sets one ref, whichever kind it is. */
-function setRef<T>(ref: Ref<T> | undefined, value: T | null) {
-  if (typeof ref === "function") ref(value);
-  else if (ref) (ref as { current: T | null }).current = value;
-}
-
-/** One callback ref that sets every ref given. Memoise it, or React resets the refs each render. */
-export function composeRefs<T>(...refs: (Ref<T> | undefined)[]) {
-  return (value: T | null) => {
-    for (const ref of refs) setRef(ref, value);
-  };
-}
 
 /** The side the popup actually landed on, read from where it sits against the anchor. */
 function measureSide(popup: HTMLElement, anchor: HTMLElement | null, side: PopoverSide) {

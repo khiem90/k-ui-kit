@@ -1,6 +1,6 @@
 # k-ui-kit
 
-Accessible React component library on npm. Plain CSS, Radix underneath the hard widgets, Storybook stories as tests.
+Accessible React component library on npm. Plain CSS with Tokens, Components built on the platform (native dialog and inputs, the Popover API, CSS anchor positioning) with zero runtime dependencies, Stories as tests.
 
 ## Agent skills
 

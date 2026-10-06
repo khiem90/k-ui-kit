@@ -18,10 +18,11 @@ import {
   type ReactElement,
   type ReactNode,
   type RefObject,
-  type SyntheticEvent,
 } from "react";
+import { composeEventHandlers, composeRefs } from "../../compose.js";
+import { useControllableState } from "../../controllable-state.js";
 import { CloseIcon } from "../../icons.js";
-import { composeRefs, Slot } from "../../slot.js";
+import { Slot } from "../../slot.js";
 
 interface DialogContextValue {
   open: boolean;
@@ -48,17 +49,6 @@ interface PanelContextValue {
 
 const PanelContext = createContext<PanelContextValue | null>(null);
 
-/** The Consumer's handler runs first, and the kit's is skipped if it prevented the default. */
-function composeHandlers<E extends SyntheticEvent>(
-  theirs: ((event: E) => void) | undefined,
-  ours: (event: E) => void,
-) {
-  return (event: E) => {
-    theirs?.(event);
-    if (!event.defaultPrevented) ours(event);
-  };
-}
-
 /** Root renders no element of its own, so it takes no ref, class name, or DOM props. */
 export interface DialogRootProps {
   /** Controlled open state. Pair it with onOpenChange. */
@@ -72,18 +62,19 @@ export interface DialogRootProps {
 }
 
 const Root = ({ open: openProp, defaultOpen = false, onOpenChange, children }: DialogRootProps) => {
-  const [uncontrolledOpen, setUncontrolledOpen] = useState(defaultOpen);
-  const open = openProp ?? uncontrolledOpen;
+  const [open, setOpenState] = useControllableState({
+    prop: openProp,
+    defaultProp: defaultOpen,
+    onChange: onOpenChange,
+  });
   const triggerRef = useRef<HTMLElement>(null);
   const contentId = useId();
 
   const setOpen = useCallback(
     (next: boolean) => {
-      if (next === open) return;
-      if (openProp === undefined) setUncontrolledOpen(next);
-      onOpenChange?.(next);
+      if (next !== open) setOpenState(next);
     },
-    [open, openProp, onOpenChange],
+    [open, setOpenState],
   );
 
   const focusTrigger = useCallback(() => triggerRef.current?.focus(), []);
@@ -123,7 +114,7 @@ const Trigger = forwardRef<HTMLButtonElement, DialogTriggerProps>(function Dialo
       aria-controls={open ? contentId : undefined}
       data-state={open ? "open" : "closed"}
       {...props}
-      onClick={composeHandlers(onClick, () => setOpen(!open))}
+      onClick={composeEventHandlers(onClick, () => setOpen(!open))}
     >
       {children}
     </Slot>
@@ -235,8 +226,8 @@ function Panel({
       data-state="open"
       className={["kui-dialog", className].filter(Boolean).join(" ")}
       {...props}
-      onKeyDown={composeHandlers(onKeyDown, handleKeyDown)}
-      onPointerDown={composeHandlers(onPointerDown, handlePointerDown)}
+      onKeyDown={composeEventHandlers(onKeyDown, handleKeyDown)}
+      onPointerDown={composeEventHandlers(onPointerDown, handlePointerDown)}
       onCancel={(event) => {
         // The browser would close the dialog on its own. Closing through state keeps a controlled
         // open prop in charge.
@@ -393,7 +384,7 @@ const Close = forwardRef<HTMLButtonElement, DialogCloseProps>(function DialogClo
   ref,
 ) {
   const { setOpen } = useDialogContext("Close");
-  const handleClick = composeHandlers(onClick, () => setOpen(false));
+  const handleClick = composeEventHandlers(onClick, () => setOpen(false));
 
   if (asChild) {
     return (

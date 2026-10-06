@@ -192,6 +192,16 @@ export const Ridgeline: Story = {
       // Only the height changes with the size, as in TextField.
       await expect(style.fontSize).toBe("16px");
       await expectBorder(trigger, "--kui-border");
+      // The padding follows the TextField's Token and the type follows the root size, so a
+      // Consumer's root rule reaches both fields alike.
+      const root = document.documentElement.style;
+      root.setProperty("--kui-padding-field-inline", "20px");
+      root.fontSize = "20px";
+      const followed = getComputedStyle(trigger);
+      const values = [followed.paddingInlineStart, followed.paddingInlineEnd, followed.fontSize];
+      root.removeProperty("--kui-padding-field-inline");
+      root.removeProperty("font-size");
+      await expect(values).toEqual(["20px", "20px", "20px"]);
     }
   },
 };
@@ -309,11 +319,17 @@ export const RidgelineList: Story = {
     await expect(getComputedStyle(banana).color).toBe(tokenColour("--kui-foreground"));
     await expectFocusRing(banana);
 
-    // Ember on Peach sky is under 3:1, so a highlighted check darkens to primary hover.
+    // Ember on Peach sky is under 3:1, so a highlighted check takes primary on tint, and a
+    // Consumer's root override of that Token reaches it.
     await userEvent.keyboard("{ArrowUp}");
     await expect(apple).toHaveAttribute("data-highlighted", "");
     await expect(settledStyle(apple).backgroundColor).toBe(tokenColour("--kui-tint"));
-    await expect(getComputedStyle(check()).color).toBe(tokenColour("--kui-primary-hover"));
+    await expect(getComputedStyle(check()).color).toBe(tokenColour("--kui-primary-on-tint"));
+    const root = document.documentElement.style;
+    root.setProperty("--kui-primary-on-tint", "rgb(1, 2, 3)");
+    const overridden = getComputedStyle(check()).color;
+    root.removeProperty("--kui-primary-on-tint");
+    await expect(overridden).toBe("rgb(1, 2, 3)");
     await expectFocusRing(apple);
   },
 };
@@ -869,6 +885,73 @@ export const InForm: Story = {
     await expectClosed(trigger);
     await userEvent.click(canvas.getByRole("button", { name: "Order" }));
     await expect(canvas.getByText("Submitted cherry")).toBeVisible();
+  },
+};
+
+/** A reset returns the Select to the value it started with, as a native select would. */
+export const ResetToDefault: Story = {
+  args: { name: "fruit", defaultValue: "banana" },
+  render: (args) => {
+    const OrderForm = () => {
+      const [submitted, setSubmitted] = useState("nothing yet");
+      return (
+        <form
+          style={{ display: "grid", gap: "var(--kui-space-4)", justifyItems: "start" }}
+          onSubmit={(event) => {
+            event.preventDefault();
+            setSubmitted(String(new FormData(event.currentTarget).get("fruit")));
+          }}
+        >
+          <Select.Root {...args}>
+            <Select.Trigger aria-label="Fruit" style={{ inlineSize: "16rem" }} />
+            <Select.Content>
+              <Select.Item value="apple">Apple</Select.Item>
+              <Select.Item value="banana">Banana</Select.Item>
+              <Select.Item value="cherry">Cherry</Select.Item>
+            </Select.Content>
+          </Select.Root>
+          <div style={{ display: "flex", gap: "var(--kui-space-2)" }}>
+            <Button type="submit">Order</Button>
+            <Button type="reset" variant="outline">
+              Start over
+            </Button>
+          </div>
+          <output>Submitted {submitted}</output>
+        </form>
+      );
+    };
+    return <OrderForm />;
+  },
+  play: async ({ canvas, userEvent, args }) => {
+    const trigger = canvas.getByRole("combobox", { name: "Fruit" });
+    const order = canvas.getByRole("button", { name: "Order" });
+    const startOver = canvas.getByRole("button", { name: "Start over" });
+
+    // A reset with nothing changed keeps the value and reports nothing.
+    await userEvent.click(startOver);
+    await expect(trigger).toHaveTextContent("Banana");
+    await userEvent.click(order);
+    await expect(canvas.getByText("Submitted banana")).toBeVisible();
+    await expect(args.onValueChange).not.toHaveBeenCalled();
+
+    // After a pick, a reset goes back to the starting value and reports it.
+    await userEvent.click(trigger);
+    await userEvent.click(within(await findListbox()).getByRole("option", { name: "Cherry" }));
+    await expectClosed(trigger);
+    await expect(args.onValueChange).toHaveBeenLastCalledWith("cherry");
+    await userEvent.click(startOver);
+    await expect(trigger).toHaveTextContent("Banana");
+    await expect(args.onValueChange).toHaveBeenLastCalledWith("banana");
+    await expect(args.onValueChange).toHaveBeenCalledTimes(2);
+    await userEvent.click(order);
+    await expect(canvas.getByText("Submitted banana")).toBeVisible();
+
+    // The form is still in step with the trigger for the next submit.
+    await userEvent.click(trigger);
+    await userEvent.click(within(await findListbox()).getByRole("option", { name: "Apple" }));
+    await expectClosed(trigger);
+    await userEvent.click(order);
+    await expect(canvas.getByText("Submitted apple")).toBeVisible();
   },
 };
 

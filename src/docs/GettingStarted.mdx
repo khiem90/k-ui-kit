@@ -112,7 +112,7 @@ export function SignUpForm() {
 
 Ridgeline applies as soon as the stylesheet loads. There is no attribute to set and no provider to wrap your app in.
 
-Ridgeline has a light Color scheme only. The stylesheet declares `color-scheme: light` and holds no dark values, so the kit looks the same whatever the operating system prefers. A dark mode toggle in your app won't change the kit, so don't wire one up for it. The kit reads no `data-theme` attribute today. That name and `data-color-scheme` are reserved for a second Theme and a dark Color scheme, if either arrives.
+Ridgeline has a light Color scheme only. The stylesheet declares `color-scheme: light` and holds no dark values, so the kit looks the same whatever the operating system prefers. Switching your app to a dark Color scheme leaves the kit light, so there's nothing to wire up for it. The kit reads no `data-theme` attribute today. That name and `data-color-scheme` are reserved for a second Theme and a dark Color scheme, if either arrives.
 
 ## Override Tokens
 
@@ -131,34 +131,39 @@ Token names describe a role, not a colour, so `--kui-primary` still means "the m
 
 The kit checks the contrast of every pair it draws with its own values. When you change a colour, check its pairs yourself: text Tokens need 4.5:1 on the surfaces they sit on, and `--kui-border` and `--kui-focus-ring` need 3:1.
 
-A selected or hovered DataTable row is the one place a root override doesn't reach as you'd expect. The row sits on the Peach sky tint, where Ember is too faint, so it sets `--kui-primary` to `--kui-primary-hover` and `--kui-focus-ring` to `--kui-foreground` for the controls inside it. Your `--kui-primary-hover` and `--kui-foreground` values apply there instead.
+Ember is too faint on the Peach sky tint, so a control drawn there uses its own pair of Tokens. A selected or hovered DataTable row draws its checked Checkbox in `--kui-primary-on-tint` and sets `--kui-focus-ring` to `--kui-focus-ring-on-tint`, so every control in the row, your own included, rings in that colour. The highlighted Select option draws its check in `--kui-primary-on-tint`. If you change `--kui-primary` or `--kui-focus-ring`, set these two as well.
 
-| Token                      | Ridgeline value                                              | Used for                                                      |
-| -------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------- |
-| `--kui-background`         | `#f6e6d6` (Apricot)                                          | The page and the default surface                              |
-| `--kui-surface-raised`     | `#fff9f2` (Cream)                                            | Fields, secondary Buttons, popups, the Dialog, the table body |
-| `--kui-tint`               | `#f2b8a2` (Peach sky)                                        | Hover, the highlighted option, selected rows                  |
-| `--kui-foreground`         | `#3a2b26` (Bark)                                             | Text                                                          |
-| `--kui-foreground-muted`   | `#654b41`                                                    | Descriptions, placeholders, group labels                      |
-| `--kui-border`             | `#6b4f45`                                                    | The edge of fields and unchecked controls                     |
-| `--kui-primary`            | `#bd5038` (Ember)                                            | Primary Buttons, checked controls, the active tab             |
-| `--kui-primary-hover`      | `#8e3826`                                                    | Primary hover and press                                       |
-| `--kui-primary-foreground` | `#fff9f2`                                                    | Text on primary                                               |
-| `--kui-danger`             | `#9b2335`                                                    | Danger Buttons, error text and edges                          |
-| `--kui-danger-foreground`  | `#fff9f2`                                                    | Text on danger                                                |
-| `--kui-focus-ring`         | `#bd5038`                                                    | The keyboard focus outline                                    |
-| `--kui-overlay`            | `rgb(58 43 38 / 0.5)`                                        | The backdrop behind a Dialog                                  |
-| `--kui-shadow-rest`        | `0 2px 0 rgb(58 43 38 / 0.08)`                               | Resting surfaces such as the DataTable card                   |
-| `--kui-shadow-raised`      | `0 10px 24px -8px rgb(140 60 40 / 0.35)`                     | Primary and secondary Buttons                                 |
-| `--kui-shadow-floating`    | `0 24px 48px -16px rgb(90 35 25 / 0.45)`                     | The Dialog, Tooltip, and the Select list                      |
-| `--kui-font-display`       | `"Fraunces", Georgia, serif`                                 | Dialog titles                                                 |
-| `--kui-font-label`         | `"Josefin Sans", system-ui, sans-serif`                      | Buttons, field labels, tabs, table headers                    |
-| `--kui-font-body`          | `"Nunito Sans", system-ui, sans-serif`                       | Everything else                                               |
-| `--kui-label-case`         | `uppercase`                                                  | `text-transform` wherever the label font applies              |
-| `--kui-label-tracking`     | `0.24em`                                                     | `letter-spacing` wherever the label font applies              |
-| `--kui-radius-field`       | `12px`                                                       | TextField, the Select trigger and its options                 |
-| `--kui-radius-card`        | `24px`                                                       | Tooltip, the Select list, DataTable, the Dialog's bottom      |
-| `--kui-radius-pill`        | `999px`                                                      | Buttons, Switch, Tabs                                         |
-| `--kui-radius-arch`        | `160px`                                                      | The Dialog's top corners, capped at half its width            |
-| `--kui-space-1` to `-8`    | `4px`, `8px`, `12px`, `16px`, `24px`, `32px`, `48px`, `72px` | Spacing                                                       |
-| `--kui-motion-duration`    | `150ms`                                                      | Transitions. Zero under reduced motion                        |
+| Token                        | Ridgeline value                                              | Used for                                                      |
+| ---------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------- |
+| `--kui-background`           | `#f6e6d6` (Apricot)                                          | The page and the default surface                              |
+| `--kui-surface-raised`       | `#fff9f2` (Cream)                                            | Fields, secondary Buttons, popups, the Dialog, the table body |
+| `--kui-surface-stripe`       | `#f9ecde`                                                    | Every other DataTable row                                     |
+| `--kui-tint`                 | `#f2b8a2` (Peach sky)                                        | Hover, the highlighted option, selected rows                  |
+| `--kui-foreground`           | `#3a2b26` (Bark)                                             | Text                                                          |
+| `--kui-foreground-muted`     | `#654b41`                                                    | Descriptions, placeholders, group labels                      |
+| `--kui-border`               | `#6b4f45`                                                    | The edge of fields and unchecked controls                     |
+| `--kui-primary`              | `#bd5038` (Ember)                                            | Primary Buttons, checked controls, the active tab             |
+| `--kui-primary-hover`        | `#8e3826`                                                    | Primary hover and press                                       |
+| `--kui-primary-foreground`   | `#fff9f2`                                                    | Text on primary                                               |
+| `--kui-primary-on-tint`      | `#8e3826`                                                    | Checked boxes and checks on the tint                          |
+| `--kui-danger`               | `#9b2335`                                                    | Danger Buttons, error text and edges                          |
+| `--kui-danger-hover`         | `#8c2433`                                                    | Danger hover                                                  |
+| `--kui-danger-foreground`    | `#fff9f2`                                                    | Text on danger                                                |
+| `--kui-focus-ring`           | `#bd5038`                                                    | The keyboard focus outline                                    |
+| `--kui-focus-ring-on-tint`   | `#3a2b26` (Bark)                                             | The focus outline on the tint                                 |
+| `--kui-overlay`              | `rgb(58 43 38 / 0.5)`                                        | The backdrop behind a Dialog                                  |
+| `--kui-shadow-rest`          | `0 2px 0 rgb(58 43 38 / 0.08)`                               | Resting surfaces such as the DataTable card                   |
+| `--kui-shadow-raised`        | `0 10px 24px -8px rgb(140 60 40 / 0.35)`                     | Primary and secondary Buttons                                 |
+| `--kui-shadow-floating`      | `0 24px 48px -16px rgb(90 35 25 / 0.45)`                     | The Dialog, Tooltip, and the Select list                      |
+| `--kui-font-display`         | `"Fraunces", Georgia, serif`                                 | Dialog titles                                                 |
+| `--kui-font-label`           | `"Josefin Sans", system-ui, sans-serif`                      | Buttons, field labels, tabs, table headers                    |
+| `--kui-font-body`            | `"Nunito Sans", system-ui, sans-serif`                       | Everything else                                               |
+| `--kui-label-case`           | `uppercase`                                                  | `text-transform` wherever the label font applies              |
+| `--kui-label-tracking`       | `0.24em`                                                     | `letter-spacing` wherever the label font applies              |
+| `--kui-radius-field`         | `12px`                                                       | TextField, the Select trigger and its options                 |
+| `--kui-radius-card`          | `24px`                                                       | Tooltip, the Select list, DataTable, the Dialog's bottom      |
+| `--kui-radius-pill`          | `999px`                                                      | Buttons, Switch, Tabs                                         |
+| `--kui-radius-arch`          | `160px`                                                      | The Dialog's top corners, capped at half its width            |
+| `--kui-space-1` to `-8`      | `4px`, `8px`, `12px`, `16px`, `24px`, `32px`, `48px`, `72px` | Spacing                                                       |
+| `--kui-padding-field-inline` | `18px`                                                       | Inline padding in TextField and the Select trigger            |
+| `--kui-motion-duration`      | `150ms`                                                      | Transitions. Zero under reduced motion                        |

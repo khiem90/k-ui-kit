@@ -19,6 +19,13 @@ const checks = [
   ]),
   // Tooltip and Select import the shared popover anchoring from outside their own folders.
   ["dist/popover.js", "export useAnchoredPopover", (s) => s.includes("useAnchoredPopover")],
+  // Components share the ref, event handler, and controlled state helpers from these two.
+  ["dist/compose.js", "export composeRefs", (s) => s.includes("composeRefs")],
+  [
+    "dist/controllable-state.js",
+    "export useControllableState",
+    (s) => s.includes("useControllableState"),
+  ],
   ["dist/index.d.ts", "declare Button", (s) => s.includes("declare const Button")],
   ["dist/index.d.ts", "declare TextField", (s) => s.includes("declare const TextField")],
   ["dist/index.d.ts", "declare Checkbox", (s) => s.includes("declare const Checkbox")],

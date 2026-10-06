@@ -9,13 +9,13 @@
   box-sizing: border-box;
   inline-size: 100%;
   margin: 0;
-  padding: 0 18px;
+  padding: 0 var(--kui-padding-field-inline);
   border: 2px solid var(--kui-border);
   border-radius: var(--kui-radius-field);
   background: var(--kui-surface-raised);
   color: var(--kui-foreground);
   font-family: var(--kui-font-body);
-  font-size: 16px;
+  font-size: 1rem;
   line-height: 1;
   text-align: start;
   cursor: pointer;
@@ -116,7 +116,7 @@
   box-shadow: var(--kui-shadow-floating);
   color: var(--kui-foreground);
   font-family: var(--kui-font-body);
-  font-size: 16px;
+  font-size: 1rem;
   /* The list takes focus itself only while the pointer rests on a disabled option or a label. */
   outline: none;
 }
@@ -180,10 +180,10 @@
   color: var(--kui-primary);
 }
 
-/* Ember on Peach sky is under 3:1, so the check on a highlighted option darkens to primary hover,
-   as DataTable's checked box does on a Peach sky row. */
+/* Ember on Peach sky is under 3:1, so the check on a highlighted option takes primary on tint, as
+   DataTable's checked box does on a Peach sky row. */
 .kui-select__item[data-highlighted] .kui-select__item-indicator {
-  color: var(--kui-primary-hover);
+  color: var(--kui-primary-on-tint);
 }
 
 /* The label sits in line with the option text below it. */
@@ -192,7 +192,7 @@
   padding-inline: var(--kui-space-6) var(--kui-space-4);
   color: var(--kui-foreground-muted);
   font-family: var(--kui-font-label);
-  font-size: 12px;
+  font-size: 0.75rem;
   font-weight: 600;
   line-height: 1rem;
   text-transform: var(--kui-label-case);

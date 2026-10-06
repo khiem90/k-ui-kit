@@ -3,13 +3,11 @@ import {
   cloneElement,
   forwardRef,
   useMemo,
-  version,
   type HTMLAttributes,
   type ReactElement,
   type ReactNode,
-  type Ref,
-  type RefCallback,
 } from "react";
+import { composeRefs, getElementRef } from "./compose.js";
 
 // The kit's own asChild Slot, for Button and Dialog.Close (ADR 0004). It is internal: the entry
 // never exports it, and tsup builds it as its own file beside icons.js.
@@ -31,7 +29,7 @@ export const Slot = forwardRef<HTMLElement, SlotProps>(function Slot(
   forwardedRef,
 ) {
   const child = Children.only(children) as ReactElement<Props>;
-  const childRef = getElementRef(child);
+  const childRef = getElementRef<HTMLElement>(child);
   const ref = useMemo(() => composeRefs(forwardedRef, childRef), [forwardedRef, childRef]);
 
   return cloneElement(child, { ...mergeProps(slotProps, child.props), ref });
@@ -63,35 +61,4 @@ function mergeProps(slotProps: Props, childProps: Props): Props {
 
 function isFunction(value: unknown): value is (...args: unknown[]) => unknown {
   return typeof value === "function";
-}
-
-// React 19 moved an element's ref into its props and warns when element.ref is read. React 18
-// keeps it on the element and strips it from the props.
-const refIsAProp = Number(version.split(".")[0]) >= 19;
-
-function getElementRef(element: ReactElement<Props>): Ref<unknown> | undefined {
-  return (
-    refIsAProp ? element.props.ref : (element as unknown as { ref?: unknown }).ref
-  ) as Ref<unknown>;
-}
-
-/** One ref callback that sets every ref given. Memoise it, or React resets the refs each render. */
-export function composeRefs<T>(...refs: (Ref<T> | undefined)[]): RefCallback<T> {
-  return (node) => {
-    const cleanups = refs.map((ref) => setRef(ref, node));
-    // React 19 calls a returned cleanup in place of calling the ref again with null.
-    if (cleanups.some(isFunction)) {
-      return () => {
-        cleanups.forEach((cleanup, index) => {
-          if (isFunction(cleanup)) cleanup();
-          else setRef(refs[index], null);
-        });
-      };
-    }
-  };
-}
-
-function setRef<T>(ref: Ref<T> | undefined, node: T | null): unknown {
-  if (typeof ref === "function") return ref(node);
-  if (ref) ref.current = node;
 }

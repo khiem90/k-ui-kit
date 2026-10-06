@@ -247,3 +247,19 @@ Prior art: the play functions in every existing Story file, the Getting started 
 - v1 ticket 13 should be blocked on the last slice of this work.
 - The 13 pending changesets describe the Radix-based kit. They are rewritten in the final slice.
 - ADR 0004 records the move to zero runtime dependencies and supersedes ADR 0002. ADR 0005 records that a Theme is Token values only.
+
+## Comments
+
+2026-10-06: Code review findings applied on branch `ridgeline-review-fixes`.
+
+Shared code. `src/compose.ts` holds the one `composeRefs` and `setRef` (the React 19 cleanup-aware version), `getElementRef`, and `composeEventHandlers`, which runs the Consumer's handler first and skips the kit's when it called preventDefault. The Slot, the popover hook, Dialog, Select, Tooltip, and Tabs use them, and Switch, RadioGroup, and Tabs.List lost their inline ref merges. `src/controllable-state.ts` holds `useControllableState`, used by Checkbox, Switch, RadioGroup, Select, Tabs, Tooltip, Dialog, and DataTable selection. Its setter reports every call, so Components that report only real changes still compare first, and a silent form covers RadioGroup's reset. Both files have a tsup entry and a build check line. The Stories passed unchanged across this refactor. `src/docs/contrast.ts` holds the contrast helpers that DataTable's Stories and the Tokens Story share, and nothing in the package imports it.
+
+New Tokens. `--kui-padding-field-inline` (18px) replaces the hard-coded padding in TextField and the Select trigger, and field font sizes are in rem. The two fields keep separate box rules that read the same Tokens, since a shared class would not have been cleaner. `--kui-danger-hover` and `--kui-surface-stripe` replace the inline color-mix values. DataTable no longer reassigns `--kui-primary` in tinted rows. `--kui-primary-on-tint` on the root draws the row Checkbox's checked box and the highlighted Select option's check instead. A tinted row still sets `--kui-focus-ring`, but now to `--kui-focus-ring-on-tint`, so every control in it rings at 3:1, a Consumer's Button in a cell included. Stories prove a root override of either on-tint Token reaches the row. The Tokens Story checks the new pairs.
+
+DataTable. `sortFn` takes a `(rowA, rowB, columnId)` comparator again, with `id`, `index`, `original`, and `getValue(columnId)` on each row. The paging Buttons are outline again.
+
+Select reset. Radix 2.3.7 restored the starting value on reset and reported it only if it changed, and its uncontrolled native select reset itself to the same option. The kit matched the first part, but its controlled native select had no default option, so a reset with nothing changed submitted "". The Root now marks the starting option as the default. The one remaining difference is that a Select that started empty reports "" on reset where Radix passed undefined, and the Select changeset says so.
+
+Docs. CLAUDE.md describes the kit as built on the platform with zero runtime dependencies. The Getting started page uses Color scheme wording and lists the new Tokens. The first release, DataTable, DataTable selection, and Select changesets describe these changes.
+
+Left as they were, per the review: Dialog's `container-type`, the Select `aria-invalid` edge, the read-only TextField tint, the old Token name build check, and the muted foreground value.
