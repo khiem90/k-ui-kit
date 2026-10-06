@@ -39,6 +39,7 @@
       "default": "./dist/index.js"
     },
     "./styles.css": "./dist/styles/index.css",
+    "./fonts.css": "./dist/styles/fonts.css",
     "./package.json": "./package.json"
   },
   "scripts": {
