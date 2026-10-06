@@ -192,6 +192,16 @@ export const Ridgeline: Story = {
       // Only the height changes with the size, as in TextField.
       await expect(style.fontSize).toBe("16px");
       await expectBorder(trigger, "--kui-border");
+      // The padding follows the TextField's Token and the type follows the root size, so a
+      // Consumer's root rule reaches both fields alike.
+      const root = document.documentElement.style;
+      root.setProperty("--kui-padding-field-inline", "20px");
+      root.fontSize = "20px";
+      const followed = getComputedStyle(trigger);
+      const values = [followed.paddingInlineStart, followed.paddingInlineEnd, followed.fontSize];
+      root.removeProperty("--kui-padding-field-inline");
+      root.removeProperty("font-size");
+      await expect(values).toEqual(["20px", "20px", "20px"]);
     }
   },
 };
@@ -309,11 +319,17 @@ export const RidgelineList: Story = {
     await expect(getComputedStyle(banana).color).toBe(tokenColour("--kui-foreground"));
     await expectFocusRing(banana);
 
-    // Ember on Peach sky is under 3:1, so a highlighted check darkens to primary hover.
+    // Ember on Peach sky is under 3:1, so a highlighted check takes primary on tint, and a
+    // Consumer's root override of that Token reaches it.
     await userEvent.keyboard("{ArrowUp}");
     await expect(apple).toHaveAttribute("data-highlighted", "");
     await expect(settledStyle(apple).backgroundColor).toBe(tokenColour("--kui-tint"));
-    await expect(getComputedStyle(check()).color).toBe(tokenColour("--kui-primary-hover"));
+    await expect(getComputedStyle(check()).color).toBe(tokenColour("--kui-primary-on-tint"));
+    const root = document.documentElement.style;
+    root.setProperty("--kui-primary-on-tint", "rgb(1, 2, 3)");
+    const overridden = getComputedStyle(check()).color;
+    root.removeProperty("--kui-primary-on-tint");
+    await expect(overridden).toBe("rgb(1, 2, 3)");
     await expectFocusRing(apple);
   },
 };

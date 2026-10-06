@@ -77,6 +77,18 @@ const expectBorder = async (input: HTMLElement, colour: string) => {
   await expect(getComputedStyle(input).borderTopColor).toBe(tokenColour(colour));
 };
 
+/** Changes the field padding Token and the root font size, and expects the field to follow. */
+const expectFollowsRoot = async (field: HTMLElement) => {
+  const root = document.documentElement.style;
+  root.setProperty("--kui-padding-field-inline", "20px");
+  root.fontSize = "20px";
+  const style = getComputedStyle(field);
+  const followed = [style.paddingInlineStart, style.paddingInlineEnd, style.fontSize];
+  root.removeProperty("--kui-padding-field-inline");
+  root.removeProperty("font-size");
+  await expect(followed).toEqual(["20px", "20px", "20px"]);
+};
+
 export const Ridgeline: Story = {
   args: { description: "We only use this for receipts." },
   play: async ({ canvas }) => {
@@ -89,6 +101,9 @@ export const Ridgeline: Story = {
     await expect(field.fontFamily).toBe(tokenValue("--kui-font-body"));
     await expect(field.fontSize).toBe("16px");
     await expectBorder(input, "--kui-border");
+    // The padding follows its Token and the type follows the root size, so a Consumer's root
+    // rule reaches both.
+    await expectFollowsRoot(input);
 
     const label = getComputedStyle(canvas.getByText("Email"));
     await expect(label.fontFamily).toBe(tokenValue("--kui-font-label"));

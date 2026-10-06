@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, fn, waitFor, within } from "storybook/test";
 import { useRef, useState } from "react";
+import { contrast, luminance, toRGB, tokenColour } from "../../docs/contrast";
 import { Button, DataTable, type ColumnDef, type DataTableProps } from "../../index";
 
 interface Member {
@@ -149,56 +150,6 @@ const getColumnText = (canvas: Canvas, header: string) => {
     (row: HTMLElement) => within(row).getAllByRole("cell")[index]?.textContent,
   );
 };
-
-type RGB = [number, number, number];
-
-/**
- * A computed colour as sRGB channels from 0 to 255. Accepts `rgb()` and the `color(srgb ...)` that
- * color-mix computes to. Fails on a translucent colour, whose look depends on what is under it.
- */
-function toRGB(computed: string): RGB {
-  const isRGB = computed.startsWith("rgb");
-  const isSRGB = computed.startsWith("color(srgb ");
-  const [r, g, b, alpha = 1] =
-    computed
-      .replace("color(srgb ", "")
-      .match(/[\d.e-]+/g)
-      ?.map(Number) ?? [];
-  if (!(isRGB || isSRGB) || r === undefined || g === undefined || b === undefined) {
-    throw new Error(`${computed} is not an sRGB colour`);
-  }
-  if (alpha !== 1) throw new Error(`${computed} is translucent`);
-  const scale = isSRGB ? 255 : 1;
-  return [r * scale, g * scale, b * scale].map((channel) => Math.round(channel)) as RGB;
-}
-
-/** Resolves a colour Token through the browser, as it applies inside the given element. */
-function colourIn(element: Element, name: string): RGB {
-  const probe = document.createElement("span");
-  probe.style.color = `var(${name})`;
-  element.append(probe);
-  const computed = getComputedStyle(probe).color;
-  probe.remove();
-  return toRGB(computed);
-}
-
-/** Resolves a colour Token through the browser, as the root defines it. */
-const tokenColour = (name: string) => colourIn(document.body, name);
-
-/** WCAG 2 relative luminance. */
-function luminance(colour: RGB) {
-  const [R, G, B] = colour.map((channel) => {
-    const c = channel / 255;
-    return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
-  }) as RGB;
-  return 0.2126 * R + 0.7152 * G + 0.0722 * B;
-}
-
-function contrast(a: RGB, b: RGB) {
-  const light = Math.max(luminance(a), luminance(b));
-  const dark = Math.min(luminance(a), luminance(b));
-  return (light + 0.05) / (dark + 0.05);
-}
 
 const backgroundOf = (element: Element) => toRGB(getComputedStyle(element).backgroundColor);
 
@@ -838,13 +789,31 @@ export const Layered: Story = {
       await expect(backgroundOf(cell)).toEqual(cream);
     }
 
-    // The checked box (drawn in primary) and the focus ring around it need 3:1 against the row
-    // (WCAG 1.4.11). Ember on Peach sky is under that, so the row deepens both.
-    const selectionCell = within(first).getAllByRole("cell")[0] as HTMLElement;
-    for (const token of ["--kui-primary", "--kui-focus-ring"]) {
-      const ratio = contrast(colourIn(selectionCell, token), peach);
-      await expect(ratio, `${token} on a selected row`).toBeGreaterThanOrEqual(3);
-    }
+    // The checked box and the focus ring around it need 3:1 against the row (WCAG 1.4.11). Ember
+    // on Peach sky is under that, so the row draws both in the on-tint Tokens.
+    const box = first.querySelector(".kui-checkbox__box") as HTMLElement;
+    const boxStyle = () => {
+      void getComputedStyle(box).backgroundColor;
+      for (const animation of box.getAnimations()) animation.finish();
+      return getComputedStyle(box);
+    };
+    await expect(toRGB(boxStyle().backgroundColor)).toEqual(tokenColour("--kui-primary-on-tint"));
+    await expect(contrast(toRGB(boxStyle().backgroundColor), peach)).toBeGreaterThanOrEqual(3);
+    await userEvent.tab();
+    await userEvent.tab({ shift: true });
+    await expect(within(first).getByRole("checkbox")).toHaveFocus();
+    await expect(toRGB(boxStyle().outlineColor)).toEqual(tokenColour("--kui-focus-ring-on-tint"));
+    await expect(contrast(toRGB(boxStyle().outlineColor), peach)).toBeGreaterThanOrEqual(3);
+
+    // The row reads those Tokens where the root defines them, so a Consumer's plain root rule
+    // reaches it like any other.
+    const root = document.documentElement.style;
+    root.setProperty("--kui-primary-on-tint", "rgb(1, 2, 3)");
+    root.setProperty("--kui-focus-ring-on-tint", "rgb(4, 5, 6)");
+    const overridden = [boxStyle().backgroundColor, boxStyle().outlineColor];
+    root.removeProperty("--kui-primary-on-tint");
+    root.removeProperty("--kui-focus-ring-on-tint");
+    await expect(overridden).toEqual(["rgb(1, 2, 3)", "rgb(4, 5, 6)"]);
 
     // Paging uses the kit's Button as a secondary pill, which layers on the page like the card
     // does, rather than the stroked outline variant.

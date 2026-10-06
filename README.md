@@ -80,7 +80,7 @@ Tokens expire, so repeat steps 2 and 3 when a Release run fails with an authenti
 - `src/icons.tsx` holds the inline SVG icons the kit's own Components use. `src/slot.tsx` holds the Slot behind `asChild`, and `src/popover.tsx` the anchored popover hook Tooltip and Select share. `src/compose.ts` merges refs and event handlers, and `src/controllable-state.ts` holds the controlled or uncontrolled state every stateful Component uses. None of them are exported, and each needs its own line in the tsup entry list.
 - `src/index.ts` is the public entry. It carries no client directive and assembles the composite namespaces, so a server component can render `Dialog.Root`. Each Component's file carries its own directive and is built to its own file under `dist/`. `docs/adr/0003-client-boundary-below-the-entry.md` has the reasoning.
 - `scripts/` holds the build verifier and the Consumer smoke test.
-- `src/docs/` holds the Getting started page and the Story it renders.
+- `src/docs/` holds the Getting started page and the Story it renders, the Tokens and Fonts Stories, and `contrast.ts`, the WCAG contrast helpers Stories share. Nothing in it ships.
 - `.changeset/` holds pending changesets and the Changesets config.
 - `.github/workflows/` holds the CI, Pages, and Release workflows.
 - `GLOSSARY.md` is the glossary. `docs/adr/` records the decisions behind the hard choices.

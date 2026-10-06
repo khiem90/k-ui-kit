@@ -1,10 +1,12 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { CSSProperties, ReactNode } from "react";
 import { expect } from "storybook/test";
+import { contrast, tokenColour } from "./contrast";
 
 const colours = [
   "--kui-background",
   "--kui-surface-raised",
+  "--kui-surface-stripe",
   "--kui-tint",
   "--kui-foreground",
   "--kui-foreground-muted",
@@ -12,14 +14,18 @@ const colours = [
   "--kui-primary",
   "--kui-primary-hover",
   "--kui-primary-foreground",
+  "--kui-primary-on-tint",
   "--kui-danger",
+  "--kui-danger-hover",
   "--kui-danger-foreground",
   "--kui-focus-ring",
+  "--kui-focus-ring-on-tint",
   "--kui-overlay",
 ];
 const shadows = ["--kui-shadow-rest", "--kui-shadow-raised", "--kui-shadow-floating"];
 const radii = ["--kui-radius-field", "--kui-radius-card", "--kui-radius-pill", "--kui-radius-arch"];
 const spaces = [1, 2, 3, 4, 5, 6, 7, 8].map((step) => `--kui-space-${step}`);
+const paddings = ["--kui-padding-field-inline"];
 const fonts = ["--kui-font-display", "--kui-font-label", "--kui-font-body"];
 const labelStyle = ["--kui-label-case", "--kui-label-tracking"];
 
@@ -28,12 +34,15 @@ const textPairs: [string, string][] = [
   ["--kui-foreground", "--kui-background"],
   ["--kui-foreground", "--kui-surface-raised"],
   ["--kui-foreground", "--kui-tint"],
+  // DataTable's striped rows.
+  ["--kui-foreground", "--kui-surface-stripe"],
   ["--kui-foreground-muted", "--kui-background"],
   ["--kui-foreground-muted", "--kui-surface-raised"],
   ["--kui-foreground-muted", "--kui-tint"],
   ["--kui-primary-foreground", "--kui-primary"],
   ["--kui-primary-foreground", "--kui-primary-hover"],
   ["--kui-danger-foreground", "--kui-danger"],
+  ["--kui-danger-foreground", "--kui-danger-hover"],
   ["--kui-danger", "--kui-background"],
   ["--kui-danger", "--kui-surface-raised"],
   // Tooltip: cream text on a Bark bubble.
@@ -49,14 +58,19 @@ const edgePairs: [string, string][] = [
   ["--kui-border", "--kui-background"],
   ["--kui-focus-ring", "--kui-background"],
   ["--kui-focus-ring", "--kui-surface-raised"],
-  // A checked Checkbox is a filled Ember box on the page or in a cream table body.
+  // A checked Checkbox is a filled Ember box on the page or on either row of a table body, with
+  // the border and the focus ring around it.
   ["--kui-primary", "--kui-background"],
   ["--kui-primary", "--kui-surface-raised"],
+  ["--kui-primary", "--kui-surface-stripe"],
+  ["--kui-border", "--kui-surface-stripe"],
+  ["--kui-focus-ring", "--kui-surface-stripe"],
   // A hovered or selected DataTable row is Peach sky, where Ember falls under 3:1. The row draws
-  // its checked box in primary hover and its focus ring in the foreground colour instead. A
-  // highlighted Select option is Peach sky too, and draws its check in primary hover.
-  ["--kui-primary-hover", "--kui-tint"],
-  ["--kui-foreground", "--kui-tint"],
+  // its checked box and its focus ring in the on-tint Tokens instead. A highlighted Select option
+  // is Peach sky too, and draws its check in primary on tint.
+  ["--kui-primary-on-tint", "--kui-tint"],
+  ["--kui-focus-ring-on-tint", "--kui-tint"],
+  ["--kui-border", "--kui-tint"],
 ];
 
 const label = (name: string) => name.replace("--kui-", "");
@@ -220,42 +234,6 @@ function TokenSheet() {
 const tokenValue = (name: string) =>
   getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 
-/** Resolves a colour Token to sRGB channels through the browser, whatever syntax it is written in. */
-function tokenColour(name: string): RGB {
-  const probe = document.createElement("span");
-  probe.style.color = `var(${name})`;
-  document.body.append(probe);
-  const computed = getComputedStyle(probe).color;
-  probe.remove();
-  const [r, g, b, alpha = 1] = computed.match(/[\d.]+/g)?.map(Number) ?? [];
-  if (!computed.startsWith("rgb") || r === undefined || g === undefined || b === undefined) {
-    throw new Error(`${name} resolved to ${computed}, which is not an sRGB colour`);
-  }
-  if (alpha !== 1) {
-    throw new Error(
-      `${name} is translucent (${computed}), so its contrast depends on what is under it`,
-    );
-  }
-  return [r, g, b];
-}
-
-type RGB = [number, number, number];
-
-/** WCAG 2 relative luminance. */
-function luminance(colour: RGB) {
-  const [R, G, B] = colour.map((channel) => {
-    const c = channel / 255;
-    return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
-  }) as RGB;
-  return 0.2126 * R + 0.7152 * G + 0.0722 * B;
-}
-
-function contrast(a: RGB, b: RGB) {
-  const light = Math.max(luminance(a), luminance(b));
-  const dark = Math.min(luminance(a), luminance(b));
-  return (light + 0.05) / (dark + 0.05);
-}
-
 const meta = {
   title: "Tokens",
   component: TokenSheet,
@@ -272,6 +250,7 @@ export const Ridgeline: Story = {
       ...shadows,
       ...radii,
       ...spaces,
+      ...paddings,
       ...fonts,
       ...labelStyle,
       "--kui-motion-duration",

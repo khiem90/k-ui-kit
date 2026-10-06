@@ -86,7 +86,7 @@
 }
 
 .kui-button[data-variant="danger"]:not([data-disabled]):hover {
-  background: color-mix(in srgb, var(--kui-danger) 85%, var(--kui-foreground));
+  background: var(--kui-danger-hover);
 }
 
 .kui-button[data-disabled] {
