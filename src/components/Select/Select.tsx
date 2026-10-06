@@ -156,9 +156,12 @@ function focusOption(list: HTMLElement, option: HTMLElement, enabled: ItemEntry[
   } else if (option === enabled[enabled.length - 1]?.element) {
     list.scrollTop = list.scrollHeight;
   } else {
+    // The list's scroll padding keeps room for the focus ring around the option.
+    const { scrollPaddingTop, scrollPaddingBottom } = getComputedStyle(list);
     const box = option.getBoundingClientRect();
-    const top = list.getBoundingClientRect().top + list.clientTop;
-    const bottom = top + list.clientHeight;
+    const edge = list.getBoundingClientRect().top + list.clientTop;
+    const top = edge + (parseFloat(scrollPaddingTop) || 0);
+    const bottom = edge + list.clientHeight - (parseFloat(scrollPaddingBottom) || 0);
     if (box.top < top) list.scrollTop -= top - box.top;
     else if (box.bottom > bottom) list.scrollTop += box.bottom - bottom;
   }

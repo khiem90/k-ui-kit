@@ -51,7 +51,8 @@ const edgePairs: [string, string][] = [
   ["--kui-primary", "--kui-background"],
   ["--kui-primary", "--kui-surface-raised"],
   // A hovered or selected DataTable row is Peach sky, where Ember falls under 3:1. The row draws
-  // its checked box in primary hover and its focus ring in the foreground colour instead.
+  // its checked box in primary hover and its focus ring in the foreground colour instead. A
+  // highlighted Select option is Peach sky too, and draws its check in primary hover.
   ["--kui-primary-hover", "--kui-tint"],
   ["--kui-foreground", "--kui-tint"],
 ];
