@@ -48,6 +48,10 @@ const edgePairs: [string, string][] = [
   // A checked Checkbox is a filled Ember box on the page or in a cream table body.
   ["--kui-primary", "--kui-background"],
   ["--kui-primary", "--kui-surface-raised"],
+  // A hovered or selected DataTable row is Peach sky, where Ember falls under 3:1. The row draws
+  // its checked box in primary hover and its focus ring in the foreground colour instead.
+  ["--kui-primary-hover", "--kui-tint"],
+  ["--kui-foreground", "--kui-tint"],
 ];
 
 const label = (name: string) => name.replace("--kui-", "");
