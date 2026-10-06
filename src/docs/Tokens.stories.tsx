@@ -3,6 +3,7 @@ import type { CSSProperties, ReactNode } from "react";
 import { expect, within } from "storybook/test";
 import {
   Button,
+  Checkbox,
   DataTable,
   Dialog,
   RadioGroup,
@@ -11,7 +12,7 @@ import {
   TextField,
   type ColumnDef,
 } from "../index";
-import { contrast, isTransparentIn, tokenColour } from "./contrast";
+import { contrast, isTransparentIn, toRGB, tokenColour } from "./contrast";
 
 const colours = [
   "--kui-background",
@@ -38,6 +39,7 @@ const colours = [
   "--kui-focus-ring",
   "--kui-focus-ring-on-tint",
   "--kui-overlay",
+  "--kui-rail-color",
 ];
 const shadows = [
   "--kui-shadow-rest",
@@ -45,7 +47,10 @@ const shadows = [
   "--kui-shadow-raised",
   "--kui-shadow-floating",
 ];
-const radii = ["--kui-radius-field", "--kui-radius-card", "--kui-radius-pill", "--kui-radius-arch"];
+const radii = ["field", "button", "tab", "check", "row", "card", "pill", "arch"].map(
+  (part) => `--kui-radius-${part}`,
+);
+const widths = ["--kui-border-width-field", "--kui-rail-width"];
 const spaces = [1, 2, 3, 4, 5, 6, 7, 8].map((step) => `--kui-space-${step}`);
 const paddings = ["--kui-padding-field-inline"];
 const fonts = ["--kui-font-display", "--kui-font-label", "--kui-font-body"];
@@ -214,15 +219,38 @@ function TokenSheet() {
       <Section title="Radius">
         <div style={gridStyle}>
           {radii.map((name) => (
+            // The Token goes straight into border-radius, since a radius Token may hold four
+            // values and a function around it would reject them. The browser shrinks a radius
+            // taller than the swatch, so pill and arch show as the swatch's full curve.
             <Swatch
               key={name}
               name={name}
-              style={{
-                background: "var(--kui-tint)",
-                borderRadius: `min(var(${name}), 50%) min(var(${name}), 50%) 0 0`,
-              }}
+              style={{ background: "var(--kui-tint)", borderRadius: `var(${name})` }}
             />
           ))}
+        </div>
+      </Section>
+      <Section title="Border">
+        <div style={gridStyle}>
+          <Swatch
+            name="--kui-border-width-field"
+            style={{
+              background: "var(--kui-surface-raised)",
+              borderStyle: "solid",
+              borderWidth: "var(--kui-border-width-field)",
+              borderColor: "var(--kui-border)",
+              borderRadius: "var(--kui-radius-field)",
+            }}
+          />
+          <Swatch
+            name="--kui-rail-width"
+            style={{
+              background: "var(--kui-surface-track)",
+              borderBlockStart: "var(--kui-rail-width) solid var(--kui-rail-color)",
+              borderRadius: "var(--kui-radius-tab)",
+              boxShadow: "var(--kui-shadow-track)",
+            }}
+          />
         </div>
       </Section>
       <Section title="Spacing">
@@ -320,9 +348,89 @@ function LabelledParts() {
   );
 }
 
+/** Every part whose corners or edge have a shape role of their own. */
+function ShapedParts() {
+  return (
+    <div style={{ display: "grid", gap: "var(--kui-space-4)", padding: "var(--kui-space-4)" }}>
+      <Button>Save</Button>
+      <TextField label="Email" />
+      <Select.Root defaultValue="lemon">
+        <Select.Trigger aria-label="Fruit" />
+        <Select.Content>
+          <Select.Item value="lemon">Lemon</Select.Item>
+        </Select.Content>
+      </Select.Root>
+      <Checkbox label="Remember me" />
+      <Tabs.Root defaultValue="profile">
+        <Tabs.List aria-label="Account settings">
+          <Tabs.Trigger value="profile">Profile</Tabs.Trigger>
+        </Tabs.List>
+        <Tabs.Content value="profile">Update your name and photo.</Tabs.Content>
+      </Tabs.Root>
+      <DataTable caption="Guests" columns={guestColumns} data={guests} getRowId={(row) => row.id} />
+    </div>
+  );
+}
+
+/** The two parts a Theme may hang a Rail on: a Tabs list and a Dialog. */
+function RailedParts() {
+  return (
+    <div style={{ display: "grid", gap: "var(--kui-space-4)", padding: "var(--kui-space-4)" }}>
+      <Tabs.Root defaultValue="profile">
+        <Tabs.List aria-label="Account settings">
+          <Tabs.Trigger value="profile">Profile</Tabs.Trigger>
+          <Tabs.Trigger value="security">Security</Tabs.Trigger>
+        </Tabs.List>
+        <Tabs.Content value="profile">Update your name and photo.</Tabs.Content>
+        <Tabs.Content value="security">Change your password.</Tabs.Content>
+      </Tabs.Root>
+      <Dialog.Root>
+        <Dialog.Trigger>
+          <Button variant="outline">Open</Button>
+        </Dialog.Trigger>
+        <Dialog.Content>
+          <Dialog.Title>Weekend escape</Dialog.Title>
+          <Dialog.Description>Two nights in a cabin by the lake.</Dialog.Description>
+          <Dialog.Close />
+        </Dialog.Content>
+      </Dialog.Root>
+    </div>
+  );
+}
+
 /** Reads a Token off the root. An empty string means the Token is not defined. */
 const tokenValue = (name: string) =>
   getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+
+/** The top edge of an element: the Rail, where a Theme draws one. */
+const topEdge = (element: Element) => {
+  const style = getComputedStyle(element);
+  return { width: style.borderTopWidth, style: style.borderTopStyle, colour: style.borderTopColor };
+};
+
+/** An element's four corner radii, clockwise from the top left. */
+const corners = (element: Element) => {
+  const style = getComputedStyle(element);
+  return [
+    style.borderTopLeftRadius,
+    style.borderTopRightRadius,
+    style.borderBottomRightRadius,
+    style.borderBottomLeftRadius,
+  ];
+};
+
+/** An element's four border widths, clockwise from the top. */
+const edges = (element: Element) => {
+  const style = getComputedStyle(element);
+  return [
+    style.borderTopWidth,
+    style.borderRightWidth,
+    style.borderBottomWidth,
+    style.borderLeftWidth,
+  ];
+};
+
+const same = (value: string) => [value, value, value, value];
 
 const meta = {
   title: "Tokens",
@@ -372,12 +480,126 @@ export const LabelWeight: Story = {
   },
 };
 
+export const ShapeTokens: Story = {
+  render: () => <ShapedParts />,
+  play: async ({ canvas, userEvent }) => {
+    const button = canvas.getByRole("button", { name: "Save" });
+    const input = canvas.getByLabelText("Email");
+    const trigger = canvas.getByRole("combobox", { name: "Fruit" });
+    const box = canvas
+      .getByRole("checkbox", { name: "Remember me" })
+      .closest(".kui-checkbox")
+      ?.querySelector(".kui-checkbox__box");
+    if (!box) throw new Error("The Checkbox has no box");
+    const tab = canvas.getByRole("tab", { name: "Profile" });
+    const list = canvas.getByRole("tablist", { name: "Account settings" });
+    const cell = canvas.getByRole("cell", { name: "Lena Fischer" });
+    const shapes = () => ({
+      button: corners(button),
+      field: corners(input),
+      trigger: corners(trigger),
+      fieldEdges: edges(input),
+      triggerEdges: edges(trigger),
+      box: corners(box),
+      tab: corners(tab),
+      list: corners(list),
+      row: corners(cell),
+    });
+
+    await expect(shapes()).toEqual({
+      button: same("999px"),
+      field: same("12px"),
+      trigger: same("12px"),
+      fieldEdges: same("2px"),
+      triggerEdges: same("2px"),
+      box: same("6px"),
+      tab: same("999px"),
+      list: same("999px"),
+      row: same("12px"),
+    });
+
+    // Each part follows its own role, and radius pill and radius field no longer reach the parts
+    // that moved off them. Radius tab and border width field take four values, so a Consumer gets
+    // a square-topped tab and an underlined field from one rule each. The values are read before
+    // the overrides are removed, so a failed assertion never leaks into the next Story.
+    const overrides: Record<string, string> = {
+      "--kui-radius-pill": "7px",
+      "--kui-radius-field": "8px",
+      "--kui-radius-button": "3px",
+      "--kui-radius-tab": "0 0 6px 6px",
+      "--kui-radius-check": "1px",
+      "--kui-radius-row": "5px",
+      "--kui-border-width-field": "0 0 3px",
+    };
+    const root = document.documentElement.style;
+    for (const [name, value] of Object.entries(overrides)) root.setProperty(name, value);
+    const overridden = shapes();
+    // The focus rule sets only the colour, so it lands on the one side that has width.
+    await userEvent.click(input);
+    for (const animation of input.getAnimations()) animation.finish();
+    const focused = { edges: edges(input), underline: getComputedStyle(input).borderBottomColor };
+    for (const name of Object.keys(overrides)) root.removeProperty(name);
+
+    await expect(overridden).toEqual({
+      button: same("3px"),
+      field: same("8px"),
+      trigger: same("8px"),
+      fieldEdges: ["0px", "0px", "3px", "0px"],
+      triggerEdges: ["0px", "0px", "3px", "0px"],
+      box: same("1px"),
+      tab: ["0px", "0px", "6px", "6px"],
+      list: ["0px", "0px", "6px", "6px"],
+      row: same("5px"),
+    });
+    await expect(input).toHaveFocus();
+    await expect(focused.edges).toEqual(["0px", "0px", "3px", "0px"]);
+    await expect(toRGB(focused.underline)).toEqual(tokenColour("--kui-primary"));
+  },
+};
+
+export const RailTokens: Story = {
+  render: () => <RailedParts />,
+  play: async ({ canvas, userEvent }) => {
+    const list = canvas.getByRole("tablist", { name: "Account settings" });
+    await userEvent.click(canvas.getByRole("button", { name: "Open" }));
+    const dialog = await within(document.body).findByRole("dialog", {}, { timeout: 2000 });
+    const viewport = dialog.querySelector(".kui-dialog__viewport");
+    if (!viewport) throw new Error("The dialog has no viewport");
+
+    // Ridgeline sets the Rail's width to 0, so neither part draws one, and the Dialog keeps its
+    // arch on top.
+    const ember = tokenColour("--kui-rail-color");
+    for (const part of [list, viewport]) {
+      const edge = topEdge(part);
+      await expect(edge.width).toBe("0px");
+      await expect(toRGB(edge.colour)).toEqual(ember);
+    }
+    const archBefore = corners(viewport);
+
+    // One Consumer rule hangs a bar along the top of both parts, and the arch sits under it. The
+    // values are read before the overrides are removed, so a failed assertion never leaks into the
+    // next Story.
+    const root = document.documentElement.style;
+    root.setProperty("--kui-rail-width", "10px");
+    root.setProperty("--kui-rail-color", "rgb(1, 2, 3)");
+    const overridden = { list: topEdge(list), dialog: topEdge(viewport) };
+    const archAfter = corners(viewport);
+    root.removeProperty("--kui-rail-width");
+    root.removeProperty("--kui-rail-color");
+
+    const rail = { width: "10px", style: "solid", colour: "rgb(1, 2, 3)" };
+    await expect(overridden).toEqual({ list: rail, dialog: rail });
+    await expect(archAfter).toEqual(archBefore);
+  },
+};
+
 export const Ridgeline: Story = {
   play: async () => {
     for (const name of [
       ...colours,
       ...shadows,
       ...radii,
+      ...widths,
       ...spaces,
       ...paddings,
       ...fonts,

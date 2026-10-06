@@ -8,7 +8,7 @@
   padding-block: 0;
   /* Every variant keeps a 2px border, so outline is the same size as the rest. */
   border: 2px solid transparent;
-  border-radius: var(--kui-radius-pill);
+  border-radius: var(--kui-radius-button);
   background: transparent;
   color: var(--kui-foreground);
   font-family: var(--kui-font-label);

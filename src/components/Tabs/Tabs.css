@@ -9,14 +9,17 @@
   flex-direction: row;
 }
 
-/* A track that hugs its tabs. It layers on the page with its own shadow instead of a line. */
+/* A track that hugs its tabs. It layers on the page with its own shadow instead of a line, and
+   hangs from the Rail, a bar along its top that Ridgeline sets to no width. The track takes the
+   tab radius, so square-topped tabs sit in a square-topped track. */
 .kui-tabs__list {
   display: flex;
   flex-shrink: 0;
   align-self: flex-start;
   gap: var(--kui-space-1);
   padding: var(--kui-space-1);
-  border-radius: var(--kui-radius-pill);
+  border-block-start: var(--kui-rail-width) solid var(--kui-rail-color);
+  border-radius: var(--kui-radius-tab);
   background: var(--kui-surface-track);
   box-shadow: var(--kui-shadow-track);
 }
@@ -37,7 +40,7 @@
   margin: 0;
   padding: 0 var(--kui-space-4);
   border: 0;
-  border-radius: var(--kui-radius-pill);
+  border-radius: var(--kui-radius-tab);
   /* The inactive look. The hover and active rules below carry more specificity and win. */
   background: var(--kui-tab);
   color: var(--kui-tab-foreground);
