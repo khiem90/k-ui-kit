@@ -3,18 +3,23 @@ import { expect, fn, waitFor, within } from "storybook/test";
 import { useRef, useState, type CSSProperties } from "react";
 import { Button, Dialog, TextField } from "../../index";
 
-/** The dialog renders in a portal at the end of body, outside the Story's canvas. */
 const findDialog = () => within(document.body).findByRole("dialog", {}, { timeout: 2000 });
 const queryDialog = () => within(document.body).queryByRole("dialog");
 
-/** The overlay carries no role. A Consumer styles it through this class, so a test names it the same way. */
-const getOverlay = () => {
-  const overlay = document.body.querySelector<HTMLElement>(".kui-dialog__overlay");
-  if (!overlay) throw new Error("The overlay is not in the document.");
-  return overlay;
+/**
+ * The overlay is the dialog's ::backdrop, which has no element of its own. A press on it lands on
+ * the dialog element at a point outside the panel's box. Pass this to `userEvent.pointer`.
+ */
+const pressOnBackdrop = (dialog: HTMLElement) => {
+  const box = dialog.getBoundingClientRect();
+  return {
+    keys: "[MouseLeft]",
+    target: dialog,
+    coords: { clientX: box.left / 2, clientY: box.top / 2 },
+  };
 };
 
-/** Radix moves focus a frame after the dialog mounts, and returns it after the close animation. */
+/** Focus can move a frame after the dialog opens or closes, so a test waits for it. */
 const expectFocus = async (element: HTMLElement) => {
   await waitFor(() => expect(element).toHaveFocus());
 };
@@ -115,8 +120,8 @@ export const ClosesOnOverlayClick: Story = {
   play: async ({ canvas, userEvent, args }) => {
     const trigger = canvas.getByRole("button", { name: "Delete file" });
     await userEvent.click(trigger);
-    await findDialog();
-    await userEvent.click(getOverlay());
+    const dialog = await findDialog();
+    await userEvent.pointer(pressOnBackdrop(dialog));
     await expectDismissed(trigger);
     await expect(args.onOpenChange).toHaveBeenLastCalledWith(false);
   },
@@ -255,11 +260,11 @@ export const LongBody: Story = {
     const dialog = await findDialog();
     // defaultOpen opens the panel without reporting a change.
     await expect(args.onOpenChange).not.toHaveBeenCalled();
-    // Everything behind an open dialog leaves the accessibility tree, the trigger included, so
-    // the role query only finds it with hidden elements included.
-    await expect(canvas.queryByRole("button", { name: "Read the terms" })).not.toBeInTheDocument();
+    // Everything behind an open dialog is inert, the trigger included, so it can't take focus.
     const trigger = canvas.getByRole("button", { name: "Read the terms", hidden: true });
     await expect(trigger).toHaveAttribute("data-state", "open");
+    trigger.focus();
+    await expect(trigger).not.toHaveFocus();
 
     const close = within(dialog).getByRole("button", { name: "Close" });
     const end = within(dialog).getByText(lastClause);
@@ -412,7 +417,7 @@ export const Controlled: Story = {
 
 const ShareWithRefs = () => {
   const triggerRef = useRef<HTMLButtonElement>(null);
-  const contentRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDialogElement>(null);
   const titleRef = useRef<HTMLHeadingElement>(null);
   const descriptionRef = useRef<HTMLParagraphElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
@@ -483,5 +488,48 @@ export const PartsThroughRefs: Story = {
     await expect(
       canvas.getByText("Parts: open from dialog, H2 title, P description, Close button"),
     ).toBeVisible();
+  },
+};
+
+export const NativeModal: Story = {
+  play: async ({ canvas, canvasElement, userEvent, args }) => {
+    const trigger = canvas.getByRole("button", { name: "Delete file" });
+    await expect(trigger).toHaveAttribute("aria-haspopup", "dialog");
+    await expect(trigger).toHaveAttribute("aria-expanded", "false");
+    await userEvent.click(trigger);
+
+    // The panel is a native dialog opened as modal. The browser lifts it into the top layer where
+    // it is rendered, so no portal moves it out of the Story's canvas.
+    const dialog = await findDialog();
+    await expect(dialog).toBeInstanceOf(HTMLDialogElement);
+    await expect(dialog.matches(":modal")).toBe(true);
+    await expect(canvasElement).toContainElement(dialog);
+    await expect(trigger).toHaveAttribute("aria-expanded", "true");
+    await expect(trigger).toHaveAttribute("aria-controls", dialog.id);
+
+    // Title and Description name and describe the panel through their ids.
+    const title = within(dialog).getByRole("heading", { name: "Delete report.pdf?" });
+    const description = within(dialog).getByText(/^The file goes for everyone/);
+    await expect(dialog).toHaveAttribute("aria-labelledby", title.id);
+    await expect(dialog).toHaveAttribute("aria-describedby", description.id);
+
+    // A press inside the panel's box leaves it open, even where it lands on the panel itself.
+    const box = dialog.getBoundingClientRect();
+    await userEvent.pointer({
+      keys: "[MouseLeft]",
+      target: dialog,
+      coords: { clientX: box.left + 2, clientY: box.top + 2 },
+    });
+    await expect(queryDialog()).toBe(dialog);
+    await expect(args.onOpenChange).toHaveBeenCalledTimes(1);
+
+    // A close request from the browser, such as a back gesture, fires cancel and closes the
+    // dialog the way Escape does.
+    (dialog as HTMLDialogElement).requestClose();
+    await expectDismissed(trigger);
+    await expect(args.onOpenChange).toHaveBeenLastCalledWith(false);
+    await expect(args.onOpenChange).toHaveBeenCalledTimes(2);
+    await expect(trigger).toHaveAttribute("aria-expanded", "false");
+    await expect(trigger).not.toHaveAttribute("aria-controls");
   },
 };

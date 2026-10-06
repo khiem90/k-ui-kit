@@ -75,7 +75,8 @@ function getElementRef(element: ReactElement<Props>): Ref<unknown> | undefined {
   ) as Ref<unknown>;
 }
 
-function composeRefs<T>(...refs: (Ref<T> | undefined)[]): RefCallback<T> {
+/** One ref callback that sets every ref given. Memoise it, or React resets the refs each render. */
+export function composeRefs<T>(...refs: (Ref<T> | undefined)[]): RefCallback<T> {
   return (node) => {
     const cleanups = refs.map((ref) => setRef(ref, node));
     // React 19 calls a returned cleanup in place of calling the ref again with null.
