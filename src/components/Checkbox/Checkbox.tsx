@@ -6,10 +6,10 @@ import {
   useImperativeHandle,
   useLayoutEffect,
   useRef,
-  useState,
   type InputHTMLAttributes,
   type ReactNode,
 } from "react";
+import { useControllableState } from "../../controllable-state.js";
 import { CheckIcon, MinusIcon } from "../../icons.js";
 
 /**
@@ -68,9 +68,11 @@ export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(function Che
   useImperativeHandle(ref, () => inputRef.current as HTMLInputElement, []);
   // Owning the state keeps the input controlled at all times, so an uncontrolled box toggled while
   // indeterminate lands on checked once the Consumer clears that prop.
-  const [uncontrolledChecked, setUncontrolledChecked] = useState(defaultChecked);
-  const isControlled = checkedProp !== undefined;
-  const checked = isControlled ? checkedProp : uncontrolledChecked;
+  const [checked, setChecked] = useControllableState({
+    prop: checkedProp,
+    defaultProp: defaultChecked,
+    onChange: onCheckedChange,
+  });
   const state = indeterminate ? "indeterminate" : checked ? "checked" : "unchecked";
 
   // The mixed state has no HTML attribute. Only the DOM property reaches assistive technology.
@@ -98,8 +100,7 @@ export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(function Che
             // A click clears the property. Put it back until the Consumer drops the prop, since a
             // Consumer that ignores the change causes no render to do it.
             event.currentTarget.indeterminate = indeterminate;
-            if (!isControlled) setUncontrolledChecked(nextChecked);
-            onCheckedChange?.(nextChecked);
+            setChecked(nextChecked);
           }}
           {...props}
         />

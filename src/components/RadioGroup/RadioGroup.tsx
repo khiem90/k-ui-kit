@@ -7,14 +7,15 @@ import {
   useContext,
   useEffect,
   useId,
+  useMemo,
   useRef,
-  useState,
   type ChangeEvent,
   type HTMLAttributes,
   type InputHTMLAttributes,
   type ReactNode,
-  type Ref,
 } from "react";
+import { composeRefs } from "../../compose.js";
+import { useControllableState } from "../../controllable-state.js";
 
 interface RadioGroupContextValue {
   value: string | undefined;
@@ -79,25 +80,24 @@ const Root = forwardRef<HTMLDivElement, RadioGroupRootProps>(function RadioGroup
   ref,
 ) {
   // Owning the state lets each item put data-state on its root, the way Checkbox and Switch do.
-  const [uncontrolledValue, setUncontrolledValue] = useState(defaultValue);
-  const isControlled = valueProp !== undefined;
-  const value = isControlled ? valueProp : uncontrolledValue;
+  const [value, setValue, isControlled] = useControllableState({
+    prop: valueProp,
+    defaultProp: defaultValue,
+    onChange: onValueChange,
+  });
   const labelId = useId();
   // The items are native radios, so the shared name is what makes the browser treat them as one
   // group: one Tab stop, arrow keys that move the selection, and one value in the form.
   const generatedName = useId();
   const name = nameProp ?? generatedName;
 
-  const select = (next: string) => {
-    if (!isControlled) setUncontrolledValue(next);
-    onValueChange?.(next);
-  };
-
   // A form reset puts native radios back to their default. Uncontrolled, that is defaultValue.
-  // Controlled, the default tracks the current value, so a reset leaves the selection alone.
-  const reset = useCallback(() => {
-    if (!isControlled) setUncontrolledValue(defaultValue);
-  }, [isControlled, defaultValue]);
+  // Controlled, the default tracks the current value, so a reset leaves the selection alone. The
+  // browser reports no change for a reset, so neither does the group.
+  const reset = useCallback(
+    () => setValue(defaultValue, { silent: true }),
+    [setValue, defaultValue],
+  );
 
   // The Label part renders under labelId, so server HTML already names the group, and a Consumer
   // who names it with aria-label gets no dangling reference. Orientation only sets the layout:
@@ -111,7 +111,7 @@ const Root = forwardRef<HTMLDivElement, RadioGroupRootProps>(function RadioGroup
         required,
         disabled,
         labelId,
-        select,
+        select: setValue,
         reset,
       }}
     >
@@ -147,11 +147,6 @@ export interface RadioGroupItemProps extends Omit<
   label: ReactNode;
 }
 
-function setRef<T>(ref: Ref<T> | undefined, node: T | null) {
-  if (typeof ref === "function") ref(node);
-  else if (ref) ref.current = node;
-}
-
 const Item = forwardRef<HTMLInputElement, RadioGroupItemProps>(function RadioGroupItem(
   { value, label, disabled, id: idProp, className, onChange, ...props },
   ref,
@@ -163,13 +158,7 @@ const Item = forwardRef<HTMLInputElement, RadioGroupItemProps>(function RadioGro
   const isDefault = group.resetValue === value;
   const isDisabled = group.disabled || disabled;
   const inputRef = useRef<HTMLInputElement | null>(null);
-  const setInputRef = useCallback(
-    (node: HTMLInputElement | null) => {
-      inputRef.current = node;
-      setRef(ref, node);
-    },
-    [ref],
-  );
+  const setInputRef = useMemo(() => composeRefs(ref, inputRef), [ref]);
 
   // React writes the checked attribute once, at mount. Keeping it on the default item means a
   // native form reset restores the selection the group's state will settle on.

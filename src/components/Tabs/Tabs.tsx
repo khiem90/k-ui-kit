@@ -7,13 +7,15 @@ import {
   useContext,
   useId,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
   type ButtonHTMLAttributes,
   type HTMLAttributes,
   type KeyboardEvent,
-  type SyntheticEvent,
 } from "react";
+import { composeEventHandlers, composeRefs } from "../../compose.js";
+import { useControllableState } from "../../controllable-state.js";
 
 export type TabsOrientation = "horizontal" | "vertical";
 
@@ -40,17 +42,6 @@ const partId = (baseId: string, part: string, value: string) =>
   `${baseId}-${part}-${value.replace(/\s/g, "-")}`;
 
 const join = (...classNames: (string | undefined)[]) => classNames.filter(Boolean).join(" ");
-
-// The Consumer's handler runs first. Calling preventDefault in it skips the kit's handler.
-function compose<E extends SyntheticEvent>(
-  theirs: ((event: E) => void) | undefined,
-  ours: (event: E) => void,
-) {
-  return (event: E) => {
-    theirs?.(event);
-    if (!event.defaultPrevented) ours(event);
-  };
-}
 
 /**
  * The ref, `className`, and every other prop go to the element that wraps the list and the panels.
@@ -85,17 +76,17 @@ const Root = forwardRef<HTMLDivElement, TabsRootProps>(function TabsRoot(
   ref,
 ) {
   const baseId = useId();
-  const [uncontrolledValue, setUncontrolledValue] = useState(defaultValue);
-  const isControlled = valueProp !== undefined;
-  const value = isControlled ? valueProp : uncontrolledValue;
+  const [value, setValue] = useControllableState({
+    prop: valueProp,
+    defaultProp: defaultValue,
+    onChange: onValueChange,
+  });
 
   const select = useCallback(
     (next: string) => {
-      if (next === value) return;
-      if (!isControlled) setUncontrolledValue(next);
-      onValueChange?.(next);
+      if (next !== value) setValue(next);
     },
-    [value, isControlled, onValueChange],
+    [value, setValue],
   );
 
   return (
@@ -141,14 +132,7 @@ const List = forwardRef<HTMLDivElement, TabsListProps>(function TabsList(
     setFallbackStop(hasActive ? undefined : enabled[0]?.id);
   }, [value, children]);
 
-  const setRef = useCallback(
-    (node: HTMLDivElement | null) => {
-      listRef.current = node;
-      if (typeof forwardedRef === "function") forwardedRef(node);
-      else if (forwardedRef) forwardedRef.current = node;
-    },
-    [forwardedRef],
-  );
+  const setRef = useMemo(() => composeRefs(forwardedRef, listRef), [forwardedRef]);
 
   return (
     <FallbackStopContext.Provider value={fallbackStop}>
@@ -234,15 +218,15 @@ const Trigger = forwardRef<HTMLButtonElement, TabsTriggerProps>(function TabsTri
       {...props}
       // A primary press activates before focus lands, so the tab and its panel switch together.
       // Other buttons and Ctrl-click leave focus where it is.
-      onMouseDown={compose(onMouseDown, (event) => {
+      onMouseDown={composeEventHandlers(onMouseDown, (event) => {
         if (disabled) return;
         if (event.button === 0 && !event.ctrlKey) context.select(value);
         else event.preventDefault();
       })}
-      onFocus={compose(onFocus, () => {
+      onFocus={composeEventHandlers(onFocus, () => {
         if (!disabled) context.select(value);
       })}
-      onKeyDown={compose(onKeyDown, moveFocus)}
+      onKeyDown={composeEventHandlers(onKeyDown, moveFocus)}
     />
   );
 });

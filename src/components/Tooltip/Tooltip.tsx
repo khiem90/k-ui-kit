@@ -8,16 +8,15 @@ import {
   useId,
   useMemo,
   useRef,
-  useState,
-  version,
   type HTMLAttributes,
   type PointerEvent,
   type ReactElement,
   type ReactNode,
   type Ref,
-  type SyntheticEvent,
 } from "react";
-import { composeRefs, useAnchoredPopover } from "../../popover.js";
+import { composeEventHandlers, composeRefs, getElementRef } from "../../compose.js";
+import { useControllableState } from "../../controllable-state.js";
+import { useAnchoredPopover } from "../../popover.js";
 
 export type TooltipSide = "top" | "right" | "bottom" | "left";
 
@@ -51,24 +50,6 @@ export interface TooltipProps extends Omit<HTMLAttributes<HTMLDivElement>, "cont
 
 type TriggerProps = HTMLAttributes<HTMLElement> & { ref?: Ref<HTMLElement> };
 
-/** Runs the Consumer's handler first, and the kit's only if the Consumer did not prevent it. */
-function compose<E extends SyntheticEvent>(
-  theirs: ((event: E) => void) | undefined,
-  ours: (event: E) => void,
-) {
-  return (event: E) => {
-    theirs?.(event);
-    if (!event.defaultPrevented) ours(event);
-  };
-}
-
-/** React 19 keeps an element's ref in its props. React 18 keeps it on the element. */
-function refOf(element: ReactElement<TriggerProps>): Ref<HTMLElement> | undefined {
-  return Number(version.split(".")[0]) >= 19
-    ? element.props.ref
-    : (element as unknown as { ref?: Ref<HTMLElement> }).ref;
-}
-
 /**
  * A short description of its trigger. It opens on hover and keyboard focus, closes on Escape and
  * blur, and screen readers read it as the trigger's description.
@@ -91,9 +72,11 @@ export const Tooltip = forwardRef<HTMLDivElement, TooltipProps>(function Tooltip
   },
   ref,
 ) {
-  const [uncontrolledOpen, setUncontrolledOpen] = useState(defaultOpen);
-  const isControlled = openProp !== undefined;
-  const open = isControlled ? openProp : uncontrolledOpen;
+  const [open, setOpenState] = useControllableState({
+    prop: openProp,
+    defaultProp: defaultOpen,
+    onChange: onOpenChange,
+  });
   const state = open ? "open" : "closed";
   const generatedId = useId();
   const id = idProp ?? generatedId;
@@ -122,8 +105,7 @@ export const Tooltip = forwardRef<HTMLDivElement, TooltipProps>(function Tooltip
     if (openRef.current === next) return;
     openRef.current = next;
     if (next) document.dispatchEvent(new CustomEvent(TOOLTIP_OPEN));
-    if (!isControlled) setUncontrolledOpen(next);
-    onOpenChange?.(next);
+    setOpenState(next);
   };
 
   const closeAfterGrace = () => {
@@ -160,7 +142,7 @@ export const Tooltip = forwardRef<HTMLDivElement, TooltipProps>(function Tooltip
   });
 
   const child = Children.only(children) as ReactElement<TriggerProps>;
-  const childRef = refOf(child);
+  const childRef = getElementRef<HTMLElement>(child);
   const triggerRef = useMemo(() => composeRefs(childRef, anchorRef), [childRef, anchorRef]);
   const describedBy = [child.props["aria-describedby"], open ? id : undefined]
     .filter(Boolean)
@@ -171,26 +153,29 @@ export const Tooltip = forwardRef<HTMLDivElement, TooltipProps>(function Tooltip
     style: { ...child.props.style, ...anchorStyle },
     "data-state": state,
     "aria-describedby": describedBy || undefined,
-    onPointerMove: compose(child.props.onPointerMove, (event: PointerEvent<HTMLElement>) => {
-      if (event.pointerType === "touch" || hovering.current) return;
-      hovering.current = true;
-      clearTimeout(closeTimer.current);
-      if (!openRef.current) openTimer.current = setTimeout(() => setOpen(true), delay);
-    }),
-    onPointerLeave: compose(child.props.onPointerLeave, () => {
+    onPointerMove: composeEventHandlers(
+      child.props.onPointerMove,
+      (event: PointerEvent<HTMLElement>) => {
+        if (event.pointerType === "touch" || hovering.current) return;
+        hovering.current = true;
+        clearTimeout(closeTimer.current);
+        if (!openRef.current) openTimer.current = setTimeout(() => setOpen(true), delay);
+      },
+    ),
+    onPointerLeave: composeEventHandlers(child.props.onPointerLeave, () => {
       hovering.current = false;
       clearTimeout(openTimer.current);
       if (openRef.current) closeAfterGrace();
     }),
-    onPointerDown: compose(child.props.onPointerDown, () => {
+    onPointerDown: composeEventHandlers(child.props.onPointerDown, () => {
       pressing.current = true;
       document.addEventListener("pointerup", () => (pressing.current = false), { once: true });
     }),
-    onClick: compose(child.props.onClick, () => setOpen(false)),
-    onFocus: compose(child.props.onFocus, () => {
+    onClick: composeEventHandlers(child.props.onClick, () => setOpen(false)),
+    onFocus: composeEventHandlers(child.props.onFocus, () => {
       if (!pressing.current) setOpen(true);
     }),
-    onBlur: compose(child.props.onBlur, () => setOpen(false)),
+    onBlur: composeEventHandlers(child.props.onBlur, () => setOpen(false)),
   } as TriggerProps);
 
   return (
@@ -204,8 +189,10 @@ export const Tooltip = forwardRef<HTMLDivElement, TooltipProps>(function Tooltip
           className={["kui-tooltip", className].filter(Boolean).join(" ")}
           data-state={state}
           style={{ ...popoverProps.style, ...style }}
-          onPointerEnter={compose(onPointerEnter, () => clearTimeout(closeTimer.current))}
-          onPointerLeave={compose(onPointerLeave, closeAfterGrace)}
+          onPointerEnter={composeEventHandlers(onPointerEnter, () =>
+            clearTimeout(closeTimer.current),
+          )}
+          onPointerLeave={composeEventHandlers(onPointerLeave, closeAfterGrace)}
           {...props}
         >
           {content}

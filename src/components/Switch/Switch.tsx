@@ -5,12 +5,15 @@ import {
   useCallback,
   useEffect,
   useId,
+  useMemo,
   useRef,
   useState,
   type ButtonHTMLAttributes,
   type MouseEvent,
   type ReactNode,
 } from "react";
+import { composeRefs } from "../../compose.js";
+import { useControllableState } from "../../controllable-state.js";
 
 /**
  * `className` lands on the root element. Every other prop, including the ref, goes to the button
@@ -68,21 +71,16 @@ export const Switch = forwardRef<HTMLButtonElement, SwitchProps>(function Switch
   const id = idProp ?? generatedId;
   // Owning the state puts data-state on the root, where Checkbox exposes it too, so a Consumer
   // targets both the same way.
-  const [uncontrolledChecked, setUncontrolledChecked] = useState(defaultChecked);
-  const isControlled = checkedProp !== undefined;
-  const checked = isControlled ? checkedProp : uncontrolledChecked;
+  const [checked, setCheckedState] = useControllableState({
+    prop: checkedProp,
+    defaultProp: defaultChecked,
+    onChange: onCheckedChange,
+  });
   const state = checked ? "checked" : "unchecked";
   const [initialChecked] = useState(checked);
 
   const [button, setButton] = useState<HTMLButtonElement | null>(null);
-  const buttonRef = useCallback(
-    (node: HTMLButtonElement | null) => {
-      setButton(node);
-      if (typeof ref === "function") ref(node);
-      else if (ref) ref.current = node;
-    },
-    [ref],
-  );
+  const buttonRef = useMemo(() => composeRefs(ref, setButton), [ref]);
   const inputRef = useRef<HTMLInputElement>(null);
   // The state a user toggle asked for, and whether the Consumer stopped its click. A change that
   // lands on that state is announced to the form with a click from the hidden input.
@@ -93,11 +91,9 @@ export const Switch = forwardRef<HTMLButtonElement, SwitchProps>(function Switch
 
   const setChecked = useCallback(
     (next: boolean) => {
-      if (next === checked) return;
-      if (!isControlled) setUncontrolledChecked(next);
-      onCheckedChange?.(next);
+      if (next !== checked) setCheckedState(next);
     },
-    [checked, isControlled, onCheckedChange],
+    [checked, setCheckedState],
   );
 
   const handleClick = (event: MouseEvent<HTMLButtonElement>) => {

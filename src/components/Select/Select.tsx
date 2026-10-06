@@ -20,11 +20,12 @@ import {
   type ReactNode,
   type Ref,
   type RefObject,
-  type SyntheticEvent,
 } from "react";
 import { createPortal } from "react-dom";
+import { composeEventHandlers, composeRefs } from "../../compose.js";
+import { useControllableState } from "../../controllable-state.js";
 import { CheckIcon, ChevronDownIcon } from "../../icons.js";
-import { composeRefs, useAnchoredPopover } from "../../popover.js";
+import { useAnchoredPopover } from "../../popover.js";
 
 export type SelectSize = "sm" | "md" | "lg";
 
@@ -81,17 +82,6 @@ function useSelectContext(part: string) {
   const context = useContext(SelectContext);
   if (!context) throw new Error(`Select.${part} must be rendered inside Select.Root.`);
   return context;
-}
-
-/** Runs the Consumer's handler first, and the kit's only if the Consumer did not prevent it. */
-function compose<E extends SyntheticEvent>(
-  theirs: ((event: E) => void) | undefined,
-  ours: (event: E) => void,
-) {
-  return (event: E) => {
-    theirs?.(event);
-    if (!event.defaultPrevented) ours(event);
-  };
 }
 
 /** No value, or an empty one, shows the placeholder, as a native select's empty option does. */
@@ -219,9 +209,11 @@ const Root = ({
   disabled = false,
   children,
 }: SelectRootProps) => {
-  const [uncontrolledValue, setUncontrolledValue] = useState(defaultValue);
-  const isControlled = valueProp !== undefined;
-  const value = isControlled ? valueProp : uncontrolledValue;
+  const [value, setValueState] = useControllableState({
+    prop: valueProp,
+    defaultProp: defaultValue,
+    onChange: onValueChange,
+  });
   // A form reset returns to the value the Select started with.
   const [initialValue] = useState(value);
   const [open, setOpen] = useState(false);
@@ -242,8 +234,7 @@ const Root = ({
   const setValue = (next: string) => {
     if (next === valueRef.current) return;
     valueRef.current = next;
-    if (!isControlled) setUncontrolledValue(next);
-    onValueChange?.(next);
+    setValueState(next);
   };
   useEffect(() => {
     valueRef.current = value;
@@ -595,8 +586,8 @@ const Content = forwardRef<HTMLDivElement, SelectContentProps>(function SelectCo
       ref={contentRef}
       popover="manual"
       style={{ ...context.popoverStyle, ...style }}
-      onKeyDown={compose(onKeyDown, handleKeyDown)}
-      onBlur={compose(onBlur, handleBlur)}
+      onKeyDown={composeEventHandlers(onKeyDown, handleKeyDown)}
+      onBlur={composeEventHandlers(onBlur, handleBlur)}
     >
       {children}
     </div>
@@ -674,9 +665,9 @@ const Item = forwardRef<HTMLDivElement, SelectItemProps>(function SelectItem(
       className={["kui-select__item", className].filter(Boolean).join(" ")}
       {...props}
       ref={composedRef}
-      onFocus={compose(onFocus, () => setHighlighted(true))}
-      onBlur={compose(onBlur, () => setHighlighted(false))}
-      onKeyDown={compose(onKeyDown, (event: KeyboardEvent<HTMLDivElement>) => {
+      onFocus={composeEventHandlers(onFocus, () => setHighlighted(true))}
+      onBlur={composeEventHandlers(onBlur, () => setHighlighted(false))}
+      onKeyDown={composeEventHandlers(onKeyDown, (event: KeyboardEvent<HTMLDivElement>) => {
         if (disabled || event.target !== event.currentTarget) return;
         // A space typed in the middle of a search is part of it, not a pick.
         if (event.key === " " && context.listTypeahead.isTyping()) return;

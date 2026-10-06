@@ -77,7 +77,7 @@ Tokens expire, so repeat steps 2 and 3 when a Release run fails with an authenti
 - `src/components/<Name>/` holds a Component's source, CSS, and Stories.
 - `src/styles/` holds the Ridgeline Tokens, the main entry stylesheet, and the opt-in fonts stylesheet.
 - `src/fonts/` holds the woff2 files and each family's OFL.txt. The build copies them to `dist/fonts/` unchanged.
-- `src/icons.tsx` holds the inline SVG icons the kit's own Components use. `src/slot.tsx` holds the Slot behind `asChild`, and `src/popover.tsx` the anchored popover hook Tooltip and Select share. None of them are exported.
+- `src/icons.tsx` holds the inline SVG icons the kit's own Components use. `src/slot.tsx` holds the Slot behind `asChild`, and `src/popover.tsx` the anchored popover hook Tooltip and Select share. `src/compose.ts` merges refs and event handlers, and `src/controllable-state.ts` holds the controlled or uncontrolled state every stateful Component uses. None of them are exported, and each needs its own line in the tsup entry list.
 - `src/index.ts` is the public entry. It carries no client directive and assembles the composite namespaces, so a server component can render `Dialog.Root`. Each Component's file carries its own directive and is built to its own file under `dist/`. `docs/adr/0003-client-boundary-below-the-entry.md` has the reasoning.
 - `scripts/` holds the build verifier and the Consumer smoke test.
 - `src/docs/` holds the Getting started page and the Story it renders.

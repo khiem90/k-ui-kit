@@ -10,6 +10,8 @@ export default defineConfig({
     "src/icons.tsx",
     "src/slot.tsx",
     "src/popover.tsx",
+    "src/compose.ts",
+    "src/controllable-state.ts",
     "src/components/*/*.tsx",
     "!src/components/*/*.stories.tsx",
     "src/styles/index.css",

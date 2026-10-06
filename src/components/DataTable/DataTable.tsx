@@ -16,6 +16,7 @@ import {
   type RefAttributes,
   type TableHTMLAttributes,
 } from "react";
+import { useControllableState } from "../../controllable-state.js";
 import { ChevronDownIcon } from "../../icons.js";
 import { Button } from "../Button/Button.js";
 import { Checkbox } from "../Checkbox/Checkbox.js";
@@ -416,15 +417,14 @@ function DataTableInner<TData>(
     setPageIndex(0);
   };
 
-  const [uncontrolledSelectedIds, setUncontrolledSelectedIds] = useState(defaultSelectedIds);
-  const isSelectionControlled = selectedIdsProp !== undefined;
-  const selectedIds = isSelectionControlled ? selectedIdsProp : uncontrolledSelectedIds;
+  const [selectedIds, setSelectedIds] = useControllableState<readonly string[]>({
+    prop: selectedIdsProp,
+    defaultProp: defaultSelectedIds,
+    onChange: onSelectionChange,
+  });
   const selectedIdSet = useMemo(() => new Set(selectedIds), [selectedIds]);
-  const setSelected = (rowIds: readonly string[], selected: boolean) => {
-    const next = updateSelection(selectedIds, rowIds, selected);
-    if (!isSelectionControlled) setUncontrolledSelectedIds(next);
-    onSelectionChange?.(next);
-  };
+  const setSelected = (rowIds: readonly string[], selected: boolean) =>
+    setSelectedIds(updateSelection(selectedIds, rowIds, selected));
 
   // While loading the body shows the status in place of the rows, so select-all has nothing to
   // act on.
