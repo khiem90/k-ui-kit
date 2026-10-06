@@ -54,6 +54,7 @@ const meta = {
         <div
           style={{
             display: "flex",
+            flexWrap: "wrap",
             gap: "var(--kui-space-2)",
             justifyContent: "flex-end",
             marginBlockStart: "var(--kui-space-6)",
@@ -488,6 +489,151 @@ export const PartsThroughRefs: Story = {
     await expect(
       canvas.getByText("Parts: open from dialog, H2 title, P description, Close button"),
     ).toBeVisible();
+  },
+};
+
+/** What a style resolves to through the browser, so a Token compares with what an element draws. */
+const resolveStyle = (property: "color" | "boxShadow" | "fontFamily", value: string) => {
+  const probe = document.createElement("span");
+  probe.style[property] = value;
+  document.body.append(probe);
+  const resolved = getComputedStyle(probe)[property];
+  probe.remove();
+  return resolved;
+};
+
+const tokenPx = (name: string) =>
+  parseFloat(getComputedStyle(document.documentElement).getPropertyValue(name));
+
+type Corner = "TopLeft" | "TopRight" | "BottomLeft" | "BottomRight";
+
+/** A corner's radius as [horizontal, vertical] pixels. */
+const cornerRadius = (style: CSSStyleDeclaration, corner: Corner) => {
+  const [x = 0, y = x] = style[`border${corner}Radius`].split(" ").map(parseFloat);
+  return [x, y];
+};
+
+/** Checks the Ridgeline look on an open dialog that has settled. */
+const expectRidgeline = async (dialog: HTMLElement) => {
+  const surface = dialog.querySelector<HTMLElement>(".kui-dialog__viewport");
+  if (!surface) throw new Error("The dialog has no viewport");
+  const panel = getComputedStyle(surface);
+  await expect(panel.backgroundColor).toBe(resolveStyle("color", "var(--kui-surface-raised)"));
+  await expect(panel.boxShadow).toBe(resolveStyle("boxShadow", "var(--kui-shadow-floating)"));
+  await expect(getComputedStyle(dialog, "::backdrop").backgroundColor).toBe(
+    resolveStyle("color", "var(--kui-overlay)"),
+  );
+
+  // Each top corner is a quarter circle, never an ellipse, and no wider than half the panel, where
+  // the two quarters meet.
+  const arch = Math.min(tokenPx("--kui-radius-arch"), dialog.getBoundingClientRect().width / 2);
+  const card = tokenPx("--kui-radius-card");
+  await expect(cornerRadius(panel, "TopLeft")).toEqual([arch, arch]);
+  await expect(cornerRadius(panel, "TopRight")).toEqual([arch, arch]);
+  await expect(cornerRadius(panel, "BottomLeft")).toEqual([card, card]);
+  await expect(cornerRadius(panel, "BottomRight")).toEqual([card, card]);
+  // A browser shrinks every corner when a side's two radii add up to more than the side, so the
+  // panel stays tall enough for the arch and a card corner below it.
+  await expect(surface.getBoundingClientRect().height).toBeGreaterThanOrEqual(arch + card);
+
+  // The header is centred on the panel: an italic display Title in Ember, muted body text below.
+  const box = dialog.getBoundingClientRect();
+  const middle = box.left + box.width / 2;
+  const title = within(dialog).getByRole("heading");
+  const description = dialog.querySelector<HTMLElement>(".kui-dialog__description");
+  if (!description) throw new Error("The dialog has no description");
+  for (const part of [title, description]) {
+    const partBox = part.getBoundingClientRect();
+    await expect(partBox.left + partBox.width / 2).toBeCloseTo(middle, 0);
+    await expect(getComputedStyle(part).textAlign).toBe("center");
+  }
+  const titleStyle = getComputedStyle(title);
+  await expect(titleStyle.fontFamily).toBe(resolveStyle("fontFamily", "var(--kui-font-display)"));
+  await expect(titleStyle.fontStyle).toBe("italic");
+  await expect(titleStyle.color).toBe(resolveStyle("color", "var(--kui-primary)"));
+  const descriptionStyle = getComputedStyle(description);
+  await expect(descriptionStyle.fontFamily).toBe(
+    resolveStyle("fontFamily", "var(--kui-font-body)"),
+  );
+  await expect(descriptionStyle.color).toBe(resolveStyle("color", "var(--kui-foreground-muted)"));
+  await expect(description.getBoundingClientRect().top).toBeGreaterThanOrEqual(
+    title.getBoundingClientRect().bottom,
+  );
+
+  // The close button and its focus outline (2px, offset 2px) sit inside the arch's curve. Its outer
+  // corner is the point nearest the panel's clipped corner, so that point is checked against the
+  // circle the corner is cut from.
+  const close = within(dialog).getByRole("button", { name: "Close" });
+  const ring = 4;
+  const closeBox = close.getBoundingClientRect();
+  const fromEnd = box.right - (closeBox.right + ring);
+  const fromTop = closeBox.top - ring - box.top;
+  await expect(fromEnd).toBeGreaterThanOrEqual(0);
+  await expect(fromTop).toBeGreaterThanOrEqual(0);
+  await expect(Math.hypot(arch - fromEnd, arch - fromTop)).toBeLessThanOrEqual(arch);
+  // And it stays clear of the title, which wraps before reaching it.
+  const titleBox = title.getBoundingClientRect();
+  const overlaps =
+    closeBox.left < titleBox.right &&
+    titleBox.left < closeBox.right &&
+    closeBox.top < titleBox.bottom &&
+    titleBox.top < closeBox.bottom;
+  await expect(overlaps).toBe(false);
+  return arch;
+};
+
+const NarrowAndWide = () => (
+  <div style={{ display: "flex", gap: "var(--kui-space-4)" }}>
+    <Dialog.Root>
+      <Dialog.Trigger>
+        <Button variant="outline">Open the narrow dialog</Button>
+      </Dialog.Trigger>
+      {/* The default width on a 320px phone. */}
+      <Dialog.Content style={{ inlineSize: "18rem" }}>
+        <Dialog.Title>Weekend escape</Dialog.Title>
+        <Dialog.Description>Two nights in a cabin above the tree line.</Dialog.Description>
+        <Dialog.Close />
+      </Dialog.Content>
+    </Dialog.Root>
+    <Dialog.Root>
+      <Dialog.Trigger>
+        <Button variant="outline">Open the wide dialog</Button>
+      </Dialog.Trigger>
+      <Dialog.Content style={{ inlineSize: "40rem" }}>
+        <Dialog.Title>Weekend escape</Dialog.Title>
+        <Dialog.Description>
+          Two nights in a cabin above the tree line, with the trail map and the key code sent the
+          day before you arrive.
+        </Dialog.Description>
+        <Dialog.Close />
+      </Dialog.Content>
+    </Dialog.Root>
+  </div>
+);
+
+/**
+ * The top corners take the arch radius, capped at half the panel's width. The narrow panel is
+ * under twice the arch, so its top is a semicircle. The wide one keeps the full arch.
+ */
+export const ArchAtTwoWidths: Story = {
+  render: () => <NarrowAndWide />,
+  play: async ({ canvas, userEvent }) => {
+    for (const name of ["Open the narrow dialog", "Open the wide dialog"]) {
+      const trigger = canvas.getByRole("button", { name });
+      await userEvent.click(trigger);
+      const dialog = await findDialog();
+      await waitFor(() => expect(dialog.getAnimations()).toHaveLength(0));
+      const arch = await expectRidgeline(dialog);
+      // The narrow panel is under twice the arch Token, so the cap applies. The wide one is over it,
+      // and it stays open, so the Story ends showing it.
+      if (name === "Open the narrow dialog") {
+        await expect(arch).toBeLessThan(tokenPx("--kui-radius-arch"));
+        await userEvent.keyboard("{Escape}");
+        await expectDismissed(trigger);
+      } else {
+        await expect(arch).toBe(tokenPx("--kui-radius-arch"));
+      }
+    }
   },
 };
 
