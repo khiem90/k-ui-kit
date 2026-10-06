@@ -13,6 +13,7 @@ import {
   type ColumnDef,
 } from "../index";
 import { colourIn, contrast, isTransparentIn, toRGB, tokenColour } from "./contrast";
+import { settledStyle, withRootOverrides } from "./story-helpers";
 
 const colours = [
   "--kui-background",
@@ -320,10 +321,19 @@ interface Guest {
 const guestColumns: ColumnDef<Guest>[] = [{ accessorKey: "name", header: "Name" }];
 const guests: Guest[] = [{ id: "g-1", name: "Lena Fischer" }];
 
+/** A padded column of parts, one per row. */
+function Stack({ children }: { children: ReactNode }) {
+  return (
+    <div style={{ display: "grid", gap: "var(--kui-space-4)", padding: "var(--kui-space-4)" }}>
+      {children}
+    </div>
+  );
+}
+
 /** Every part the kit sets in the label style, plus the two headings that share its weight. */
 function LabelledParts() {
   return (
-    <div style={{ display: "grid", gap: "var(--kui-space-4)", padding: "var(--kui-space-4)" }}>
+    <Stack>
       <Button>Save</Button>
       <TextField label="Email" />
       <RadioGroup.Root>
@@ -360,14 +370,14 @@ function LabelledParts() {
           <Dialog.Close />
         </Dialog.Content>
       </Dialog.Root>
-    </div>
+    </Stack>
   );
 }
 
 /** Every part whose corners or edge have a shape role of their own. */
 function ShapedParts() {
   return (
-    <div style={{ display: "grid", gap: "var(--kui-space-4)", padding: "var(--kui-space-4)" }}>
+    <Stack>
       <Button>Save</Button>
       <TextField label="Email" />
       <Select.Root defaultValue="lemon">
@@ -384,14 +394,14 @@ function ShapedParts() {
         <Tabs.Content value="profile">Update your name and photo.</Tabs.Content>
       </Tabs.Root>
       <DataTable caption="Guests" columns={guestColumns} data={guests} getRowId={(row) => row.id} />
-    </div>
+    </Stack>
   );
 }
 
 /** The two parts a Theme may hang a Rail on: a Tabs list and a Dialog. */
 function RailedParts() {
   return (
-    <div style={{ display: "grid", gap: "var(--kui-space-4)", padding: "var(--kui-space-4)" }}>
+    <Stack>
       <Tabs.Root defaultValue="profile">
         <Tabs.List aria-label="Account settings">
           <Tabs.Trigger value="profile">Profile</Tabs.Trigger>
@@ -410,7 +420,7 @@ function RailedParts() {
           <Dialog.Close />
         </Dialog.Content>
       </Dialog.Root>
-    </div>
+    </Stack>
   );
 }
 
@@ -434,9 +444,9 @@ function NorenSheet() {
   return (
     <div data-theme="noren">
       <TokenSheet />
-      <div style={{ display: "grid", gap: "var(--kui-space-4)", padding: "var(--kui-space-4)" }}>
+      <Stack>
         <TextField label="Email" />
-      </div>
+      </Stack>
       <RailedParts />
     </div>
   );
@@ -449,9 +459,11 @@ const tokenValue = (name: string) =>
 /**
  * The declarations of the stylesheet rule that selects a Theme by its attribute. A Theme block
  * that forgets a Token is invisible to computed style, which inherits the root's value, so the
- * check reads the block itself.
+ * check reads the block itself. The quotes around the value are optional in the match, since a
+ * minifier drops them from the built stylesheet.
  */
 function themeDeclarations(theme: string) {
+  const selectsTheme = new RegExp(`data-theme=["']?${theme}["']?`);
   for (const sheet of document.styleSheets) {
     let rules: CSSRuleList;
     try {
@@ -460,7 +472,7 @@ function themeDeclarations(theme: string) {
       continue;
     }
     for (const rule of rules) {
-      if (rule instanceof CSSStyleRule && rule.selectorText.includes(`data-theme="${theme}"`)) {
+      if (rule instanceof CSSStyleRule && selectsTheme.test(rule.selectorText)) {
         return rule.style;
       }
     }
@@ -485,12 +497,6 @@ async function expectContrastIn(root: Element) {
     await expect(ratio, `${edge} on ${background}`).toBeGreaterThanOrEqual(3);
   }
 }
-
-/** A Button's fill once its colour transition has finished. */
-const settledFill = (button: Element) => {
-  for (const animation of button.getAnimations()) animation.finish();
-  return getComputedStyle(button).backgroundColor;
-};
 
 const ember = "rgb(189, 80, 56)";
 const lantern = "rgb(200, 64, 43)";
@@ -567,10 +573,7 @@ export const LabelWeight: Story = {
 
     // One override moves every label. The values are read before it is removed, so a failed
     // assertion never leaks into the next Story.
-    const root = document.documentElement.style;
-    root.setProperty("--kui-label-weight", "300");
-    const overridden = weights();
-    root.removeProperty("--kui-label-weight");
+    const overridden = await withRootOverrides({ "--kui-label-weight": "300" }, weights);
     await expect(overridden).toEqual(every("300"));
   },
 };
@@ -626,14 +629,16 @@ export const ShapeTokens: Story = {
       "--kui-radius-row": "5px",
       "--kui-border-width-field": "0 0 3px",
     };
-    const root = document.documentElement.style;
-    for (const [name, value] of Object.entries(overrides)) root.setProperty(name, value);
-    const overridden = shapes();
-    // The focus rule sets only the colour, so it lands on the one side that has width.
-    await userEvent.click(input);
-    for (const animation of input.getAnimations()) animation.finish();
-    const focused = { edges: edges(input), underline: getComputedStyle(input).borderBottomColor };
-    for (const name of Object.keys(overrides)) root.removeProperty(name);
+    const { overridden, focused } = await withRootOverrides(overrides, async () => {
+      const shaped = shapes();
+      // The focus rule sets only the colour, so it lands on the one side that has width.
+      await userEvent.click(input);
+      const style = settledStyle(input);
+      return {
+        overridden: shaped,
+        focused: { edges: edges(input), underline: style.borderBottomColor },
+      };
+    });
 
     await expect(overridden).toEqual({
       button: same("3px"),
@@ -663,24 +668,24 @@ export const RailTokens: Story = {
 
     // Ridgeline sets the Rail's width to 0, so neither part draws one, and the Dialog keeps its
     // arch on top.
-    const ember = tokenColour("--kui-rail-color");
+    const railColour = tokenColour("--kui-rail-color");
     for (const part of [list, viewport]) {
       const edge = topEdge(part);
       await expect(edge.width).toBe("0px");
-      await expect(toRGB(edge.colour)).toEqual(ember);
+      await expect(toRGB(edge.colour)).toEqual(railColour);
     }
     const archBefore = corners(viewport);
 
-    // One Consumer rule hangs a bar along the top of both parts, and the arch sits under it. The
+    // One Consumer rule hangs a Rail along the top of both parts, and the arch sits under it. The
     // values are read before the overrides are removed, so a failed assertion never leaks into the
     // next Story.
-    const root = document.documentElement.style;
-    root.setProperty("--kui-rail-width", "10px");
-    root.setProperty("--kui-rail-color", "rgb(1, 2, 3)");
-    const overridden = { list: topEdge(list), dialog: topEdge(viewport) };
-    const archAfter = corners(viewport);
-    root.removeProperty("--kui-rail-width");
-    root.removeProperty("--kui-rail-color");
+    const { overridden, archAfter } = await withRootOverrides(
+      { "--kui-rail-width": "10px", "--kui-rail-color": "rgb(1, 2, 3)" },
+      () => ({
+        overridden: { list: topEdge(list), dialog: topEdge(viewport) },
+        archAfter: corners(viewport),
+      }),
+    );
 
     const rail = { width: "10px", style: "solid", colour: "rgb(1, 2, 3)" };
     await expect(overridden).toEqual({ list: rail, dialog: rail });
@@ -750,29 +755,36 @@ export const ThemeSwitch: Story = {
   play: async ({ canvas }) => {
     const outside = canvas.getByRole("button", { name: "Ridgeline" });
     const inside = canvas.getByRole("button", { name: "Noren" });
-    const fills = () => [settledFill(outside), settledFill(inside)];
+    const fills = () => [outside, inside].map((button) => settledStyle(button).backgroundColor);
 
     await expect(fills()).toEqual([ember, lantern]);
 
-    // The attribute on the html element themes everything under it, and a Consumer's own rule on
-    // :root beats either Theme there, since both blocks carry no specificity. The wrapper is its
-    // own Theme root and keeps Lantern: a rule on :root alone does not reach inside a wrapper, and
-    // a Consumer who themes a subtree overrides on `:root, [data-theme]` instead. The values are
-    // read before the attribute and the override are removed, so a failed assertion never leaks
-    // into the next Story.
+    // The attribute on the html element themes everything under it, and a Consumer's own
+    // stylesheet rule on :root beats either Theme there, since both blocks sit in :where() and
+    // carry no specificity. The rule goes in ahead of the kit's stylesheet, so it wins on
+    // specificity alone and not on source order. The wrapper is its own Theme root and keeps
+    // Lantern: a rule on :root alone does not reach inside a wrapper, and a Consumer who themes a
+    // subtree overrides on `:root, [data-theme]` instead. The values are read before the attribute
+    // and the rule are removed, so a failed assertion never leaks into the next Story.
+    const override = "rgb(1, 2, 3)";
     const html = document.documentElement;
+    const sheet = document.createElement("style");
+    sheet.textContent = `:root { --kui-primary: ${override}; }`;
     html.setAttribute("data-theme", "noren");
     const onHtml = fills();
-    html.style.setProperty("--kui-primary", "rgb(1, 2, 3)");
+    document.head.prepend(sheet);
     const overriddenUnderNoren = fills();
     html.removeAttribute("data-theme");
     const overriddenUnderRidgeline = fills();
-    html.style.removeProperty("--kui-primary");
+    sheet.textContent = `:root, [data-theme] { --kui-primary: ${override}; }`;
+    const overriddenInWrapper = fills();
+    sheet.remove();
     const restored = fills();
 
     await expect(onHtml).toEqual([lantern, lantern]);
-    await expect(overriddenUnderNoren).toEqual(["rgb(1, 2, 3)", lantern]);
-    await expect(overriddenUnderRidgeline).toEqual(["rgb(1, 2, 3)", lantern]);
+    await expect(overriddenUnderNoren).toEqual([override, lantern]);
+    await expect(overriddenUnderRidgeline).toEqual([override, lantern]);
+    await expect(overriddenInWrapper).toEqual([override, override]);
     await expect(restored).toEqual([ember, lantern]);
   },
 };

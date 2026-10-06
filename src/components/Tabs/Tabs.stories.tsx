@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, fn } from "storybook/test";
 import { useRef, useState } from "react";
 import { Button, Tabs } from "../../index";
+import { settledStyle, withRootOverrides } from "../../docs/story-helpers";
 
 const meta = {
   title: "Components/Tabs",
@@ -374,8 +375,7 @@ export const FocusThroughRef: Story = {
 
 /** The settled fill, text, and shadow of an element, with any transition finished. */
 const settled = (element: HTMLElement) => {
-  for (const animation of element.getAnimations()) animation.finish();
-  const style = getComputedStyle(element);
+  const style = settledStyle(element);
   return { fill: style.backgroundColor, text: style.color, shadow: style.boxShadow };
 };
 
@@ -389,17 +389,15 @@ export const TrackAndTabTokens: Story = {
     // A Consumer restyles the track and the inactive tabs through their own roles, and the active
     // tab keeps reading primary. The values are read before the overrides are removed, so a failed
     // assertion never leaks into the next Story.
-    const root = document.documentElement.style;
-    root.setProperty("--kui-surface-track", "rgb(1, 2, 3)");
-    root.setProperty("--kui-shadow-track", "rgb(4, 5, 6) 0px 1px 0px 0px");
-    root.setProperty("--kui-tab", "rgb(7, 8, 9)");
-    root.setProperty("--kui-tab-foreground", "rgb(10, 11, 12)");
-    const track = settled(list);
-    const tab = settled(inactive);
-    const activeAfter = settled(active);
-    for (const name of ["surface-track", "shadow-track", "tab", "tab-foreground"]) {
-      root.removeProperty(`--kui-${name}`);
-    }
+    const { track, tab, activeAfter } = await withRootOverrides(
+      {
+        "--kui-surface-track": "rgb(1, 2, 3)",
+        "--kui-shadow-track": "rgb(4, 5, 6) 0px 1px 0px 0px",
+        "--kui-tab": "rgb(7, 8, 9)",
+        "--kui-tab-foreground": "rgb(10, 11, 12)",
+      },
+      () => ({ track: settled(list), tab: settled(inactive), activeAfter: settled(active) }),
+    );
 
     await expect(track.fill).toBe("rgb(1, 2, 3)");
     await expect(track.shadow).toBe("rgb(4, 5, 6) 0px 1px 0px 0px");
