@@ -1,9 +1,10 @@
 import type { Preview } from "@storybook/react-vite";
 import { useEffect } from "react";
 import "../src/styles/index.css";
-// The opt-in fonts stylesheets, so the docs show the full Theme a Consumer gets with both imports.
+// The opt-in fonts stylesheets, so the docs show the full Theme a Consumer gets with each import.
 import "../src/styles/fonts.css";
 import "../src/styles/fonts-noren.css";
+import "../src/styles/fonts-rooftop.css";
 import "./preview.css";
 
 const preview: Preview = {
