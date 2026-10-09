@@ -21,11 +21,11 @@ A Storybook example of a component. Stories double as the component's tests.
 _Avoid_: Example, demo, test case
 
 **Theme**:
-A named visual identity, expressed as a complete set of Token values for colour, type, shape and depth. Ridgeline is the default, and Noren is the second, which a Consumer opts into.
+A named visual identity, expressed as a complete set of Token values for colour, type, shape and depth. Ridgeline is the default. Noren and Rooftop are the second and third, which a Consumer opts into.
 _Avoid_: Skin, look, style, design system
 
 **Color scheme**:
-The light or dark variant of a Theme. Ridgeline and Noren each have a light Color scheme only.
+The light or dark variant of a Theme. Each Theme has one Color scheme: Ridgeline and Noren are light, and Rooftop is dark.
 _Avoid_: Mode, theme, appearance
 
 **Rail**:
