@@ -6,6 +6,8 @@
 
 **Status:** ready-for-agent
 
+**GitHub:** https://github.com/khiem90/k-ui-kit/issues/7
+
 - [ ] A third block selected by `[data-theme="rooftop"]`, wrapped in `:where()` and placed after Noren's, fills every Token role with the value from the spec's Theme table, palette names in comments, declares `color-scheme: dark`, and leaves motion duration alone so the reduced-motion rule keeps the last word
 - [ ] The header comment of `tokens.css` describes three Themes and says each carries its own Color scheme
 - [ ] The attribute works on the html element and on any ancestor, and a Dialog opened from a Rooftop subtree renders in Rooftop

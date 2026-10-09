@@ -6,6 +6,8 @@
 
 **Status:** ready-for-agent
 
+**GitHub:** https://github.com/khiem90/k-ui-kit/issues/6
+
 - [ ] The Ridgeline block declares `--kui-surface-field` as Cream and the Noren block as Paper, each with a comment naming the role and the palette name, placed beside surface raised
 - [ ] TextField, the Select trigger, the Checkbox box, the Switch track, and the RadioGroup control read surface field for their fill; the Select list and its options, the Dialog, the Tooltip, and the DataTable body still read surface raised
 - [ ] The Tokens Story lists surface field among the colours a Theme must fill, and its edge pairs change for every Theme: border on surface field replaces border on surface raised, and foreground on surface raised is added for the outline Button's edge; border on the page, on the stripe, and on the tint stay

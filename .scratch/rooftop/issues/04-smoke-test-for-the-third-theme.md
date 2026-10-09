@@ -6,6 +6,8 @@
 
 **Status:** ready-for-agent
 
+**GitHub:** https://github.com/khiem90/k-ui-kit/issues/9
+
 - [ ] The Next.js smoke app imports `k-ui-kit/fonts/rooftop.css` beside the other two, and the test asserts both Rooftop faces load for both samples, with a `rooftopFaces` list kept in step with the Fonts Story and the build check's fonts table
 - [ ] The Vite smoke app renders the same two Components again inside `<section id="rooftop" data-theme="rooftop">`, and the test asserts the override colour on the primary Button inside the Ridgeline content, the Noren section, and the Rooftop section
 - [ ] The test asserts the Rooftop section's TextField has a Wet stone fill, a 2px Fog teal edge on every side, and that the section's computed `color-scheme` is dark, while the body is still Apricot

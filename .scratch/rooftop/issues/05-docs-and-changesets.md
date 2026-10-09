@@ -6,6 +6,8 @@
 
 **Status:** ready-for-agent
 
+**GitHub:** https://github.com/khiem90/k-ui-kit/issues/10
+
 - [ ] The Getting started Themes section covers `data-theme="rooftop"`, the `k-ui-kit/fonts/rooftop.css` import with its file count and size, the latin and latin-ext coverage, the dark Color scheme and what `color-scheme: dark` does inside a Rooftop subtree, and the Storybook toolbar entry
 - [ ] The Getting started "light only" paragraph now says each Theme declares its own Color scheme, Rooftop's is dark, and `data-color-scheme` stays reserved, and ADR 0001's light-only consequence says the same; the decisions in ADR 0001 and 0005 are untouched
 - [ ] The Token table has a Rooftop column and a surface field row, every value copied from `src/styles/tokens.css`, and the page is read in the browser at 1280px: if the table overflows Storybook's column, it splits into one table per Theme
