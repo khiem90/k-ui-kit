@@ -22,6 +22,7 @@ const preview: Preview = {
         items: [
           { value: "ridgeline", title: "Ridgeline" },
           { value: "noren", title: "Noren" },
+          { value: "rooftop", title: "Rooftop" },
         ],
         dynamicTitle: true,
       },
@@ -36,7 +37,7 @@ const preview: Preview = {
       // body and the top layer follow the Theme. Ridgeline is the attribute-less default.
       useEffect(() => {
         const html = document.documentElement;
-        if (theme === "noren") html.setAttribute("data-theme", "noren");
+        if (theme === "noren" || theme === "rooftop") html.setAttribute("data-theme", theme);
         else html.removeAttribute("data-theme");
       }, [theme]);
       return <Story />;
