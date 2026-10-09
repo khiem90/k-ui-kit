@@ -5,4 +5,5 @@ import { cp } from "node:fs/promises";
 // scripts/verify-build.mjs fails the build if any of those urls has no file behind it.
 await cp("src/styles/fonts.css", "dist/styles/fonts.css");
 await cp("src/styles/fonts-noren.css", "dist/styles/fonts-noren.css");
+await cp("src/styles/fonts-rooftop.css", "dist/styles/fonts-rooftop.css");
 await cp("src/fonts", "dist/fonts", { recursive: true });

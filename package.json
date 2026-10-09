@@ -40,6 +40,7 @@
     "./styles.css": "./dist/styles/index.css",
     "./fonts.css": "./dist/styles/fonts.css",
     "./fonts/noren.css": "./dist/styles/fonts-noren.css",
+    "./fonts/rooftop.css": "./dist/styles/fonts-rooftop.css",
     "./package.json": "./package.json"
   },
   "scripts": {

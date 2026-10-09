@@ -1,9 +1,10 @@
 import type { Preview } from "@storybook/react-vite";
 import { useEffect } from "react";
 import "../src/styles/index.css";
-// The opt-in fonts stylesheets, so the docs show the full Theme a Consumer gets with both imports.
+// The opt-in fonts stylesheets, so the docs show the full Theme a Consumer gets with each import.
 import "../src/styles/fonts.css";
 import "../src/styles/fonts-noren.css";
+import "../src/styles/fonts-rooftop.css";
 import "./preview.css";
 
 const preview: Preview = {
@@ -21,6 +22,7 @@ const preview: Preview = {
         items: [
           { value: "ridgeline", title: "Ridgeline" },
           { value: "noren", title: "Noren" },
+          { value: "rooftop", title: "Rooftop" },
         ],
         dynamicTitle: true,
       },
@@ -35,7 +37,7 @@ const preview: Preview = {
       // body and the top layer follow the Theme. Ridgeline is the attribute-less default.
       useEffect(() => {
         const html = document.documentElement;
-        if (theme === "noren") html.setAttribute("data-theme", "noren");
+        if (theme === "noren" || theme === "rooftop") html.setAttribute("data-theme", theme);
         else html.removeAttribute("data-theme");
       }, [theme]);
       return <Story />;

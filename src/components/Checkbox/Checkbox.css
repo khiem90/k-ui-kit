@@ -38,7 +38,7 @@
   border: 2px solid var(--kui-border);
   /* Its own role rather than half the field radius, which may hold four values (ADR 0006). */
   border-radius: var(--kui-radius-check);
-  background: var(--kui-surface-raised);
+  background: var(--kui-surface-field);
   color: var(--kui-primary-foreground);
   pointer-events: none;
   transition:

@@ -4,19 +4,27 @@
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** ready-for-human
 
 **GitHub:** https://github.com/khiem90/k-ui-kit/issues/7
 
-- [ ] A third block selected by `[data-theme="rooftop"]`, wrapped in `:where()` and placed after Noren's, fills every Token role with the value from the spec's Theme table, palette names in comments, declares `color-scheme: dark`, and leaves motion duration alone so the reduced-motion rule keeps the last word
-- [ ] The header comment of `tokens.css` describes three Themes and says each carries its own Color scheme
-- [ ] The attribute works on the html element and on any ancestor, and a Dialog opened from a Rooftop subtree renders in Rooftop
-- [ ] The ThemeSwitch Story gains a Rooftop case: a Button inside a Rooftop wrapper is Bulb beside a Ridgeline one, and the `:root, [data-theme]` override reaches both
-- [ ] The Tokens Story gains a Rooftop Story on its own root carrying the attribute, with the same contrast assertions, and it fails on any Token the Rooftop block leaves undeclared, the way the Noren Story does
-- [ ] The Rooftop Tokens Story also asserts from computed style that a TextField rendered inside an open Dialog has a Wet stone fill on an Awning panel with a Fog teal edge, that the Dialog's box shadow carries the 2px Bulb ring, that a Tab trigger and a Button have 4px corners, that the Tabs list and the Dialog show no Rail, and that the computed `color-scheme` of the Theme root is dark
-- [ ] Danger is #E58A6E, the stripe is #1E2829, and the tint is #141A1B, as the spec's table and notes record
-- [ ] The Storybook toolbar global gains a Rooftop entry that sets the attribute on the html element, and the canvas turns Wet stone under Rooftop through the existing background Token
+- [x] A third block selected by `[data-theme="rooftop"]`, wrapped in `:where()` and placed after Noren's, fills every Token role with the value from the spec's Theme table, palette names in comments, declares `color-scheme: dark`, and leaves motion duration alone so the reduced-motion rule keeps the last word
+- [x] The header comment of `tokens.css` describes three Themes and says each carries its own Color scheme
+- [x] The attribute works on the html element and on any ancestor, and a Dialog opened from a Rooftop subtree renders in Rooftop
+- [x] The ThemeSwitch Story gains a Rooftop case: a Button inside a Rooftop wrapper is Bulb beside a Ridgeline one, and the `:root, [data-theme]` override reaches both
+- [x] The Tokens Story gains a Rooftop Story on its own root carrying the attribute, with the same contrast assertions, and it fails on any Token the Rooftop block leaves undeclared, the way the Noren Story does
+- [x] The Rooftop Tokens Story also asserts from computed style that a TextField rendered inside an open Dialog has a Wet stone fill on an Awning panel with a Fog teal edge, that the Dialog's box shadow carries the 2px Bulb ring, that a Tab trigger and a Button have 4px corners, that the Tabs list and the Dialog show no Rail, and that the computed `color-scheme` of the Theme root is dark
+- [x] Danger is #E58A6E, the stripe is #1E2829, and the tint is #141A1B, as the spec's table and notes record
+- [x] The Storybook toolbar global gains a Rooftop entry that sets the attribute on the html element, and the canvas turns Wet stone under Rooftop through the existing background Token
 - [ ] The maintainer has checked each Component under Rooftop in Storybook against the board, read a 12px DataTable header and a Select group label in Big Shoulders Display at 800, and either accepted them or recorded the `--kui-font-button` fallback in the spec's Further notes
-- [ ] axe passes on every Story under the default Theme; lint, typecheck, tests, and build pass
+- [x] axe passes on every Story under the default Theme; lint, typecheck, tests, and build pass
 
 ## Comments
+
+2026-10-09: Landed on branch `claude/kind-lamport-q4wrek`. The Rooftop block sits after Noren's in `src/styles/tokens.css` as `:where([data-theme="rooftop"])`, declares `color-scheme: dark`, and fills every role with the spec table's values and palette names in comments, the surface field role from ticket 01 included. Motion duration is again the one Token it leaves out, so the reduced-motion rule keeps the last word. The header comment describes three Themes, each carrying one Color scheme, with `data-color-scheme` reserved. `.storybook/preview.tsx` has a Rooftop toolbar entry, and its decorator sets `data-theme` to the chosen name for Noren and Rooftop alike and removes it for Ridgeline, so the canvas turns Wet stone through the background Token.
+
+`src/docs/Tokens.stories.tsx` gains a `Rooftop` Story on a `RooftopSheet` root: the Token sheet, a Button, Tabs, and a Dialog holding a TextField. It reads the block itself for every name in `themeTokens`, runs `expectContrastIn` on the root, asserts the root's computed `color-scheme` is dark, checks danger is #E58A6E, the stripe #1E2829, and the tint #141A1B, reads 4px corners on the Button and the Tab trigger, a 0 Rail in Bulb on the Tabs list, then opens the Dialog from inside the subtree and reads an Awning viewport with 10px corners, no Rail, and `rgb(242, 196, 107) 0px 0px 0px 2px` in its box shadow, and inside it a field on Wet stone with a 2px edge on every side. The Dialog hands focus to that field, so the Story reads the edge as Bulb first, blurs it, and then reads Fog teal. The ThemeSwitch Story renders a third wrapper and asserts [Ember, Lantern, Bulb] at rest, Bulb outside the wrappers with the attribute on the html element, the `:root` override reaching only the outside Button under each Theme, and the `:root, [data-theme]` form reaching all three.
+
+Verified with `pnpm lint`, `pnpm typecheck`, `pnpm test` (155 Story tests in Chromium, 154 green; the one red is the Tooltip flip test that fails on the untouched base in this container's Chromium, recorded in ticket 01), and `pnpm build`. One deliberate failure after everything was green: deleting `--kui-space-8` from the Rooftop block failed the Rooftop Story with "--kui-space-8 is in the Rooftop block". The Vitest run plays every Story once under Ridgeline, so axe is unchanged.
+
+Looked at in a static Storybook build under `globals=theme:rooftop` at 900px, with the Rooftop fonts loaded: Button in every variant and size (Bulb and Stool with the black drop shadow, outline with a Ticket edge, danger in lifted Tail light, all 4px), TextField at rest and focused, the Select trigger and its open list (Awning, the Bulb ring and glow, Sign box on the highlighted option, group labels in Big Shoulders Display), Tabs (Sign box track, Rain sky text, Bulb active tab), the Dialog with a form (Awning, 10px corners, the ring and glow, Sign gold italic title, a recessed field, Sign box overlay), DataTable with selection (flat Awning body, darker stripe, Big Shoulders headers at 14px), Checkbox, Switch, RadioGroup (Wet stone with a Fog teal edge, Bulb when on), Tooltip (Ticket bubble, Awning text, the ring and glow), and the sign-up form. Each matched stories 8 to 31 and the three deviations the spec already records. The 14px DataTable header and Select group label in Big Shoulders Display at 800 read fine to me, so no `--kui-font-button` fallback was recorded; that box is left for the maintainer, who can open any Story under Rooftop with the toolbar entry or the `globals=theme:rooftop` query parameter.

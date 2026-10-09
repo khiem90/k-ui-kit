@@ -1,6 +1,6 @@
 # k-ui-kit
 
-Accessible React Components styled with plain CSS. Ten Components that meet WCAG 2.2 AA, in two Themes. Ridgeline, the default, is warm apricot and cream surfaces, Ember actions, pill Buttons, and an arched Dialog. Noren, one attribute away, is Washi and Paper surfaces, Cat text, a Lantern red primary, Tabs hung like cloth from a Cedar Rail, underlined fields, and flat square Buttons. One stylesheet holds both, each has a bundled fonts stylesheet, and there is no styling runtime and no runtime dependency besides React.
+Accessible React Components styled with plain CSS. Ten Components that meet WCAG 2.2 AA, in three Themes. Ridgeline, the default, is warm apricot and cream surfaces, Ember actions, pill Buttons, and an arched Dialog. Noren, one attribute away, is Washi and Paper surfaces, Cat text, a Lantern red primary, Tabs hung like cloth from a Cedar Rail, underlined fields, and flat square Buttons. Rooftop, the dark one, is a Wet stone page with Awning panels, Ticket text, a Bulb yellow primary, fields recessed behind a Fog teal edge, Big Shoulders signage, and a Bulb ring with a warm glow on anything that floats. One stylesheet holds all three, each has a bundled fonts stylesheet, and there is no styling runtime and no runtime dependency besides React.
 
 Browse every Component in the Storybook at https://khiem90.github.io/k-ui-kit/. The package is on npm at https://www.npmjs.com/package/k-ui-kit.
 
@@ -18,22 +18,22 @@ import { Button } from "k-ui-kit";
 <Button variant="primary">Save</Button>;
 ```
 
-That is Ridgeline. For Noren, set `data-theme="noren"` on the html element, or on any ancestor, and import its fonts stylesheet instead:
+That is Ridgeline. For Noren or Rooftop, set `data-theme="noren"` or `data-theme="rooftop"` on the html element, or on any ancestor, and import that Theme's fonts stylesheet instead:
 
 ```tsx
 import "k-ui-kit/styles.css";
-import "k-ui-kit/fonts/noren.css";
+import "k-ui-kit/fonts/rooftop.css";
 
-<html lang="en" data-theme="noren">
+<html lang="en" data-theme="rooftop">
   <body>{children}</body>
 </html>;
 ```
 
-Both fonts stylesheets are optional. `k-ui-kit/fonts.css` loads Fraunces, Josefin Sans, and Nunito Sans, and `k-ui-kit/fonts/noren.css` loads Shippori Mincho B1 and Zen Kaku Gothic New, each from files inside the package under the SIL Open Font License. Leave one out if you already serve those fonts, or to fall back to Georgia and `system-ui`. On a Japanese machine Noren reaches the system mincho and gothic first. The Noren files are the latin and latin-ext subsets, and the two families draw almost no latin-ext letters, so Japanese text and most accented Central European letters fall back to the next family in the stack. The main stylesheet loads no font files.
+All three fonts stylesheets are optional. `k-ui-kit/fonts.css` loads Fraunces, Josefin Sans, and Nunito Sans, `k-ui-kit/fonts/noren.css` loads Shippori Mincho B1 and Zen Kaku Gothic New, and `k-ui-kit/fonts/rooftop.css` loads Big Shoulders Display and Barlow, each from files inside the package under the SIL Open Font License. Leave one out if you already serve those fonts, or to fall back to Georgia and `system-ui` under Ridgeline and Noren and to Arial Narrow and `system-ui` under Rooftop. On a Japanese machine Noren reaches the system mincho and gothic first. The Noren and Rooftop files are the latin and latin-ext subsets. The two Noren families draw almost no latin-ext letters, so Japanese text and most accented Central European letters fall back to the next family in the stack; the Rooftop families draw the range in full, and only Vietnamese and other text outside it falls back. The main stylesheet loads no font files.
 
 React and React DOM 18 or later are peer dependencies, and the package has no other dependencies. Every Component is the kit's own code, built on the native dialog element, the Popover API, CSS anchor positioning, and real form inputs. Every Component renders from a React Server Component with no client boundary in your app.
 
-Both Themes have a light Color scheme only, and both ship in the one stylesheet. Restyle either by overriding Tokens such as `--kui-primary` or `--kui-radius-button` in a plain `:root` rule, or `:root, [data-theme]` to reach a Theme set on a wrapper below the root. See the Getting started page in Storybook for every Token with its value in each Theme and a form example.
+Each Theme carries one Color scheme of its own, light for Ridgeline and Noren and dark for Rooftop, and all three ship in the one stylesheet. Restyle any of them by overriding Tokens such as `--kui-primary` or `--kui-radius-button` in a plain `:root` rule, or `:root, [data-theme]` to reach a Theme set on a wrapper below the root. See the Getting started page in Storybook for every Token with its value in each Theme and a form example.
 
 ## Develop it
 
@@ -55,7 +55,7 @@ Stories are the tests. The a11y addon fails the run on any axe violation, and pl
 
 Stylelint guards ADR 0001 in `src/**/*.css`. It fails on a colour written as hex, `rgb()`, `color-mix()`, a named colour, or any other colour function, and on a px or rem length in a margin, padding, gap, radius, or font-size property. Those values belong in `src/styles/tokens.css`, the one file the colour rules skip. The length rule lets through `0`, `1px`, `2px`, and the `-1px` of the visually-hidden pattern. A declaration that needs another value carries a `stylelint-disable-next-line` comment with the reason after `--`, and the config rejects a disable without one.
 
-`pnpm smoke` is the Consumer check. It packs the package, scaffolds a Next.js App Router app and a Vite app in a temporary folder, installs the tarball into each, builds them, and drives them in Chromium. The Next.js app runs under Noren with both fonts imports; the Vite app stays Ridgeline and themes one section as Noren beside it. The test checks that the installed kit brings no dependencies, that every Component renders and responds from a server component, that both fonts stylesheets resolve every face in the Next.js build and the Button draws in Zen Kaku Gothic New, that the Noren page ignores a dark system preference, that a `:root, [data-theme]` Token override reaches the Ridgeline Button and the Noren section alike while the section's TextField keeps its 3px underline, and that the Vite bundle holds only the Components the app imports, the stylesheet, and no font files. It needs the network and takes a few minutes. Run it before merging a version pull request.
+`pnpm smoke` is the Consumer check. It packs the package, scaffolds a Next.js App Router app and a Vite app in a temporary folder, installs the tarball into each, builds them, and drives them in Chromium. The Next.js app runs under Noren with all three fonts imports; the Vite app stays Ridgeline and themes one section as Noren and another as Rooftop beside it. The test checks that the installed kit brings no dependencies, that every Component renders and responds from a server component, that all three fonts stylesheets resolve every face in the Next.js build and the Button draws in Zen Kaku Gothic New, that the Noren page ignores a dark system preference, that a `:root, [data-theme]` Token override reaches the Ridgeline Button and both sections alike while the Noren TextField keeps its 3px underline and the Rooftop one sits on Wet stone behind a 2px Fog teal edge inside a subtree whose Color scheme is dark, and that the Vite bundle holds only the Components the app imports, the stylesheet, and no font files. It needs the network and takes a few minutes. Run it before merging a version pull request.
 
 If the first test run after adding a dependency fails with a 404 on a `node_modules/.cache` chunk, run it again. Vite re-optimises dependencies on that run and invalidates the chunk the browser had already requested.
 
@@ -88,8 +88,8 @@ Tokens expire, so repeat steps 2 and 3 when a Release run fails with an authenti
 ## Repository layout
 
 - `src/components/<Name>/` holds a Component's source, CSS, and Stories.
-- `src/styles/` holds the Tokens of both Themes in `tokens.css`, the main entry stylesheet, and the two opt-in fonts stylesheets, `fonts.css` for Ridgeline and `fonts-noren.css` for Noren.
-- `src/fonts/` holds the woff2 files and each family's OFL.txt, one folder per family across both Themes. The build copies them to `dist/fonts/` unchanged.
+- `src/styles/` holds the Tokens of all three Themes in `tokens.css`, the main entry stylesheet, and the three opt-in fonts stylesheets, `fonts.css` for Ridgeline, `fonts-noren.css` for Noren, and `fonts-rooftop.css` for Rooftop.
+- `src/fonts/` holds the woff2 files and each family's OFL.txt, one folder per family across the three Themes, `big-shoulders-display/` and `barlow/` among them for Rooftop. The build copies them to `dist/fonts/` unchanged.
 - `src/icons.tsx` holds the inline SVG icons the kit's own Components use. `src/slot.tsx` holds the Slot behind `asChild`, and `src/popover.tsx` the anchored popover hook Tooltip and Select share. `src/compose.ts` merges refs and event handlers, and `src/controllable-state.ts` holds the controlled or uncontrolled state every stateful Component uses. None of them are exported, and each needs its own line in the tsup entry list.
 - `src/index.ts` is the public entry. It carries no client directive and assembles the composite namespaces, so a server component can render `Dialog.Root`. Each Component's file carries its own directive and is built to its own file under `dist/`. `docs/adr/0003-client-boundary-below-the-entry.md` has the reasoning.
 - `scripts/` holds the build verifier and the Consumer smoke test.

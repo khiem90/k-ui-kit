@@ -42,8 +42,9 @@ const bodyCss = `body {
 `;
 
 // The Vite app overrides one Token the way the Getting started page says to. The rule names
-// [data-theme] as well as :root so the override reaches the Noren subtree the app renders: a Theme
-// block declares every Token on the wrapper itself, and that beats a value inherited from :root.
+// [data-theme] as well as :root so the override reaches the Noren and Rooftop subtrees the app
+// renders: a Theme block declares every Token on the wrapper itself, and that beats a value
+// inherited from :root.
 const OVERRIDE_PRIMARY = "#2f6f5e";
 const overrideCss = `:root,
 [data-theme] {
@@ -68,11 +69,12 @@ const norenFaces = [
   'normal 400 16px "Zen Kaku Gothic New"',
   'normal 700 16px "Zen Kaku Gothic New"',
 ];
+const rooftopFaces = ['normal 800 16px "Big Shoulders Display"', 'normal 400 16px "Barlow"'];
 const fontSamples = ["Weekend escape", "Łódź, Ærøskøbing"];
 
 // A server component: no client directive, no function props, every Component uncontrolled. The
 // page is under Noren, with the attribute on the html element the way the Getting started page
-// says, and it loads both opt-in fonts stylesheets, so the Next.js build has to resolve every
+// says, and it loads all three opt-in fonts stylesheets, so the Next.js build has to resolve every
 // bundled font file.
 const nextFiles = {
   "app/globals.css": bodyCss,
@@ -80,6 +82,7 @@ const nextFiles = {
 import "k-ui-kit/styles.css";
 import "k-ui-kit/fonts.css";
 import "k-ui-kit/fonts/noren.css";
+import "k-ui-kit/fonts/rooftop.css";
 import "./globals.css";
 
 export const metadata: Metadata = { title: "k-ui-kit smoke test" };
@@ -188,7 +191,8 @@ export default function Home() {
 
 // Imports two Components only, so the production bundle shows what tree-shaking dropped. It skips
 // the fonts stylesheets, so the bundle proves the main stylesheet pulls in no font files. The same
-// two Components render again inside a Noren subtree, beside the Ridgeline ones.
+// two Components render again inside a Noren subtree and a Rooftop subtree, beside the Ridgeline
+// ones.
 const viteFiles = {
   "src/app.css": bodyCss + overrideCss,
   "src/main.tsx": `import { StrictMode } from "react";
@@ -217,6 +221,11 @@ export function App() {
       </section>
       <section id="noren" data-theme="noren">
         <h2>The same two under Noren</h2>
+        <Button variant="primary">Save</Button>
+        <TextField label="Name" />
+      </section>
+      <section id="rooftop" data-theme="rooftop">
+        <h2>The same two under Rooftop</h2>
         <Button variant="primary">Save</Button>
         <TextField label="Name" />
       </section>
@@ -251,12 +260,18 @@ const root = reused
 mkdirSync(root, { recursive: true });
 
 // Theme colours, read from the Tokens so a Token change cannot pass unnoticed. Each Theme declares
-// every Token once in its own block: Ridgeline's is the :root block and Noren's follows it, so a
-// name is looked up in the text of one block only.
+// every Token once in its own block: Ridgeline's is the :root block, Noren's follows it, and
+// Rooftop's follows that, so a name is looked up in the text of one block only.
 const tokens = readFileSync(join(kit, "src/styles/tokens.css"), "utf8");
 const norenStart = tokens.indexOf('[data-theme="noren"]');
 if (norenStart < 0) throw new Error("tokens.css has no Noren block");
-const blocks = { Ridgeline: tokens.slice(0, norenStart), Noren: tokens.slice(norenStart) };
+const rooftopStart = tokens.indexOf('[data-theme="rooftop"]');
+if (rooftopStart < norenStart) throw new Error("tokens.css has no Rooftop block after Noren's");
+const blocks = {
+  Ridgeline: tokens.slice(0, norenStart),
+  Noren: tokens.slice(norenStart, rooftopStart),
+  Rooftop: tokens.slice(rooftopStart),
+};
 const rgb = (hex) => `rgb(${[1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16)).join(", ")})`;
 const tokenRgb = (theme, name) => {
   const hex = blocks[theme].match(new RegExp(`${name}:\\s*(#[0-9a-f]{6})\\b`, "i"))?.[1];
@@ -266,10 +281,12 @@ const tokenRgb = (theme, name) => {
 const themeColours = (theme) => ({
   background: tokenRgb(theme, "--kui-background"),
   primary: tokenRgb(theme, "--kui-primary"),
-  surfaceRaised: tokenRgb(theme, "--kui-surface-raised"),
+  surfaceField: tokenRgb(theme, "--kui-surface-field"),
+  border: tokenRgb(theme, "--kui-border"),
 });
 const ridgeline = themeColours("Ridgeline");
 const noren = themeColours("Noren");
+const rooftop = themeColours("Rooftop");
 
 const problems = [];
 
@@ -380,8 +397,9 @@ async function backgroundSettles(page, selector, expected) {
 
 /**
  * The Theme the page is under: Ridgeline with no attribute, Noren with it on the html element.
- * Both ignore a dark system preference, since each has a light Color scheme only. `primary` is
- * the colour the app's primary Button should show, which an override may have changed.
+ * Both ignore a dark system preference, since a Theme carries one Color scheme of its own and
+ * these two are light. `primary` is the colour the app's primary Button should show, which an
+ * override may have changed.
  */
 function verifyTheme(theme, { background, primary }) {
   return async (page, url) => {
@@ -462,10 +480,24 @@ function verifyLabelFont(family) {
   };
 }
 
+/** A TextField input's edge widths, edge colour, and fill. */
+const field = async (page, selector) => ({
+  edges: [
+    await computed(page, selector, "borderTopWidth"),
+    await computed(page, selector, "borderRightWidth"),
+    await computed(page, selector, "borderBottomWidth"),
+    await computed(page, selector, "borderLeftWidth"),
+  ],
+  edgeColour: await computed(page, selector, "borderBottomColor"),
+  background: await computed(page, selector, "backgroundColor"),
+});
+const describeField = ({ edges, edgeColour, background }) =>
+  `${edges.join(" ")} ${edgeColour} on ${background}`;
+
 /**
- * The Vite app themes one subtree. The attribute reaches the Components inside it, the page
- * outside it stays Ridgeline, and the app's override of primary reaches both because it is written
- * as `:root, [data-theme]`. A `:root` rule alone stops at the wrapper, where the Noren block
+ * The Vite app themes two subtrees. The attribute reaches the Components inside each, the page
+ * outside them stays Ridgeline, and the app's override of primary reaches all three because it is
+ * written as `:root, [data-theme]`. A `:root` rule alone stops at a wrapper, where the Theme block
  * declares the Token again.
  */
 async function verifyNorenSubtree(page, url) {
@@ -477,23 +509,43 @@ async function verifyNorenSubtree(page, url) {
     await backgroundSettles(page, `${wrapper} .kui-button`, rgb(OVERRIDE_PRIMARY)),
     `${url} the override reaches the primary Button inside the Noren subtree`,
   );
-  const field = async (selector) => ({
-    top: await computed(page, selector, "borderTopWidth"),
-    bottom: await computed(page, selector, "borderBottomWidth"),
-    background: await computed(page, selector, "backgroundColor"),
-  });
-  const describe = ({ top, bottom, background }) => `${top}, ${bottom}, ${background}`;
-  const inside = await field(`${wrapper} .kui-text-field__input`);
-  const outside = await field("#text-field .kui-text-field__input");
+  const inside = await field(page, `${wrapper} .kui-text-field__input`);
+  const outside = await field(page, "#text-field .kui-text-field__input");
   check(
-    inside.top === "0px" && inside.bottom === "3px" && inside.background === noren.surfaceRaised,
-    `${url} the field inside the subtree is Noren, a 3px underline on Paper (${describe(inside)})`,
+    inside.edges.join(" ") === "0px 0px 3px 0px" && inside.background === noren.surfaceField,
+    `${url} the field inside the subtree is Noren, a 3px underline on Paper (${describeField(inside)})`,
   );
   check(
-    outside.top === "2px" &&
-      outside.bottom === "2px" &&
-      outside.background === ridgeline.surfaceRaised,
-    `${url} the field outside the subtree stays Ridgeline (${describe(outside)})`,
+    outside.edges.every((edge) => edge === "2px") && outside.background === ridgeline.surfaceField,
+    `${url} the field outside the subtree stays Ridgeline (${describeField(outside)})`,
+  );
+}
+
+/**
+ * The Rooftop subtree is the dark one. Its field recesses to Wet stone behind a 2px Fog teal
+ * edge, the subtree declares a dark Color scheme of its own, and the page around it stays Apricot.
+ */
+async function verifyRooftopSubtree(page, url) {
+  const wrapper = '#rooftop[data-theme="rooftop"]';
+  const present = (await page.locator(wrapper).count()) > 0;
+  check(present, `${url} renders a Rooftop subtree beside the Noren one`);
+  if (!present) return;
+  check(
+    await backgroundSettles(page, `${wrapper} .kui-button`, rgb(OVERRIDE_PRIMARY)),
+    `${url} the override reaches the primary Button inside the Rooftop subtree`,
+  );
+  const inside = await field(page, `${wrapper} .kui-text-field__input`);
+  check(
+    inside.edges.every((edge) => edge === "2px") &&
+      inside.edgeColour === rooftop.border &&
+      inside.background === rooftop.surfaceField,
+    `${url} the field inside the subtree is Rooftop, a 2px Fog teal edge on Wet stone (${describeField(inside)})`,
+  );
+  const scheme = await computed(page, wrapper, "colorScheme");
+  check(scheme === "dark", `${url} the Rooftop subtree's Color scheme is dark (${scheme})`);
+  check(
+    await backgroundSettles(page, "body", ridgeline.background),
+    `${url} the body around both subtrees is still Apricot`,
   );
 }
 
@@ -583,12 +635,13 @@ run("npm run build", nextDir);
 const nextUrl = `http://localhost:${NEXT_PORT}/`;
 const nextServer = await serve(`npx next start -p ${NEXT_PORT}`, nextDir, nextUrl);
 try {
-  // The Next.js app is under Noren with both fonts stylesheets imported, so every face of both
-  // Themes must load, and the label must draw in the Noren label family.
+  // The Next.js app is under Noren with all three fonts stylesheets imported, so every face of
+  // every Theme must load, and the label must draw in the Noren label family.
   await inBrowser(nextUrl, [
     verifyTheme("Noren", noren),
     verifyFaces("Ridgeline", ridgelineFaces),
     verifyFaces("Noren", norenFaces),
+    verifyFaces("Rooftop", rooftopFaces),
     verifyLabelFont("Zen Kaku Gothic New"),
     verifyEveryComponent,
   ]);
@@ -631,10 +684,11 @@ const viteServer = await serve(
   viteUrl,
 );
 try {
-  // The app's override of --kui-primary beats the kit's :where() Tokens under either Theme.
+  // The app's override of --kui-primary beats the kit's :where() Tokens under every Theme.
   await inBrowser(viteUrl, [
     verifyTheme("Ridgeline", { background: ridgeline.background, primary: rgb(OVERRIDE_PRIMARY) }),
     verifyNorenSubtree,
+    verifyRooftopSubtree,
   ]);
 } finally {
   stop(viteServer);

@@ -29,13 +29,14 @@ const checks = [
   ["dist/index.d.ts", "declare DataTable", (s) => s.includes("declare const DataTable")],
   ["dist/index.d.ts", "export the ColumnDef type", (s) => s.includes("type ColumnDef")],
   ["dist/styles/index.css", "contain the Tokens", (s) => s.includes("--kui-background:")],
-  // esbuild drops the quotes around an attribute value it does not need, so the Noren selector
-  // comes out as [data-theme=noren]. The block must be there and must fill at least one role.
-  [
+  // esbuild drops the quotes around an attribute value it does not need, so a Theme selector
+  // comes out as [data-theme=noren]. Each block must be there and must fill at least one role.
+  ...["noren", "rooftop"].map((theme) => [
     "dist/styles/index.css",
-    "contain the Noren Theme block",
-    (s) => /:where\(\[data-theme=["']?noren["']?\]\)\s*{[^}]*--kui-primary:/.test(s),
-  ],
+    `contain the ${theme} Theme block`,
+    (s) =>
+      new RegExp(`:where\\(\\[data-theme=["']?${theme}["']?\\]\\)\\s*{[^}]*--kui-primary:`).test(s),
+  ]),
   ["dist/styles/index.css", "contain the Button styles", (s) => s.includes(".kui-button")],
   ["dist/styles/index.css", "contain the TextField styles", (s) => s.includes(".kui-text-field")],
   ["dist/styles/index.css", "contain the Checkbox styles", (s) => s.includes(".kui-checkbox")],
@@ -71,15 +72,26 @@ const checks = [
     "export the Noren fonts stylesheet",
     (s) => fontsExport(s, "./fonts/noren.css") === "./dist/styles/fonts-noren.css",
   ],
+  [
+    "package.json",
+    "export the Rooftop fonts stylesheet",
+    (s) => fontsExport(s, "./fonts/rooftop.css") === "./dist/styles/fonts-rooftop.css",
+  ],
   // The kit has no runtime dependencies (ADR 0004). Even an empty field invites the next one back.
   ["package.json", "leave out the dependencies field", (s) => !("dependencies" in JSON.parse(s))],
-  ...["fraunces", "josefin-sans", "nunito-sans", "shippori-mincho-b1", "zen-kaku-gothic-new"].map(
-    (family) => [
-      `dist/fonts/${family}/OFL.txt`,
-      "carry the SIL Open Font License",
-      (s) => s.includes("SIL OPEN FONT LICENSE Version 1.1"),
-    ],
-  ),
+  ...[
+    "fraunces",
+    "josefin-sans",
+    "nunito-sans",
+    "shippori-mincho-b1",
+    "zen-kaku-gothic-new",
+    "big-shoulders-display",
+    "barlow",
+  ].map((family) => [
+    `dist/fonts/${family}/OFL.txt`,
+    "carry the SIL Open Font License",
+    (s) => s.includes("SIL OPEN FONT LICENSE Version 1.1"),
+  ]),
 ];
 
 function fontsExport(manifest, path) {
@@ -166,6 +178,13 @@ const fontsSheets = [
       ["Shippori Mincho B1", "normal", 800],
       ["Zen Kaku Gothic New", "normal", 400],
       ["Zen Kaku Gothic New", "normal", 700],
+    ],
+  ],
+  [
+    "dist/styles/fonts-rooftop.css",
+    [
+      ["Big Shoulders Display", "normal", 800],
+      ["Barlow", "normal", 400],
     ],
   ],
 ];

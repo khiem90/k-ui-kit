@@ -18,6 +18,7 @@ import { settledStyle, withRootOverrides } from "./story-helpers";
 const colours = [
   "--kui-background",
   "--kui-surface-raised",
+  "--kui-surface-field",
   "--kui-surface-stripe",
   "--kui-surface-track",
   "--kui-tint",
@@ -113,7 +114,10 @@ const textPairsOnOptionalFill: [string, string][] = [
 
 /** Every edge and indicator pair the kit draws, as [edge, background]. WCAG 1.4.11 asks 3:1. */
 const edgePairs: [string, string][] = [
-  ["--kui-border", "--kui-surface-raised"],
+  // A field's edge on its own fill, which a Theme may recess below the panels.
+  ["--kui-border", "--kui-surface-field"],
+  // The outline Button's edge on a raised panel, such as inside a Dialog.
+  ["--kui-foreground", "--kui-surface-raised"],
   // The off Switch track's edge on the page. The on track is primary on background, below.
   ["--kui-border", "--kui-background"],
   ["--kui-focus-ring", "--kui-background"],
@@ -252,7 +256,7 @@ function TokenSheet() {
           <Swatch
             name="--kui-border-width-field"
             style={{
-              background: "var(--kui-surface-raised)",
+              background: "var(--kui-surface-field)",
               borderStyle: "solid",
               borderWidth: "var(--kui-border-width-field)",
               borderColor: "var(--kui-border)",
@@ -424,7 +428,7 @@ function RailedParts() {
   );
 }
 
-/** A Button under the attribute-less root beside one inside a Noren subtree. */
+/** A Button under the attribute-less root beside one inside a Noren and one inside a Rooftop subtree. */
 function ThemedButtons() {
   return (
     <div style={{ display: "flex", gap: "var(--kui-space-4)", padding: "var(--kui-space-4)" }}>
@@ -432,6 +436,44 @@ function ThemedButtons() {
       <div data-theme="noren">
         <Button>Noren</Button>
       </div>
+      <div data-theme="rooftop">
+        <Button>Rooftop</Button>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * The Token sheet and the parts whose Rooftop shape and depth the Story reads, under one Rooftop
+ * root: a Button and Tabs for their corners and the missing Rail, and a Dialog holding a TextField
+ * for the recessed field on the Awning panel and the Bulb ring around it.
+ */
+function RooftopSheet() {
+  return (
+    <div data-theme="rooftop">
+      <TokenSheet />
+      <Stack>
+        <Button>Save</Button>
+        <Tabs.Root defaultValue="profile">
+          <Tabs.List aria-label="Account settings">
+            <Tabs.Trigger value="profile">Profile</Tabs.Trigger>
+            <Tabs.Trigger value="security">Security</Tabs.Trigger>
+          </Tabs.List>
+          <Tabs.Content value="profile">Update your name and photo.</Tabs.Content>
+          <Tabs.Content value="security">Change your password.</Tabs.Content>
+        </Tabs.Root>
+        <Dialog.Root>
+          <Dialog.Trigger>
+            <Button variant="outline">Open</Button>
+          </Dialog.Trigger>
+          <Dialog.Content>
+            <Dialog.Title>Weekend escape</Dialog.Title>
+            <Dialog.Description>Two nights in a cabin by the lake.</Dialog.Description>
+            <TextField label="Email" />
+            <Dialog.Close />
+          </Dialog.Content>
+        </Dialog.Root>
+      </Stack>
     </div>
   );
 }
@@ -499,9 +541,14 @@ async function expectContrastIn(root: Element) {
 }
 
 const ember = "rgb(189, 80, 56)";
+const cream = "rgb(255, 249, 242)";
 const lantern = "rgb(200, 64, 43)";
 const cedar = "rgb(138, 90, 54)";
 const paper = "rgb(255, 248, 232)";
+const bulb = "rgb(242, 196, 107)";
+const wetStone = "rgb(26, 34, 36)";
+const awning = "rgb(46, 59, 62)";
+const fogTeal = "rgb(94, 116, 114)";
 
 /** The top edge of an element: the Rail, where a Theme draws one. */
 const topEdge = (element: Element) => {
@@ -693,6 +740,49 @@ export const RailTokens: Story = {
   },
 };
 
+/** A TextField beside a Dialog, the two parts whose fills parted ways in the surface field split. */
+function FieldAndPanel() {
+  return (
+    <Stack>
+      <TextField label="Email" />
+      <Dialog.Root>
+        <Dialog.Trigger>
+          <Button variant="outline">Open</Button>
+        </Dialog.Trigger>
+        <Dialog.Content>
+          <Dialog.Title>Weekend escape</Dialog.Title>
+          <Dialog.Close />
+        </Dialog.Content>
+      </Dialog.Root>
+    </Stack>
+  );
+}
+
+export const SurfaceField: Story = {
+  render: () => <FieldAndPanel />,
+  play: async ({ canvas, userEvent }) => {
+    const input = canvas.getByLabelText("Email");
+    await userEvent.click(canvas.getByRole("button", { name: "Open" }));
+    const dialog = await within(document.body).findByRole("dialog", {}, { timeout: 2000 });
+    const viewport = dialog.querySelector(".kui-dialog__viewport");
+    if (!viewport) throw new Error("The dialog has no viewport");
+    const fills = () => ({
+      field: settledStyle(input).backgroundColor,
+      panel: settledStyle(viewport).backgroundColor,
+    });
+
+    // Ridgeline fills both roles with Cream, so the split changed nothing it renders.
+    await expect(fills()).toEqual({ field: cream, panel: cream });
+
+    // One override of surface field moves the field and leaves the panel on surface raised. The
+    // values are read before the override is removed, so a failed assertion never leaks into the
+    // next Story.
+    const override = "rgb(1, 2, 3)";
+    const overridden = await withRootOverrides({ "--kui-surface-field": override }, fills);
+    await expect(overridden).toEqual({ field: override, panel: cream });
+  },
+};
+
 export const Ridgeline: Story = {
   play: async () => {
     for (const name of [...themeTokens, "--kui-motion-duration"]) {
@@ -750,41 +840,107 @@ export const Noren: Story = {
   },
 };
 
+export const Rooftop: Story = {
+  render: () => <RooftopSheet />,
+  play: async ({ canvas, canvasElement, userEvent }) => {
+    const root = canvasElement.querySelector('[data-theme="rooftop"]');
+    if (!root) throw new Error("The Story has no Rooftop root");
+
+    // A Token the block leaves out would inherit Ridgeline's value and pass every computed-style
+    // check below, so the block itself is read for each name.
+    const block = themeDeclarations("rooftop");
+    for (const name of themeTokens) {
+      await expect(block.getPropertyValue(name).trim(), `${name} is in the Rooftop block`).not.toBe(
+        "",
+      );
+    }
+
+    // The first dark Theme: every pair is measured like any other, and the root declares the
+    // Color scheme the attribute brings with it (ADR 0007).
+    await expectContrastIn(root);
+    await expect(getComputedStyle(root).colorScheme).toBe("dark");
+
+    // The three values the spec's notes argue for, where the board's own would fall short.
+    await expect(colourIn(root, "--kui-danger")).toEqual([0xe5, 0x8a, 0x6e]);
+    await expect(colourIn(root, "--kui-surface-stripe")).toEqual([0x1e, 0x28, 0x29]);
+    await expect(colourIn(root, "--kui-tint")).toEqual([0x14, 0x1a, 0x1b]);
+
+    // The shapes a Consumer sees: 4px corners on a Button and a Tab trigger, and no Rail on the
+    // Tabs list, whose edge would be Bulb if a Consumer turned it on.
+    await expect(corners(canvas.getByRole("button", { name: "Save" }))).toEqual(same("4px"));
+    await expect(corners(canvas.getByRole("tab", { name: "Profile" }))).toEqual(same("4px"));
+    const list = canvas.getByRole("tablist", { name: "Account settings" });
+    await expect(topEdge(list)).toEqual({ width: "0px", style: "solid", colour: bulb });
+
+    // A Dialog opened from inside the subtree renders in Rooftop too: an Awning panel with no
+    // Rail, no arch, and the 2px Bulb ring in its shadow, and inside it a field recessed to Wet
+    // stone behind a 2px Fog teal edge.
+    await userEvent.click(canvas.getByRole("button", { name: "Open" }));
+    const dialog = await within(document.body).findByRole("dialog", {}, { timeout: 2000 });
+    const viewport = dialog.querySelector(".kui-dialog__viewport");
+    if (!viewport) throw new Error("The dialog has no viewport");
+    const panel = getComputedStyle(viewport);
+    await expect(panel.backgroundColor).toBe(awning);
+    await expect(topEdge(viewport)).toEqual({ width: "0px", style: "solid", colour: bulb });
+    await expect(corners(viewport)).toEqual(same("10px"));
+    await expect(panel.boxShadow).toContain(`${bulb} 0px 0px 0px 2px`);
+    // The Dialog hands focus to the field, whose edge is then the Bulb ring. Blurred, it is Fog
+    // teal.
+    const input = within(dialog).getByLabelText("Email");
+    await expect(input).toHaveFocus();
+    await expect(settledStyle(input).borderTopColor).toBe(bulb);
+    input.blur();
+    const field = settledStyle(input);
+    await expect(field.backgroundColor).toBe(wetStone);
+    await expect(edges(input)).toEqual(same("2px"));
+    await expect(field.borderTopColor).toBe(fogTeal);
+  },
+};
+
 export const ThemeSwitch: Story = {
   render: () => <ThemedButtons />,
   play: async ({ canvas }) => {
     const outside = canvas.getByRole("button", { name: "Ridgeline" });
-    const inside = canvas.getByRole("button", { name: "Noren" });
-    const fills = () => [outside, inside].map((button) => settledStyle(button).backgroundColor);
+    const noren = canvas.getByRole("button", { name: "Noren" });
+    const rooftop = canvas.getByRole("button", { name: "Rooftop" });
+    const fills = () =>
+      [outside, noren, rooftop].map((button) => settledStyle(button).backgroundColor);
 
-    await expect(fills()).toEqual([ember, lantern]);
+    await expect(fills()).toEqual([ember, lantern, bulb]);
 
     // The attribute on the html element themes everything under it, and a Consumer's own
-    // stylesheet rule on :root beats either Theme there, since both blocks sit in :where() and
-    // carry no specificity. The rule goes in ahead of the kit's stylesheet, so it wins on
-    // specificity alone and not on source order. The wrapper is its own Theme root and keeps
-    // Lantern: a rule on :root alone does not reach inside a wrapper, and a Consumer who themes a
-    // subtree overrides on `:root, [data-theme]` instead. The values are read before the attribute
-    // and the rule are removed, so a failed assertion never leaks into the next Story.
+    // stylesheet rule on :root beats any Theme there, since every block sits in :where() and
+    // carries no specificity. The rule goes in ahead of the kit's stylesheet, so it wins on
+    // specificity alone and not on source order. Each wrapper is its own Theme root and keeps
+    // its colour: a rule on :root alone does not reach inside a wrapper, and a Consumer who themes
+    // a subtree overrides on `:root, [data-theme]` instead, which reaches all three. The values
+    // are read before the attribute and the rule are removed, so a failed assertion never leaks
+    // into the next Story.
     const override = "rgb(1, 2, 3)";
     const html = document.documentElement;
     const sheet = document.createElement("style");
     sheet.textContent = `:root { --kui-primary: ${override}; }`;
     html.setAttribute("data-theme", "noren");
-    const onHtml = fills();
+    const norenOnHtml = fills();
+    html.setAttribute("data-theme", "rooftop");
+    const rooftopOnHtml = fills();
     document.head.prepend(sheet);
+    const overriddenUnderRooftop = fills();
+    html.setAttribute("data-theme", "noren");
     const overriddenUnderNoren = fills();
     html.removeAttribute("data-theme");
     const overriddenUnderRidgeline = fills();
     sheet.textContent = `:root, [data-theme] { --kui-primary: ${override}; }`;
-    const overriddenInWrapper = fills();
+    const overriddenInWrappers = fills();
     sheet.remove();
     const restored = fills();
 
-    await expect(onHtml).toEqual([lantern, lantern]);
-    await expect(overriddenUnderNoren).toEqual([override, lantern]);
-    await expect(overriddenUnderRidgeline).toEqual([override, lantern]);
-    await expect(overriddenInWrapper).toEqual([override, override]);
-    await expect(restored).toEqual([ember, lantern]);
+    await expect(norenOnHtml).toEqual([lantern, lantern, bulb]);
+    await expect(rooftopOnHtml).toEqual([bulb, lantern, bulb]);
+    await expect(overriddenUnderRooftop).toEqual([override, lantern, bulb]);
+    await expect(overriddenUnderNoren).toEqual([override, lantern, bulb]);
+    await expect(overriddenUnderRidgeline).toEqual([override, lantern, bulb]);
+    await expect(overriddenInWrappers).toEqual([override, override, override]);
+    await expect(restored).toEqual([ember, lantern, bulb]);
   },
 };

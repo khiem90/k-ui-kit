@@ -1,13 +1,18 @@
-/* The kit's two Themes, each a light Color scheme only. Ridgeline sits on the root with no
-   attribute and is the default. Noren follows it, selected by data-theme="noren" on the html
-   element or on any ancestor, and wins by source order alone: both blocks sit in :where(), so a
-   Consumer's own :root rule beats either (ADR 0001). Token names describe a role, and the palette
-   name sits in a comment beside the value (ADR 0005). */
+/* The kit's three Themes, each carrying one Color scheme of its own (ADR 0007). Ridgeline sits on
+   the root with no attribute and is the default. Noren and Rooftop follow it, selected by
+   data-theme="noren" or data-theme="rooftop" on the html element or on any ancestor, and win by
+   source order alone: every block sits in :where(), so a Consumer's own :root rule beats any of
+   them (ADR 0001). Ridgeline and Noren are light and Rooftop is dark; each block declares its
+   color-scheme, and data-color-scheme stays reserved and unused. Token names describe a role, and
+   the palette name sits in a comment beside the value (ADR 0005). */
 :where(:root) {
   color-scheme: light;
 
   --kui-background: #f6e6d6; /* Apricot */
   --kui-surface-raised: #fff9f2; /* Cream */
+  /* The fill of a TextField, the Select trigger, the Checkbox box, the Switch track, and a Radio
+     control. Ridgeline fills it with the same Cream as a raised panel. */
+  --kui-surface-field: #fff9f2; /* Cream */
   /* Every other DataTable row: Apricot 70% into Cream. */
   --kui-surface-stripe: #f9ecde;
   /* The Tabs list, the track behind the tabs. */
@@ -121,6 +126,8 @@
 
   --kui-background: #efe3c8; /* Washi */
   --kui-surface-raised: #fff8e8; /* Paper */
+  /* Fields and controls: the same Paper as a raised panel. */
+  --kui-surface-field: #fff8e8; /* Paper */
   /* Every other DataTable row: Paper halfway to Washi. */
   --kui-surface-stripe: #f7eed8;
   /* The Tabs list draws no track of its own; the cloth hangs straight from the Rail. */
@@ -208,6 +215,117 @@
   --kui-space-5: 36px;
   --kui-space-6: 48px;
   --kui-space-7: 72px;
+  --kui-space-8: 96px;
+
+  --kui-padding-field-inline: 16px;
+}
+
+/* Rooftop, the tiny bar on a wet roof, and the first dark Theme. Its surfaces recess rather than
+   lift: the page is Wet stone, a panel is a step lighter in Awning, and a field is cut back down to
+   the page colour inside it, which is what the surface field role is for. Bulb yellow is the one
+   thing you can act on, Stool wood the second, and anything that floats carries a Bulb ring with a
+   warm glow. The block declares a dark Color scheme of its own (ADR 0007): a Theme has one, and
+   data-theme is the only switch. Every role is filled here, and motion duration is again the one
+   Token left to the root so the reduced-motion rule keeps the last word. */
+:where([data-theme="rooftop"]) {
+  color-scheme: dark;
+
+  --kui-background: #1a2224; /* Wet stone */
+  --kui-surface-raised: #2e3b3e; /* Awning */
+  /* Fields and controls recess to the page: Fog teal is 3.25:1 on Wet stone but 2.33:1 on
+     Awning, so a field cannot sit on a panel's own colour. */
+  --kui-surface-field: #1a2224; /* Wet stone */
+  /* Every other DataTable row: the darkest step between Awning and Wet stone where Fog teal still
+     reaches 3:1 (3.03:1), so the table alternates panel and recess. */
+  --kui-surface-stripe: #1e2829;
+  /* The Tabs list is a recessed sign box. */
+  --kui-surface-track: #141a1b; /* Sign box */
+  /* A hover recesses, the board's depth scale read from the top. The board's lighter "Raised"
+     #3b4a4c would put Fog teal at 1.86:1. */
+  --kui-tint: #141a1b; /* Sign box */
+  --kui-foreground: #ede6d6; /* Ticket */
+  --kui-foreground-muted: #a9bdba; /* Rain sky */
+  /* The Dialog title: the sign over the door. */
+  --kui-foreground-display: #d8b26a; /* Sign gold */
+  --kui-border: #5e7472; /* Fog teal */
+  --kui-primary: #f2c46b; /* Bulb */
+  /* The board has no hover states. On a dark page a hover brightens the bulb. */
+  --kui-primary-hover: #f7d589;
+  --kui-primary-foreground: #1a2224; /* Wet stone */
+  /* The secondary Button: Stool wood with Wet stone text, brighter on hover. */
+  --kui-secondary: #b98a55; /* Stool */
+  --kui-secondary-hover: #cda06a;
+  --kui-secondary-foreground: #1a2224; /* Wet stone */
+  /* An inactive tab fills nothing, so the Sign box track shows through under Rain sky text. */
+  --kui-tab: transparent;
+  --kui-tab-foreground: #a9bdba; /* Rain sky */
+  /* The board's Tail light #d2694b is 4.5:1 as a Button fill under Wet stone text but 3.2:1 as
+     error text on Awning, where a TextField inside a Dialog draws its message. This is Tail light
+     lifted until that passes (4.5:1 on Awning, 6.3:1 on the page). Hover darkens back to the
+     board's own, the one hover that does not brighten. */
+  --kui-danger: #e58a6e;
+  --kui-danger-hover: #d2694b; /* Tail light */
+  --kui-danger-foreground: #1a2224; /* Wet stone */
+  --kui-focus-ring: #f2c46b; /* Bulb */
+
+  /* Bulb is 10.8:1 on Sign box, so a control drawn on the tint keeps Bulb. */
+  --kui-primary-on-tint: #f2c46b; /* Bulb */
+  --kui-focus-ring-on-tint: #f2c46b; /* Bulb */
+
+  /* The page behind a Dialog goes to the dark of the roof. */
+  --kui-overlay: rgb(20 26 27 / 0.75); /* Sign box at 75% */
+
+  /* A resting surface is recessed, with no shadow at all. */
+  --kui-shadow-rest: none;
+  --kui-shadow-track: none;
+  /* Buttons are raised metal signs on a black drop shadow. */
+  --kui-shadow-raised: 0 12px 24px -10px rgb(0 0 0 / 0.6);
+  /* Lit: a Bulb ring and a warm glow on the Dialog, the Tooltip, and the Select list. */
+  --kui-shadow-floating: 0 0 0 2px #f2c46b, 0 0 30px rgb(242 196 107 / 0.35); /* Bulb */
+
+  /* Served by the optional Rooftop fonts stylesheet. Without it, signage falls back to Arial
+     Narrow or the nearest narrow system face, and body text to the system sans. */
+  --kui-font-display:
+    "Big Shoulders Display", "Arial Narrow", "Helvetica Neue", system-ui, sans-serif;
+  --kui-font-label:
+    "Big Shoulders Display", "Arial Narrow", "Helvetica Neue", system-ui, sans-serif;
+  --kui-font-body: "Barlow", system-ui, sans-serif;
+  /* Signage first: uppercase at the board's heading weight, tracked between its 0.04em Buttons
+     and 0.1em labels, since one Token serves both. */
+  --kui-label-case: uppercase;
+  --kui-label-tracking: 0.06em;
+  --kui-label-weight: 800;
+
+  /* The board's labels, body, field text, and heading. */
+  --kui-font-size-sm: 0.875rem; /* 14px */
+  --kui-font-size-md: 1rem; /* 16px */
+  --kui-font-size-lg: 1.125rem; /* 18px */
+  --kui-font-size-display: 2.125rem; /* 34px */
+
+  /* Shape. Controls are flat at 4px and panels at 10px; the Switch keeps its pill. */
+  --kui-radius-field: 4px; /* Control 4 */
+  --kui-radius-button: 4px; /* Control 4 */
+  --kui-radius-tab: 4px; /* Control 4 */
+  --kui-radius-check: 2px; /* Ticket */
+  --kui-radius-row: 2px; /* Ticket */
+  --kui-radius-card: 10px; /* Panel 10 */
+  --kui-radius-pill: 999px;
+  /* No arch: the Dialog's top corners match a panel. */
+  --kui-radius-arch: 10px; /* Panel 10 */
+  /* A 2px Fog teal edge around a field, which turns Bulb on focus. */
+  --kui-border-width-field: 2px;
+  /* No Rail. A Consumer who turns it on gets a Bulb edge. */
+  --kui-rail-width: 0;
+  --kui-rail-color: #f2c46b; /* Bulb */
+
+  /* The board's 4px scale, extended one step. */
+  --kui-space-1: 4px;
+  --kui-space-2: 8px;
+  --kui-space-3: 12px;
+  --kui-space-4: 16px;
+  --kui-space-5: 24px;
+  --kui-space-6: 40px;
+  --kui-space-7: 64px;
   --kui-space-8: 96px;
 
   --kui-padding-field-inline: 16px;

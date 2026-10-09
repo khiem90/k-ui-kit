@@ -12,6 +12,6 @@ The kit has to work unchanged in Next.js App Router, Remix, Vite, and Astro, and
 
 - Every colour, spacing step, radius, font family, and font size in component CSS must come from a Token. A hard-coded value is a bug, and `pnpm lint` fails on one: Stylelint rejects a raw colour anywhere in `src/**/*.css` outside `tokens.css`, and a px or rem length in a spacing, radius, or font-size property, allowing only `0`, `1px`, `2px`, and `-1px`.
 - The Token selectors are wrapped in `:where()` so they carry zero specificity, and a Consumer's plain `:root` override always wins.
-- Both Themes have a light Color scheme only, so each Token is declared once per Theme: Ridgeline's on the root and Noren's under `data-theme="noren"`. There is no dark media query and no `data-theme="light|dark"` switch to restate in an override. If a dark Color scheme arrives, ADR 0005 reserves `data-color-scheme` to select it, and this consequence gets revisited then.
+- Each Theme carries one Color scheme of its own, declared in its block (ADR 0007), so each Token is declared once per Theme: Ridgeline's on the root, Noren's under `data-theme="noren"`, and Rooftop's, the dark one, under `data-theme="rooftop"`. There is no dark media query and no `data-theme="light|dark"` switch to restate in an override. `data-color-scheme` stays reserved for the day one Theme ships a light and a dark set of values.
 - package.json marks CSS as side-effectful so bundlers keep the stylesheet.
 - Modern CSS such as `color-mix()` and `:focus-visible` is used without fallbacks. Evergreen browsers only.
