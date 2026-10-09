@@ -8,6 +8,9 @@
 
   --kui-background: #f6e6d6; /* Apricot */
   --kui-surface-raised: #fff9f2; /* Cream */
+  /* The fill of a TextField, the Select trigger, the Checkbox box, the Switch track, and a Radio
+     control. Ridgeline fills it with the same Cream as a raised panel. */
+  --kui-surface-field: #fff9f2; /* Cream */
   /* Every other DataTable row: Apricot 70% into Cream. */
   --kui-surface-stripe: #f9ecde;
   /* The Tabs list, the track behind the tabs. */
@@ -121,6 +124,8 @@
 
   --kui-background: #efe3c8; /* Washi */
   --kui-surface-raised: #fff8e8; /* Paper */
+  /* Fields and controls: the same Paper as a raised panel. */
+  --kui-surface-field: #fff8e8; /* Paper */
   /* Every other DataTable row: Paper halfway to Washi. */
   --kui-surface-stripe: #f7eed8;
   /* The Tabs list draws no track of its own; the cloth hangs straight from the Rail. */

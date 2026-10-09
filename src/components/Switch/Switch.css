@@ -20,7 +20,7 @@
   padding: 2px;
   border: 2px solid var(--kui-border);
   border-radius: var(--kui-radius-pill);
-  background: var(--kui-surface-raised);
+  background: var(--kui-surface-field);
   cursor: pointer;
   appearance: none;
   transition:

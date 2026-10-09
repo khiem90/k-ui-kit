@@ -18,6 +18,7 @@ import { settledStyle, withRootOverrides } from "./story-helpers";
 const colours = [
   "--kui-background",
   "--kui-surface-raised",
+  "--kui-surface-field",
   "--kui-surface-stripe",
   "--kui-surface-track",
   "--kui-tint",
@@ -113,7 +114,10 @@ const textPairsOnOptionalFill: [string, string][] = [
 
 /** Every edge and indicator pair the kit draws, as [edge, background]. WCAG 1.4.11 asks 3:1. */
 const edgePairs: [string, string][] = [
-  ["--kui-border", "--kui-surface-raised"],
+  // A field's edge on its own fill, which a Theme may recess below the panels.
+  ["--kui-border", "--kui-surface-field"],
+  // The outline Button's edge on a raised panel, such as inside a Dialog.
+  ["--kui-foreground", "--kui-surface-raised"],
   // The off Switch track's edge on the page. The on track is primary on background, below.
   ["--kui-border", "--kui-background"],
   ["--kui-focus-ring", "--kui-background"],
@@ -252,7 +256,7 @@ function TokenSheet() {
           <Swatch
             name="--kui-border-width-field"
             style={{
-              background: "var(--kui-surface-raised)",
+              background: "var(--kui-surface-field)",
               borderStyle: "solid",
               borderWidth: "var(--kui-border-width-field)",
               borderColor: "var(--kui-border)",
@@ -499,6 +503,7 @@ async function expectContrastIn(root: Element) {
 }
 
 const ember = "rgb(189, 80, 56)";
+const cream = "rgb(255, 249, 242)";
 const lantern = "rgb(200, 64, 43)";
 const cedar = "rgb(138, 90, 54)";
 const paper = "rgb(255, 248, 232)";
@@ -690,6 +695,49 @@ export const RailTokens: Story = {
     const rail = { width: "10px", style: "solid", colour: "rgb(1, 2, 3)" };
     await expect(overridden).toEqual({ list: rail, dialog: rail });
     await expect(archAfter).toEqual(archBefore);
+  },
+};
+
+/** A TextField beside a Dialog, the two parts whose fills parted ways in the surface field split. */
+function FieldAndPanel() {
+  return (
+    <Stack>
+      <TextField label="Email" />
+      <Dialog.Root>
+        <Dialog.Trigger>
+          <Button variant="outline">Open</Button>
+        </Dialog.Trigger>
+        <Dialog.Content>
+          <Dialog.Title>Weekend escape</Dialog.Title>
+          <Dialog.Close />
+        </Dialog.Content>
+      </Dialog.Root>
+    </Stack>
+  );
+}
+
+export const SurfaceField: Story = {
+  render: () => <FieldAndPanel />,
+  play: async ({ canvas, userEvent }) => {
+    const input = canvas.getByLabelText("Email");
+    await userEvent.click(canvas.getByRole("button", { name: "Open" }));
+    const dialog = await within(document.body).findByRole("dialog", {}, { timeout: 2000 });
+    const viewport = dialog.querySelector(".kui-dialog__viewport");
+    if (!viewport) throw new Error("The dialog has no viewport");
+    const fills = () => ({
+      field: settledStyle(input).backgroundColor,
+      panel: settledStyle(viewport).backgroundColor,
+    });
+
+    // Ridgeline fills both roles with Cream, so the split changed nothing it renders.
+    await expect(fills()).toEqual({ field: cream, panel: cream });
+
+    // One override of surface field moves the field and leaves the panel on surface raised. The
+    // values are read before the override is removed, so a failed assertion never leaks into the
+    // next Story.
+    const override = "rgb(1, 2, 3)";
+    const overridden = await withRootOverrides({ "--kui-surface-field": override }, fills);
+    await expect(overridden).toEqual({ field: override, panel: cream });
   },
 };
 

@@ -44,7 +44,7 @@
   border-width: var(--kui-border-width-field);
   border-color: var(--kui-border);
   border-radius: var(--kui-radius-field);
-  background: var(--kui-surface-raised);
+  background: var(--kui-surface-field);
   color: var(--kui-foreground);
   font-family: var(--kui-font-body);
   font-size: var(--kui-font-size-lg);
