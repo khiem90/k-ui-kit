@@ -4,7 +4,7 @@
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** ready-for-human
 
 **GitHub:** https://github.com/khiem90/k-ui-kit/issues/7
 
